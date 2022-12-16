@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/KyberNetwork/go-project-template/internal/dbutil"
+	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // nolint sql driver name: "postgres"
 	"github.com/urfave/cli"
@@ -24,19 +24,19 @@ var (
 		Name:   "postgres-user",
 		Usage:  "PostgresSQL user to connect",
 		EnvVar: "POSTGRES_USER",
-		Value:  "go_project_template",
+		Value:  "test",
 	}
 	PostgresPassword = cli.StringFlag{ // nolint: gochecknoglobals
 		Name:   "postgres-password",
 		Usage:  "PostgresSQL password to connect",
 		EnvVar: "POSTGRES_PASSWORD",
-		Value:  "go_project_template",
+		Value:  "test",
 	}
 	PostgresDatabase = cli.StringFlag{ // nolint: gochecknoglobals
 		Name:   "postgres-database",
 		Usage:  "Postgres database to connect",
 		EnvVar: "POSTGRES_DATABASE",
-		Value:  "go_project_template",
+		Value:  "tradelogs",
 	}
 	PostgresMigrationPath = cli.StringFlag{ // nolint: gochecknoglobals
 		Name:   "migration-path",
@@ -64,6 +64,5 @@ func PostgresSQLFlags(defaultDB string) []cli.Flag {
 func NewDB(specs map[string]interface{}) (*sqlx.DB, error) {
 	const driverName = "postgres"
 	connStr := dbutil.FormatDSN(specs)
-
 	return sqlx.Connect(driverName, connStr)
 }

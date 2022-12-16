@@ -2,11 +2,13 @@ version: '3.1'
 services:
   postgres:
     image: 'postgres:14-alpine'
-    volumes:
-      - './data/postgres:/var/lib/postgresql/data'
     environment:
       POSTGRES_DB: test
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
     ports:
       - '127.0.0.1:5432:5432'
+  redis:
+    image: 'redis:7'
+    ports:
+      - '127.0.0.1:6379:6379'

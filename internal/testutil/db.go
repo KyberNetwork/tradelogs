@@ -3,7 +3,7 @@ package testutil
 import (
 	"fmt"
 
-	"github.com/KyberNetwork/go-project-template/internal/dbutil"
+	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	_ "github.com/golang-migrate/migrate/v4/source/file" // nolint go migrate
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // nolint sql driver name: "postgres"

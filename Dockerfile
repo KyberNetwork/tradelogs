@@ -5,7 +5,7 @@ WORKDIR /src
 
 COPY . .
 
-RUN go build -o app ./cmd/service-name
+RUN go build -o app ./cmd/tradelogs
 
 
 ## DEPLOY

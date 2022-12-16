@@ -1,7 +1,7 @@
 ## This is a template repository for golang project
 
 ### Usage
-1. Go to github: https://github.com/KyberNetwork/go-project-template
+1. Go to github: https://github.com/KyberNetwork/tradelogs
 2.  Click use this template
 3.  Create a new repository with the template
 4.  Rename package in `go.mod`
