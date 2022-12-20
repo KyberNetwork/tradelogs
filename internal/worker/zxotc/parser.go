@@ -56,7 +56,7 @@ func NewParser() (*Parser, error) {
 }
 
 func (z *Parser) Parse(log types.Log, blockNumber, blockTime uint64) (storage.OtcOrderFilled, error) {
-	if log.Topics[0].Hex() != OtcOrderFilledLog {
+	if len(log.Topics) > 0 && log.Topics[0].Hex() != OtcOrderFilledLog {
 		return storage.OtcOrderFilled{}, ErrInvalidOTCTopic
 	}
 	var event otcOrderFilled

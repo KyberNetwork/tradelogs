@@ -16,7 +16,6 @@ const (
 
 var (
 	blockTime = 12 * time.Second
-	isInit    = true
 )
 
 type Config struct {
@@ -26,21 +25,24 @@ type Config struct {
 }
 
 type Client struct {
-	client redis.UniversalClient
-	config Config
-	l      *zap.SugaredLogger
+	client     redis.UniversalClient
+	config     Config
+	l          *zap.SugaredLogger
+	isInitDone bool
+	groupName  string
 }
 
 func New(l *zap.SugaredLogger, cfg Config, client redis.UniversalClient) *Client {
 	return &Client{
-		client: client,
-		config: cfg,
-		l:      l,
+		client:    client,
+		config:    cfg,
+		l:         l,
+		groupName: "trading-tradelogs",
 	}
 }
 
 func (c *Client) Init(ctx context.Context) error {
-	_, err := c.client.XGroupCreate(ctx, c.config.Topic, "trading-tradelogs", "0").Result()
+	_, err := c.client.XGroupCreate(ctx, c.config.Topic, c.groupName, "0").Result()
 	if err != nil {
 		if err.Error() == "BUSYGROUP Consumer Group name already exists" {
 			return nil
@@ -56,10 +58,10 @@ func (c *Client) GConsume(ctx context.Context) ([]Message, error) {
 		messages = []Message{}
 		id       = ">"
 	)
-	if isInit {
+	if !c.isInitDone {
 		id = "0"
 	}
-	c.l.Debugw("Consuming msg", "isInit", isInit)
+	c.l.Debugw("Consuming msg", "isInitDone", c.isInitDone)
 	streams, err := c.client.XReadGroup(ctx, &redis.XReadGroupArgs{
 		Streams:  []string{c.config.Topic, id},
 		Group:    c.config.GroupName,
@@ -70,8 +72,8 @@ func (c *Client) GConsume(ctx context.Context) ([]Message, error) {
 		return nil, err
 	}
 
-	if isInit && len(streams[0].Messages) == 0 {
-		isInit = false
+	if !c.isInitDone && len(streams[0].Messages) == 0 {
+		c.isInitDone = true
 		return messages, nil
 	}
 
@@ -96,7 +98,7 @@ func (c *Client) Ack(ctx context.Context, m []Message) error {
 	for _, message := range m {
 		ids = append(ids, message.ID)
 	}
-	_, err := c.client.XAck(ctx, c.config.Topic, "trading-tradelogs", ids...).Result()
+	_, err := c.client.XAck(ctx, c.config.Topic, c.groupName, ids...).Result()
 	if err != nil {
 		c.l.Errorw("XAck", "ids", ids, "error", err)
 		return err

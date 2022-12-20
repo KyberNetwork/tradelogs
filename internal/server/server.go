@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	defaultTimeRange uint64 = 86400000 // 1 day
+	maxTimeRange uint64 = 86400000 // 1 day
 )
 
 // Server to serve the service.
@@ -72,7 +72,7 @@ func (s *Server) getZxOTCHandler(c *gin.Context) {
 		})
 		return
 	}
-	if query.ToTime-query.FromTime > defaultTimeRange {
+	if query.ToTime-query.FromTime > maxTimeRange {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "t",

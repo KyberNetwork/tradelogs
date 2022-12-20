@@ -32,10 +32,7 @@ func (w *Worker) Run(m []evmlistenerclient.Message) error {
 	for _, message := range m {
 		for _, block := range message.NewBlocks {
 			for _, log := range block.Logs {
-				if len(log.Topics) == 0 {
-					continue
-				}
-				if log.Topics[0].Hex() == OtcOrderFilledLog {
+				if len(log.Topics) > 0 && log.Topics[0].Hex() == OtcOrderFilledLog {
 					order, err := w.p.Parse(log, block.Number.Uint64(), block.Timestamp)
 					if err != nil {
 						return err
@@ -46,7 +43,7 @@ func (w *Worker) Run(m []evmlistenerclient.Message) error {
 		}
 		for _, block := range message.RevertedBlocks {
 			for _, log := range block.Logs {
-				if log.Topics[0].Hex() == OtcOrderFilledLog {
+				if len(log.Topics) > 0 && log.Topics[0].Hex() == OtcOrderFilledLog {
 					order, err := w.p.Parse(log, block.Number.Uint64(), block.Timestamp)
 					if err != nil {
 						return err

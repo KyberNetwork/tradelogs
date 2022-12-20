@@ -13,7 +13,7 @@ type Storage struct {
 	l  *zap.SugaredLogger
 }
 
-func NewStorage(l *zap.SugaredLogger, db *sqlx.DB) *Storage {
+func New(l *zap.SugaredLogger, db *sqlx.DB) *Storage {
 	return &Storage{
 		db: db,
 		l:  l,

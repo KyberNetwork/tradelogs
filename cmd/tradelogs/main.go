@@ -55,7 +55,7 @@ func run(c *cli.Context) error {
 	if err != nil {
 		l.Panicw("cannot init redis", "err", err)
 	}
-	s := storage.NewStorage(l, db)
+	s := storage.New(l, db)
 	listener := evmlistenerclient.New(l, libapp.EvmlistenerConfigFromCli(c), redis)
 	err = listener.Init(context.Background())
 	if err != nil {
