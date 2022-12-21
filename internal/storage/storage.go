@@ -1,12 +1,14 @@
 package storage
 
 import (
+	"reflect"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
 )
 
-const otcOrderFilledTable = "otc_order_filled"
+const tradeLogsTable = "tradelogs"
 
 type Storage struct {
 	db *sqlx.DB
@@ -20,20 +22,20 @@ func New(l *zap.SugaredLogger, db *sqlx.DB) *Storage {
 	}
 }
 
-func (s *Storage) Insert(orders []OtcOrderFilled) error {
+func (s *Storage) Insert(orders []TradeLogs) error {
 	if len(orders) == 0 {
 		return nil
 	}
 	s.l.Debugw("Request insert", "orders", orders)
-	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(otcOrderFilledTable).Columns(
-		otcOrderFilledColumns()...,
+	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(tradeLogsTable).Columns(
+		tradelogsColumns()...,
 	)
 	for _, order := range orders {
 		b = b.Values(
 			order.Serialize()...,
 		)
 	}
-	q, p, err := b.Suffix("ON CONFLICT(order_hash) DO NOTHING").ToSql()
+	q, p, err := b.ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
 		return err
@@ -45,33 +47,49 @@ func (s *Storage) Insert(orders []OtcOrderFilled) error {
 	return nil
 }
 
-func (s *Storage) Get(fromTime uint64, toTime uint64) ([]OtcOrderFilled, error) {
-	q, p, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(otcOrderFilledColumns()...).
-		From(otcOrderFilledTable).
-		Where(squirrel.GtOrEq{"timestamp": fromTime}).
-		Where(squirrel.LtOrEq{"timestamp": toTime}).
-		ToSql()
+func (s *Storage) Get(query TradeLogsQuery) ([]TradeLogs, error) {
+	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Select(tradelogsColumns()...).
+		From(tradeLogsTable)
+	if query.FromTime != 0 {
+		builder = builder.Where(squirrel.GtOrEq{"timestamp": query.FromTime})
+	}
+	if query.ToTime != 0 {
+		builder = builder.Where(squirrel.LtOrEq{"timestamp": query.ToTime})
+	}
+	v := reflect.ValueOf(query)
+	types := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		tag := string(types.Field(i).Tag.Get("json"))
+		if tag == "from_time" || tag == "to_time" {
+			continue
+		}
+		if v.Field(i).IsNil() {
+			continue
+		}
+		builder = builder.Where(squirrel.Eq{tag: v.Field(i).Interface()})
+	}
+	q, p, err := builder.ToSql()
 	if err != nil {
 		return nil, err
 	}
-	var result []OtcOrderFilled
+	var result []TradeLogs
 	if err := s.db.Select(&result, q, p...); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-func (s *Storage) Delete(orderHash []string) error {
-	if len(orderHash) == 0 {
+func (s *Storage) Delete(blocks []uint64) error {
+	if len(blocks) == 0 {
 		return nil
 	}
 	q, p, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Delete(otcOrderFilledTable).
-		Where(squirrel.Eq{"order_hash": orderHash}).
+		Delete(tradeLogsTable).
+		Where(squirrel.Eq{"block_number": blocks}).
 		ToSql()
 	if err != nil {
-		s.l.Errorw("Error while delete", "orderhash", orderHash, "error", err)
+		s.l.Errorw("Error while delete", "block_number", blocks, "error", err)
 		return err
 	}
 	if _, err := s.db.Exec(q, p...); err != nil {
@@ -80,18 +98,19 @@ func (s *Storage) Delete(orderHash []string) error {
 	return nil
 }
 
-func otcOrderFilledColumns() []string {
+func tradelogsColumns() []string {
 	return []string{
 		"order_hash",
 		"maker",
 		"taker",
 		"maker_token",
 		"taker_token",
-		"maker_token_filled_amount",
-		"taker_token_filled_amount",
-		"address",
+		"maker_token_amount",
+		"taker_token_amount",
+		"contract_address",
 		"block_number",
 		"tx_hash",
+		"log_index",
 		"timestamp",
 	}
 }

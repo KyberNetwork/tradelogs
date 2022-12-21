@@ -51,18 +51,13 @@ func (s *Server) Run() error {
 
 func (s *Server) register() {
 	pprof.Register(s.r, "/debug")
-	s.r.GET("/zxotc", s.getZxOTCHandler)
+	s.r.GET("/tradelogs", s.getTradeLogs)
 
 }
 
-type timerange struct {
-	FromTime uint64 `json:"from_time" form:"from_time" binding:"required"`
-	ToTime   uint64 `json:"to_time" form:"to_time" binding:"required"`
-}
-
-func (s *Server) getZxOTCHandler(c *gin.Context) {
+func (s *Server) getTradeLogs(c *gin.Context) {
 	var (
-		query timerange
+		query storage.TradeLogsQuery
 		err   = c.ShouldBind(&query)
 	)
 	if err != nil {
@@ -79,7 +74,7 @@ func (s *Server) getZxOTCHandler(c *gin.Context) {
 		})
 		return
 	}
-	data, err := s.s.Get(query.FromTime, query.ToTime)
+	data, err := s.s.Get(query)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,

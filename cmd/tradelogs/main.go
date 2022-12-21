@@ -9,21 +9,20 @@ import (
 	libapp "github.com/KyberNetwork/tradelogs/internal/app"
 	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	"github.com/KyberNetwork/tradelogs/internal/evmlistenerclient"
-	"github.com/KyberNetwork/tradelogs/internal/handler"
+	"github.com/KyberNetwork/tradelogs/internal/parser/kyberswap"
+	"github.com/KyberNetwork/tradelogs/internal/parser/zxotc"
 	"github.com/KyberNetwork/tradelogs/internal/server"
 	"github.com/KyberNetwork/tradelogs/internal/storage"
-	"github.com/KyberNetwork/tradelogs/internal/worker/zxotc"
+	"github.com/KyberNetwork/tradelogs/internal/worker"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
-	"github.com/joho/godotenv"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 )
 
 func main() {
-	_ = godotenv.Load("sample_file.env")
 	app := libapp.NewApp()
-	app.Name = "alert service go script runner"
+	app.Name = "trade logs crawler service"
 	app.Action = run
 	app.Flags = append(app.Flags, libapp.PostgresSQLFlags("tradelogs")...)
 	app.Flags = append(app.Flags, libapp.RedisFlags()...)
@@ -62,12 +61,14 @@ func run(c *cli.Context) error {
 		l.Errorw("Error while init listener service")
 		return err
 	}
-	handler := handler.New(l, listener)
-	w, err := zxotc.NewWorker(l, s)
+	w, err := worker.New(l, s, listener,
+		kyberswap.NewParser(),
+		zxotc.NewParser(),
+	)
 	if err != nil {
+		l.Errorw("Error while init worker")
 		return err
 	}
-	handler.AddWoker(w)
 
 	http := server.New(l, s, c.String(libapp.HTTPServerFlag.Name))
 	go func() {
@@ -76,7 +77,7 @@ func run(c *cli.Context) error {
 		}
 	}()
 
-	return handler.Run(context.Background())
+	return w.Run(context.Background())
 }
 
 func initDB(c *cli.Context) (*sqlx.DB, error) {

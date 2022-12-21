@@ -19,6 +19,6 @@ WORKDIR /cmd
 
 COPY --from=builder /src/app /cmd/app
 
-COPY migrations migrations
+COPY cmd/tradelogs/migrations migrations
 
 ENTRYPOINT /cmd/app
