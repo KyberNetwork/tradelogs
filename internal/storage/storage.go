@@ -2,6 +2,7 @@ package storage
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -22,7 +23,7 @@ func New(l *zap.SugaredLogger, db *sqlx.DB) *Storage {
 	}
 }
 
-func (s *Storage) Insert(orders []TradeLogs) error {
+func (s *Storage) Insert(orders []TradeLog) error {
 	if len(orders) == 0 {
 		return nil
 	}
@@ -47,7 +48,7 @@ func (s *Storage) Insert(orders []TradeLogs) error {
 	return nil
 }
 
-func (s *Storage) Get(query TradeLogsQuery) ([]TradeLogs, error) {
+func (s *Storage) Get(query TradeLogsQuery) ([]TradeLog, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Select(tradelogsColumns()...).
 		From(tradeLogsTable)
@@ -60,20 +61,20 @@ func (s *Storage) Get(query TradeLogsQuery) ([]TradeLogs, error) {
 	v := reflect.ValueOf(query)
 	types := v.Type()
 	for i := 0; i < v.NumField(); i++ {
-		tag := string(types.Field(i).Tag.Get("json"))
+		tag := string(types.Field(i).Tag.Get("form"))
 		if tag == "from_time" || tag == "to_time" {
 			continue
 		}
-		if v.Field(i).IsNil() {
+		if v.Field(i).IsZero() {
 			continue
 		}
-		builder = builder.Where(squirrel.Eq{tag: v.Field(i).Interface()})
+		builder = builder.Where(squirrel.Eq{tag: strings.ToLower(v.Field(i).String())})
 	}
 	q, p, err := builder.ToSql()
 	if err != nil {
 		return nil, err
 	}
-	var result []TradeLogs
+	var result []TradeLog
 	if err := s.db.Select(&result, q, p...); err != nil {
 		return nil, err
 	}

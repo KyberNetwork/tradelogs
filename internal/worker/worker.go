@@ -49,7 +49,7 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 func (w *Worker) run(m []evmlistenerclient.Message) error {
 	var (
-		insertOrders []storage.TradeLogs
+		insertOrders []storage.TradeLog
 		deleteBlocks []uint64
 	)
 

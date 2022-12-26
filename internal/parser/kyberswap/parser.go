@@ -30,8 +30,8 @@ type swapped struct {
 	ReturnAmount *big.Int       `json:"return_amount,omitempty"`
 }
 
-func (s *swapped) toTradeLogs() storage.TradeLogs {
-	return storage.TradeLogs{
+func (s *swapped) toTradeLogs() storage.TradeLog {
+	return storage.TradeLog{
 		Taker:            s.DstReceiver.Hex(),
 		MakerToken:       s.SrcToken.Hex(),
 		TakerToken:       s.DstToken.Hex(),
@@ -60,14 +60,14 @@ func (p *Parser) Topics() []string {
 	}
 }
 
-func (p *Parser) Parse(log types.Log, blockNumber, blockTime uint64) (storage.TradeLogs, error) {
+func (p *Parser) Parse(log types.Log, blockNumber, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != SwappedLog {
-		return storage.TradeLogs{}, ErrInvalidKSSwappedTopic
+		return storage.TradeLog{}, ErrInvalidKSSwappedTopic
 	}
 	var event swapped
 	err := p.abi.UnpackIntoInterface(&event, SwappedEvent, log.Data)
 	if err != nil {
-		return storage.TradeLogs{}, err
+		return storage.TradeLog{}, err
 	}
 	result := event.toTradeLogs()
 	result.ContractAddress = log.Address.Hex()

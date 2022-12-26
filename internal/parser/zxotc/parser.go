@@ -31,8 +31,8 @@ type otcOrderFilled struct {
 	TakerTokenFilledAmount *big.Int       `json:"taker_token_filled_amount,omitempty"`
 }
 
-func (o *otcOrderFilled) toTradeLogs() storage.TradeLogs {
-	return storage.TradeLogs{
+func (o *otcOrderFilled) toTradeLogs() storage.TradeLog {
+	return storage.TradeLog{
 		OrderHash:        o.OrderHash.Hex(),
 		Maker:            o.Maker.Hex(),
 		Taker:            o.Taker.Hex(),
@@ -63,14 +63,14 @@ func (p *Parser) Topics() []string {
 	}
 }
 
-func (z *Parser) Parse(log types.Log, blockNumber, blockTime uint64) (storage.TradeLogs, error) {
+func (z *Parser) Parse(log types.Log, blockNumber, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != OtcOrderFilledLog {
-		return storage.TradeLogs{}, ErrInvalidOTCTopic
+		return storage.TradeLog{}, ErrInvalidOTCTopic
 	}
 	var event otcOrderFilled
 	err := z.abi.UnpackIntoInterface(&event, OtcOrderFilledEvent, log.Data)
 	if err != nil {
-		return storage.TradeLogs{}, err
+		return storage.TradeLog{}, err
 	}
 	result := event.toTradeLogs()
 	result.ContractAddress = log.Address.Hex()

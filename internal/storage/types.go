@@ -1,6 +1,8 @@
 package storage
 
-type TradeLogs struct {
+import "strings"
+
+type TradeLog struct {
 	OrderHash        string `db:"order_hash" json:"order_hash,omitempty"`
 	Maker            string `db:"maker" json:"maker,omitempty"`
 	Taker            string `db:"taker" json:"taker,omitempty"`
@@ -26,16 +28,16 @@ type TradeLogsQuery struct {
 	OrderHash       string `form:"order_hash" json:"order_hash,omitempty"`
 }
 
-func (o *TradeLogs) Serialize() []interface{} {
+func (o *TradeLog) Serialize() []interface{} {
 	return []interface{}{
 		o.OrderHash,
-		o.Maker,
-		o.Taker,
-		o.MakerToken,
-		o.TakerToken,
+		strings.ToLower(o.Maker),
+		strings.ToLower(o.Taker),
+		strings.ToLower(o.MakerToken),
+		strings.ToLower(o.TakerToken),
 		o.MakerTokenAmount,
 		o.TakerTokenAmount,
-		o.ContractAddress,
+		strings.ToLower(o.ContractAddress),
 		o.BlockNumber,
 		o.TxHash,
 		o.LogIndex,
