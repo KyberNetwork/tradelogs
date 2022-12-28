@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS tradelogs
 (
     order_hash          TEXT NOT NULL UNIQUE,
-    maker               TEXT,
-    taker               TEXT,
+    maker               TEXT NOT NULL DEFAULT '',
+    taker               TEXT NOT NULL DEFAULT '',
     maker_token         TEXT NOT NULL,
     taker_token         TEXT NOT NULL,
     maker_token_amount  TEXT NOT NULL,

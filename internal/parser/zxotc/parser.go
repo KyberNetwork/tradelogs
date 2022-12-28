@@ -1,11 +1,7 @@
 package zxotc
 
 import (
-	"encoding/hex"
 	"errors"
-	"fmt"
-	"math/big"
-	"strings"
 
 	"github.com/KyberNetwork/tradelogs/internal/storage"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -14,70 +10,64 @@ import (
 )
 
 const (
-	OtcOrderFilledLog   = "0xac75f773e3a92f1a02b12134d65e1f47f8a14eabe4eaf1e24624918e6a8b269f"
 	OtcOrderFilledEvent = "OtcOrderFilled"
-	otcOrderABI         = `[{"anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes32","name":"orderHash","type":"bytes32"},{"indexed":false,"internalType":"address","name":"maker","type":"address"},{"indexed":false,"internalType":"address","name":"taker","type":"address"},{"indexed":false,"internalType":"address","name":"makerToken","type":"address"},{"indexed":false,"internalType":"address","name":"takerToken","type":"address"},{"indexed":false,"internalType":"uint128","name":"makerTokenFilledAmount","type":"uint128"},{"indexed":false,"internalType":"uint128","name":"takerTokenFilledAmount","type":"uint128"}],"name":"OtcOrderFilled","type":"event"}]`
 )
 
 var ErrInvalidOTCTopic = errors.New("invalid OTCFilled topic")
 
-type otcOrderFilled struct {
-	OrderHash              common.Hash    `json:"order_hash,omitempty"`
-	Maker                  common.Address `json:"maker,omitempty"`
-	Taker                  common.Address `json:"taker,omitempty"`
-	MakerToken             common.Address `json:"maker_token,omitempty"`
-	TakerToken             common.Address `json:"taker_token,omitempty"`
-	MakerTokenFilledAmount *big.Int       `json:"maker_token_filled_amount,omitempty"`
-	TakerTokenFilledAmount *big.Int       `json:"taker_token_filled_amount,omitempty"`
+type Parser struct {
+	abi       *abi.ABI
+	ps        *OtcOrderFilledFilterer
+	eventHash string
 }
 
-func (o *otcOrderFilled) toTradeLogs() storage.TradeLog {
-	return storage.TradeLog{
-		OrderHash:        o.OrderHash.Hex(),
+func MustNewParser() *Parser {
+	ps, err := NewOtcOrderFilledFilterer(common.Address{}, nil)
+	if err != nil {
+		panic(err)
+	}
+	ab, err := OtcOrderFilledMetaData.GetAbi()
+	if err != nil {
+		panic(err)
+	}
+	event, ok := ab.Events[OtcOrderFilledEvent]
+	if !ok {
+		panic("no such event: OtcOrderFilled")
+	}
+	return &Parser{
+		ps:        ps,
+		abi:       ab,
+		eventHash: event.ID.String(),
+	}
+}
+
+func (p *Parser) Topics() []string {
+	return []string{
+		p.eventHash,
+	}
+}
+
+func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error) {
+	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
+		return storage.TradeLog{}, ErrInvalidOTCTopic
+	}
+	o, err := p.ps.ParseOtcOrderFilled(log)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	res := storage.TradeLog{
+		OrderHash:        common.Hash(o.OrderHash).String(),
 		Maker:            o.Maker.Hex(),
 		Taker:            o.Taker.Hex(),
 		MakerToken:       o.MakerToken.Hex(),
 		TakerToken:       o.TakerToken.Hex(),
 		MakerTokenAmount: o.MakerTokenFilledAmount.String(),
 		TakerTokenAmount: o.TakerTokenFilledAmount.String(),
+		ContractAddress:  o.Raw.Address.String(),
+		BlockNumber:      o.Raw.BlockNumber,
+		TxHash:           o.Raw.TxHash.String(),
+		LogIndex:         uint64(o.Raw.Index),
+		Timestamp:        blockTime * 1000,
 	}
-}
-
-type Parser struct {
-	abi *abi.ABI
-}
-
-func NewParser() *Parser {
-	abi, err := abi.JSON(strings.NewReader(otcOrderABI))
-	if err != nil {
-		panic(err)
-	}
-	return &Parser{
-		abi: &abi,
-	}
-}
-
-func (p *Parser) Topics() []string {
-	return []string{
-		OtcOrderFilledLog,
-	}
-}
-
-func (z *Parser) Parse(log types.Log, blockNumber, blockTime uint64) (storage.TradeLog, error) {
-	if len(log.Topics) > 0 && log.Topics[0].Hex() != OtcOrderFilledLog {
-		return storage.TradeLog{}, ErrInvalidOTCTopic
-	}
-	var event otcOrderFilled
-	err := z.abi.UnpackIntoInterface(&event, OtcOrderFilledEvent, log.Data)
-	if err != nil {
-		return storage.TradeLog{}, err
-	}
-	result := event.toTradeLogs()
-	result.ContractAddress = log.Address.Hex()
-	result.TxHash = log.TxHash.Hex()
-	result.BlockNumber = blockNumber
-	result.Timestamp = blockTime * 1000 // blocktime is second, timestamp is millisecond
-	result.LogIndex = uint64(log.Index)
-	fmt.Println(hex.EncodeToString(log.Data))
-	return result, nil
+	return res, nil
 }

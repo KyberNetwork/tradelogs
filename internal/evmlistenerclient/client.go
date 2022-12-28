@@ -55,7 +55,7 @@ func (c *Client) Init(ctx context.Context) error {
 
 func (c *Client) GConsume(ctx context.Context) ([]Message, error) {
 	var (
-		messages = []Message{}
+		messages []Message
 		id       = ">"
 	)
 	if !c.isInitDone {
@@ -66,6 +66,7 @@ func (c *Client) GConsume(ctx context.Context) ([]Message, error) {
 		Streams:  []string{c.config.Topic, id},
 		Group:    c.config.GroupName,
 		Consumer: c.config.GroupConsumer,
+		Block:    time.Second,
 	}).Result()
 	if err != nil {
 		c.l.Errorw("XREADGROUP", "error", err)
@@ -94,7 +95,7 @@ func (c *Client) Ack(ctx context.Context, m []Message) error {
 	if len(m) == 0 {
 		return nil
 	}
-	var ids = []string{}
+	var ids []string
 	for _, message := range m {
 		ids = append(ids, message.ID)
 	}

@@ -6,6 +6,6 @@ import (
 )
 
 type Parser interface {
-	Parse(log types.Log, blockNumber, blockTime uint64) (storage.TradeLog, error)
+	Parse(log types.Log, blockTime uint64) (storage.TradeLog, error)
 	Topics() []string
 }

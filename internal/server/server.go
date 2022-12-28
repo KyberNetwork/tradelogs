@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -54,32 +55,28 @@ func (s *Server) register() {
 	s.r.GET("/tradelogs", s.getTradeLogs)
 
 }
-
+func responseErr(c *gin.Context, status int, err error) {
+	c.JSON(http.StatusBadRequest, gin.H{
+		"success": false,
+		"error":   err,
+	})
+}
 func (s *Server) getTradeLogs(c *gin.Context) {
 	var (
 		query storage.TradeLogsQuery
 		err   = c.ShouldBind(&query)
 	)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   err,
-		})
+		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
 	if query.ToTime-query.FromTime > maxTimeRange {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   "t",
-		})
+		responseErr(c, http.StatusBadRequest, errors.New("max time range"))
 		return
 	}
 	data, err := s.s.Get(query)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"error":   err,
-		})
+		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{

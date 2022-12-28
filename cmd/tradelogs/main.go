@@ -62,8 +62,8 @@ func run(c *cli.Context) error {
 		return err
 	}
 	w, err := worker.New(l, s, listener,
-		kyberswap.NewParser(),
-		zxotc.NewParser(),
+		kyberswap.MustNewParser(),
+		zxotc.MustNewParser(),
 	)
 	if err != nil {
 		l.Errorw("Error while init worker")

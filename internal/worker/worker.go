@@ -18,9 +18,9 @@ type Worker struct {
 
 func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.Client, parsers ...parser.Parser) (*Worker, error) {
 	p := make(map[string]parser.Parser)
-	for _, parser := range parsers {
-		for _, topic := range parser.Topics() {
-			p[topic] = parser
+	for _, ps := range parsers {
+		for _, topic := range ps.Topics() {
+			p[topic] = ps
 		}
 	}
 	return &Worker{
@@ -38,8 +38,11 @@ func (w *Worker) Run(ctx context.Context) error {
 			w.l.Errorw("Error while consume in group")
 			return err
 		}
-		w.l.Infow("Begin process msg")
-		if err := w.run(m); err != nil {
+		w.l.Infow("process msg", "count", len(m))
+		if len(m) == 0 {
+			continue
+		}
+		if err := w.processMessages(m); err != nil {
 			return err
 		}
 		if err := w.listener.Ack(ctx, m); err != nil {
@@ -47,7 +50,7 @@ func (w *Worker) Run(ctx context.Context) error {
 		}
 	}
 }
-func (w *Worker) run(m []evmlistenerclient.Message) error {
+func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 	var (
 		insertOrders []storage.TradeLog
 		deleteBlocks []uint64
@@ -59,11 +62,11 @@ func (w *Worker) run(m []evmlistenerclient.Message) error {
 				if len(log.Topics) == 0 {
 					continue
 				}
-				parser := w.p[log.Topics[0].Hex()]
-				if parser == nil {
+				ps := w.p[log.Topics[0].Hex()]
+				if ps == nil {
 					continue
 				}
-				order, err := parser.Parse(log, block.Number.Uint64(), block.Timestamp)
+				order, err := ps.Parse(log, block.Timestamp)
 				if err != nil {
 					return err
 				}
