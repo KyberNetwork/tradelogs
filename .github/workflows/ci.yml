@@ -90,20 +90,20 @@ jobs:
 
   test:
     runs-on: [ubuntu-22.04]
-#    services:
-#      postgres:
-#        image: postgres:14-alpine
-#        env:
-#          POSTGRES_PASSWORD: go-project-template
-#          POSTGRES_USER: go-project-template
-#          POSTGRES_DB: go-project-template
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_USER: test
+          POSTGRES_DB: test
 #        options: >-
 #          --health-cmd pg_isready
 #          --health-interval 10s
 #          --health-timeout 5s
 #          --health-retries 5
-#        ports:
-#          - 5432:5432
+        ports:
+          - 5432:5432
     needs:
       - prepare
     steps:

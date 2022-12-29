@@ -5,7 +5,7 @@ WORKDIR /src
 
 COPY . .
 
-RUN go build -o app ./cmd/service-name
+RUN go build -o app ./cmd/tradelogs
 
 
 ## DEPLOY
@@ -19,6 +19,6 @@ WORKDIR /cmd
 
 COPY --from=builder /src/app /cmd/app
 
-COPY migrations migrations
+COPY cmd/tradelogs/migrations migrations
 
 ENTRYPOINT /cmd/app
