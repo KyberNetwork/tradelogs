@@ -3,6 +3,7 @@ package evmlistenerclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/types"
@@ -69,6 +70,9 @@ func (c *Client) GConsume(ctx context.Context) ([]Message, error) {
 		Block:    time.Second,
 	}).Result()
 	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, nil
+		}
 		c.l.Errorw("XREADGROUP", "error", err)
 		return nil, err
 	}
@@ -80,12 +84,14 @@ func (c *Client) GConsume(ctx context.Context) ([]Message, error) {
 
 	for _, msg := range streams[0].Messages {
 		newMessage := Message{}
-		err := json.Unmarshal([]byte(msg.Values[messageKey].(string)), &newMessage)
-		if err != nil {
-			c.l.Errorf("error on unmarshal stream message:%v\n", msg.ID)
-			continue
-		}
 		newMessage.ID = msg.ID
+		if data, ok := msg.Values[messageKey]; ok {
+			err := json.Unmarshal([]byte(data.(string)), &newMessage)
+			if err != nil {
+				c.l.Errorf("error on unmarshal stream message:%v\n", msg.ID)
+			}
+		}
+
 		messages = append(messages, newMessage)
 	}
 	return messages, nil

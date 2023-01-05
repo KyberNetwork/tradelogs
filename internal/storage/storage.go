@@ -36,7 +36,7 @@ func (s *Storage) Insert(orders []TradeLog) error {
 			order.Serialize()...,
 		)
 	}
-	q, p, err := b.ToSql()
+	q, p, err := b.Suffix("ON CONFLICT(block_number, log_index) DO NOTHING").ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
 		return err
