@@ -37,12 +37,6 @@ var (
 		Value:  "",
 		Usage:  "Password for authenticating with redis server",
 	}
-	redisKeyPrefixFlag = &cli.StringFlag{
-		Name:   "redis-key-prefix",
-		EnvVar: "REDIS_KEY_PREFIX",
-		Value:  "",
-		Usage:  "Prefix of key for redis",
-	}
 	redisReadTimeoutFlag = &cli.DurationFlag{
 		Name:   "redis-read-timeout",
 		EnvVar: "REDIS_READ_TIMEOUT",
@@ -61,7 +55,7 @@ var (
 func RedisFlags() []cli.Flag {
 	return []cli.Flag{
 		redisMasterNameFlag, redisAddrsFlag, redisDBFlag,
-		redisUsernameFlag, redisPasswordFlag, redisKeyPrefixFlag,
+		redisUsernameFlag, redisPasswordFlag,
 		redisReadTimeoutFlag, redisWriteTimeoutFlag,
 	}
 }

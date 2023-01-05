@@ -32,7 +32,7 @@ jobs:
     needs:
       - prepare
     env:
-      SERVICE: go-project-template
+      SERVICE: tradelogs
       VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
       BUILD_DATE: ${{ needs.prepare.outputs.build_date }}
     runs-on: [ubuntu-22.04]
@@ -120,4 +120,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: ${{ env.VERSION_TAG }}
           prerelease: false
-          name: "go-project-template ${{ env.VERSION_TAG }}"
+          name: "tradelogs ${{ env.VERSION_TAG }}"

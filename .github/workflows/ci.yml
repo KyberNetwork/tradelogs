@@ -15,7 +15,7 @@ on:
       - "*"
 
 env:
-  SERVICE: go-project-template
+  SERVICE: tradelogs
 
 jobs:
   prepare:
@@ -121,7 +121,7 @@ jobs:
     runs-on: [ ubuntu-22.04 ]
     needs: [ prepare, lint, test ]
     env:
-      SERVICE: go-project-template
+      SERVICE: tradelogs
       BRANCH_TAG: ${{ needs.prepare.outputs.current_branch }}
       COMMIT_TAG: ${{ needs.prepare.outputs.commit_tag }}
     steps:
