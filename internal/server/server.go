@@ -58,7 +58,7 @@ func (s *Server) register() {
 func responseErr(c *gin.Context, status int, err error) {
 	c.JSON(http.StatusBadRequest, gin.H{
 		"success": false,
-		"error":   err,
+		"error":   err.Error(),
 	})
 }
 func (s *Server) getTradeLogs(c *gin.Context) {
