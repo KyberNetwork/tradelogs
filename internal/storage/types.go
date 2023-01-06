@@ -18,8 +18,8 @@ type TradeLog struct {
 }
 
 type TradeLogsQuery struct {
-	FromTime        uint64 `form:"from_time" json:"from_time,omitempty"`
-	ToTime          uint64 `form:"to_time" json:"to_time,omitempty"`
+	FromTime        uint64 `form:"from_time" json:"from_time,omitempty" binding:"required"`
+	ToTime          uint64 `form:"to_time" json:"to_time,omitempty" binding:"required"`
 	ContractAddress string `form:"contract_address" json:"contract_address,omitempty"`
 	Maker           string `form:"maker" json:"maker,omitempty"`
 	Taker           string `form:"taker" json:"taker,omitempty"`
