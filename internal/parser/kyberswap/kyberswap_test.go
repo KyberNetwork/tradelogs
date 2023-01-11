@@ -16,6 +16,8 @@ import (
 
 func TestFetchEvent(t *testing.T) {
 	t.Skip()
+	p := MustNewParser()
+	require.Equal(t, p.abi.Events[SwappedEvent].ID, common.HexToHash("0xd6d4f5681c246c9f42c203e287975af1601f8df8035a9251f79aab5c8f09e2f8"))
 	client, err := ethclient.Dial("https://mainnet.infura.io/v3/")
 	require.NoError(t, err)
 	logs, err := client.FilterLogs(context.Background(), ethereum.FilterQuery{

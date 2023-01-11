@@ -10,7 +10,9 @@ import (
 	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	"github.com/KyberNetwork/tradelogs/internal/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/internal/parser/kyberswap"
+	"github.com/KyberNetwork/tradelogs/internal/parser/tokenlon"
 	"github.com/KyberNetwork/tradelogs/internal/parser/zxotc"
+	"github.com/KyberNetwork/tradelogs/internal/parser/zxrfq"
 	"github.com/KyberNetwork/tradelogs/internal/server"
 	"github.com/KyberNetwork/tradelogs/internal/storage"
 	"github.com/KyberNetwork/tradelogs/internal/worker"
@@ -64,6 +66,8 @@ func run(c *cli.Context) error {
 	w, err := worker.New(l, s, listener,
 		kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
+		zxrfq.MustNewParser(),
+		tokenlon.MustNewParser(),
 	)
 	if err != nil {
 		l.Errorw("Error while init worker")

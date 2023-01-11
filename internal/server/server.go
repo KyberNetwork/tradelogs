@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/KyberNetwork/tradelogs/internal/storage"
 	"github.com/gin-contrib/pprof"
@@ -11,8 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	maxTimeRange uint64 = 86400000 // 1 day
+var (
+	maxTimeRange uint64 = uint64(24 * time.Hour.Milliseconds())
 )
 
 // Server to serve the service.
