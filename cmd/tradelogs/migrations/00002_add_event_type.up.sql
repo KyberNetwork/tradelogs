@@ -1,0 +1,1 @@
+ALTER TABLE tradelogs ADD event_hash TEXT NOT NULL DEFAULT ''
