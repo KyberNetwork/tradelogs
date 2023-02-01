@@ -54,5 +54,6 @@ func TestParseEvent(t *testing.T) {
 	p := MustNewParser()
 	log, err := p.Parse(event, uint64(time.Now().Unix()))
 	require.NoError(t, err)
+	require.Equal(t, log.EventHash, p.eventHash)
 	t.Log(log)
 }

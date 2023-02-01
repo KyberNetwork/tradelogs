@@ -15,6 +15,7 @@ type TradeLog struct {
 	TxHash           string `db:"tx_hash" json:"tx_hash,omitempty"`
 	LogIndex         uint64 `db:"log_index" json:"log_index,omitempty"`
 	Timestamp        uint64 `db:"timestamp" json:"timestamp,omitempty"`
+	EventHash        string `db:"event_hash" json:"event_hash,omitempty"`
 }
 
 type TradeLogsQuery struct {
@@ -26,6 +27,7 @@ type TradeLogsQuery struct {
 	MakerToken      string `form:"maker_token" json:"maker_token,omitempty"`
 	TakerToken      string `form:"taker_token" json:"taker_token,omitempty"`
 	OrderHash       string `form:"order_hash" json:"order_hash,omitempty"`
+	EventHash       string `form:"event_hash" json:"event_hash,omitempty"`
 }
 
 func (o *TradeLog) Serialize() []interface{} {
@@ -42,5 +44,6 @@ func (o *TradeLog) Serialize() []interface{} {
 		o.TxHash,
 		o.LogIndex,
 		o.Timestamp,
+		o.EventHash,
 	}
 }

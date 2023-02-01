@@ -70,7 +70,7 @@ func (s *Storage) Get(query TradeLogsQuery) ([]TradeLog, error) {
 		}
 		builder = builder.Where(squirrel.Eq{tag: strings.ToLower(v.Field(i).String())})
 	}
-	q, p, err := builder.ToSql()
+	q, p, err := builder.OrderBy("timestamp DESC").ToSql()
 	if err != nil {
 		return nil, err
 	}
@@ -113,5 +113,6 @@ func tradelogsColumns() []string {
 		"tx_hash",
 		"log_index",
 		"timestamp",
+		"event_hash",
 	}
 }

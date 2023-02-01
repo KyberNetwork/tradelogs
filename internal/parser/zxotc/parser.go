@@ -68,6 +68,7 @@ func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error
 		TxHash:           o.Raw.TxHash.String(),
 		LogIndex:         uint64(o.Raw.Index),
 		Timestamp:        blockTime * 1000,
+		EventHash:        p.eventHash,
 	}
 	return res, nil
 }
