@@ -10,6 +10,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	"github.com/KyberNetwork/tradelogs/internal/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/internal/parser/kyberswap"
+	"github.com/KyberNetwork/tradelogs/internal/parser/paraswap"
 	"github.com/KyberNetwork/tradelogs/internal/parser/tokenlon"
 	"github.com/KyberNetwork/tradelogs/internal/parser/zxotc"
 	"github.com/KyberNetwork/tradelogs/internal/parser/zxrfq"
@@ -68,6 +69,7 @@ func run(c *cli.Context) error {
 		zxotc.MustNewParser(),
 		zxrfq.MustNewParser(),
 		tokenlon.MustNewParser(),
+		paraswap.MustNewParser(),
 	)
 	if err != nil {
 		l.Errorw("Error while init worker")
