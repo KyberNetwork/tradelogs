@@ -15,10 +15,10 @@ import (
 )
 
 func TestFetchEvent(t *testing.T) {
-	// t.Skip()
+	t.Skip()
 	p := MustNewParser()
 	require.Equal(t, p.abi.Events[FillOrderEvent].ID, common.HexToHash("0x75d58426b26ab641a6a6a46f12fe35e17c570a1cd264c7248a73d90e3a8682ff"))
-	client, err := ethclient.Dial("https://mainnet.infura.io/v3/5fa0422fcae6466d943ac5b1d4b8078e")
+	client, err := ethclient.Dial("https://mainnet.infura.io/v3")
 	require.NoError(t, err)
 	logs, err := client.FilterLogs(context.Background(), ethereum.FilterQuery{
 		BlockHash: nil,

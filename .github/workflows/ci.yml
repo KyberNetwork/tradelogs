@@ -28,7 +28,7 @@ jobs:
       branch_tag: ${{ steps.get_tag.outputs.branch_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Extract branch
         shell: bash
@@ -75,15 +75,15 @@ jobs:
       - name: Add git config for Go private module
         run: git config --global url."https://${{ secrets.GH_PAT }}:x-oauth-basic@github.com/".insteadOf https://github.com/
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: "1.19.x"
+          go-version: "1.20.x"
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.46.2
+          version: v1.51.1
           args: --config=.golangci.yml
           skip-pkg-cache: true
           skip-build-cache: true
@@ -108,11 +108,11 @@ jobs:
       - prepare
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v3
         with:
-          go-version: "1.19.x"
+          go-version: "1.20.x"
       - name: Run test
         run: go test -race -v ./...
 
@@ -126,7 +126,7 @@ jobs:
       COMMIT_TAG: ${{ needs.prepare.outputs.commit_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Prepare images
         id: images
         shell: bash
@@ -172,14 +172,14 @@ jobs:
         run: gcloud auth configure-docker
 
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-${{ env.SERVICE }}-buildx
         if: github.event_name != 'pull_request'
 
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: .
           push: true
