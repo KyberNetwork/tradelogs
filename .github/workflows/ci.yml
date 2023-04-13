@@ -150,7 +150,7 @@ jobs:
 #          echo "::set-output name=version::$IMAGE_WITH_VERSION_TAG"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@master
+        uses: docker/setup-buildx-action@v2
         if: github.event_name != 'pull_request'
 #   ===== for docker.io =====
 #      - name: Docker login
@@ -194,7 +194,6 @@ jobs:
 #            ${{ steps.images.outputs.version }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
-        if: github.event_name != 'pull_request'
 
       - name: Move cache
         run: |

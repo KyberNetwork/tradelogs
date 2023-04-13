@@ -88,7 +88,7 @@ func (c *Client) GConsume(ctx context.Context) ([]Message, error) {
 		if data, ok := msg.Values[messageKey]; ok {
 			err := json.Unmarshal([]byte(data.(string)), &newMessage)
 			if err != nil {
-				c.l.Errorf("error on unmarshal stream message:%v\n", msg.ID)
+				c.l.Errorf("error on unmarshal stream message:%v %+v [%+v]", msg.ID, err, data)
 			}
 		}
 

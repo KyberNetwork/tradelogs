@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"github.com/KyberNetwork/tradelogs/pkg/convert"
 
 	"github.com/KyberNetwork/tradelogs/internal/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/internal/parser"
@@ -62,11 +63,11 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 				if len(log.Topics) == 0 {
 					continue
 				}
-				ps := w.p[log.Topics[0].Hex()]
+				ps := w.p[log.Topics[0]]
 				if ps == nil {
 					continue
 				}
-				order, err := ps.Parse(log, block.Timestamp)
+				order, err := ps.Parse(convert.ToETHLog(log), block.Timestamp)
 				if err != nil {
 					return err
 				}
