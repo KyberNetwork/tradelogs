@@ -194,6 +194,7 @@ jobs:
 #            ${{ steps.images.outputs.version }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
+        if: github.event_name != 'pull_request'
 
       - name: Move cache
         run: |
