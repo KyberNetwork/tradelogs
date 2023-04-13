@@ -85,7 +85,7 @@ func NewSimClient(url string, client *http.Client, accounts OverrideAccounts) (*
 	}
 
 	cc := &http.Client{Transport: round}
-	r, err := rpc.DialHTTPWithClient(url, cc)
+	r, err := rpc.DialOptions(context.Background(), url, rpc.WithHTTPClient(cc))
 	if err != nil {
 		return nil, errors.WithMessage(err, "simclient: dial rpc")
 	}

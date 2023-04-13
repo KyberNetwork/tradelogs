@@ -1,6 +1,9 @@
 package convert
 
 import (
+	types2 "github.com/KyberNetwork/evmlistener/pkg/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"math"
 	"math/big"
 
@@ -70,4 +73,26 @@ func RoundDown(value float64, tickSize float64) float64 {
 	}
 	r, _ := rec.Float64()
 	return r
+}
+
+func ToArrHashs(ss []string) []common.Hash {
+	res := make([]common.Hash, 0, len(ss))
+	for _, v := range ss {
+		res = append(res, common.HexToHash(v))
+	}
+	return res
+}
+
+func ToETHLog(log types2.Log) types.Log {
+	return types.Log{
+		Address:     common.HexToAddress(log.Address),
+		Topics:      ToArrHashs(log.Topics),
+		Data:        log.Data,
+		BlockNumber: log.BlockNumber,
+		TxHash:      common.HexToHash(log.TxHash),
+		TxIndex:     log.TxIndex,
+		BlockHash:   common.HexToHash(log.BlockHash),
+		Index:       log.Index,
+		Removed:     log.Removed,
+	}
 }

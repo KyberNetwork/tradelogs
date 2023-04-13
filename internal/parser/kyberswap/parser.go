@@ -2,11 +2,11 @@ package kyberswap
 
 import (
 	"errors"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/KyberNetwork/tradelogs/internal/storage"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 const (

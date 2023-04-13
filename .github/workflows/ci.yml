@@ -150,7 +150,7 @@ jobs:
 #          echo "::set-output name=version::$IMAGE_WITH_VERSION_TAG"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@master
+        uses: docker/setup-buildx-action@v2
         if: github.event_name != 'pull_request'
 #   ===== for docker.io =====
 #      - name: Docker login
