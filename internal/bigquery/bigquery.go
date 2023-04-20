@@ -80,8 +80,8 @@ func (w *Worker) queryDateData(
         FROM ` + "`bigquery-public-data.crypto_ethereum.logs`" + `
 		WHERE 
 			DATE(block_timestamp) = @date
-			AND block_timestamp >= TIMESTAMP_MILLIS(@minTime)
-			AND block_timestamp <= TIMESTAMP_MILLIS(@maxTime) 
+			AND block_timestamp >= TIMESTAMP_SECONDS(@minTime)
+			AND block_timestamp <= TIMESTAMP_SECONDS(@maxTime) 
 			AND ARRAY_LENGTH(topics) > 0
 			AND topics[OFFSET(0)] IN @topics
 		ORDER BY 
