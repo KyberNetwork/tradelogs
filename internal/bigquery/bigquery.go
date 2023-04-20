@@ -16,7 +16,7 @@ import (
 type WorkerState string
 
 const (
-	limit            = 1_000
+	limit            = 5_000
 	minBlockDateTime = "2018-08-08T00:00:00+00:00"
 
 	stateStopped WorkerState = "stopped"
@@ -80,7 +80,7 @@ func (w *Worker) queryDateData(
         FROM ` + "`bigquery-public-data.crypto_ethereum.logs`" + `
 		WHERE 
 			DATE(block_timestamp) = @date
-			AND block_timestamp	>= TIMESTAMP_MILLIS(@minTime)
+			AND block_timestamp >= TIMESTAMP_MILLIS(@minTime)
 			AND block_timestamp <= TIMESTAMP_MILLIS(@maxTime) 
 			AND ARRAY_LENGTH(topics) > 0
 			AND topics[OFFSET(0)] IN @topics
@@ -93,16 +93,16 @@ func (w *Worker) queryDateData(
 
 	q.Parameters = []bigquery.QueryParameter{
 		{
+			Name:  "date",
+			Value: dateString,
+		},
+		{
 			Name:  "minTime",
 			Value: minTime,
 		},
 		{
 			Name:  "maxTime",
 			Value: maxTime,
-		},
-		{
-			Name:  "date",
-			Value: dateString,
 		},
 		{
 			Name:  "topics",
@@ -179,6 +179,7 @@ func (w *Worker) run(minTime, maxTime time.Time) {
 			l.Errorw("Failed to queryDateData", "err", err, "temp", temp, "offset", offset)
 			return
 		}
+		l.Infow("Successfully queryDateData", "temp", temp)
 
 		count, tradelogs, err := w.logsFromRowIterator(iter)
 		if err != nil {
@@ -186,10 +187,11 @@ func (w *Worker) run(minTime, maxTime time.Time) {
 				"err", err, "temp", temp, "offset", offset)
 			return
 		}
+		l.Infow("Successfully get logsFromRowIterator", "temp", temp, "count", count, "tradelogs", tradelogs)
 
 		err = w.storage.Insert(tradelogs)
 		if err != nil {
-			l.Errorw("Failed to insert tradelogs", "err", err, "tradelogs", tradelogs)
+			l.Errorw("Failed to insert tradelogs", "err", err, "temp", temp, "tradelogs", tradelogs)
 			return
 		}
 
