@@ -1,6 +1,7 @@
 package bigquery
 
 import (
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -8,15 +9,23 @@ import (
 )
 
 type BQLog struct {
-	Index          uint      `bigquery:"log_index"`
+	Index          int64     `bigquery:"log_index"`
 	TxHash         string    `bigquery:"transaction_hash"`
-	TxIndex        uint      `bigquery:"transaction_index"`
+	TxIndex        int64     `bigquery:"transaction_index"`
 	Address        string    `bigquery:"address"`
 	Data           string    `bigquery:"data"`
 	Topics         []string  `bigquery:"topics"`
 	BlockTimestamp time.Time `bigquery:"block_timestamp"`
-	BlockNumber    uint64    `bigquery:"block_number"`
+	BlockNumber    int64     `bigquery:"block_number"`
 	BlockHash      string    `bigquery:"block_hash"`
+}
+
+func hex2Bytes(raw string) []byte {
+	if strings.HasPrefix(raw, "0x") {
+		return common.Hex2Bytes(raw[2:])
+	}
+
+	return common.Hex2Bytes(raw)
 }
 
 func (log BQLog) ToEthLog() types.Log {
@@ -28,11 +37,11 @@ func (log BQLog) ToEthLog() types.Log {
 	return types.Log{
 		Address:     common.HexToAddress(log.Address),
 		Topics:      topics,
-		Data:        common.Hex2Bytes(log.Data),
-		BlockNumber: log.BlockNumber,
+		Data:        hex2Bytes(log.Data),
+		BlockNumber: uint64(log.BlockNumber),
 		TxHash:      common.HexToHash(log.TxHash),
-		TxIndex:     log.TxIndex,
+		TxIndex:     uint(log.TxIndex),
 		BlockHash:   common.HexToHash(log.BlockHash),
-		Index:       log.Index,
+		Index:       uint(log.Index),
 	}
 }

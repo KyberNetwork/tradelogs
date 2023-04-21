@@ -7,6 +7,7 @@ import (
 	"os"
 
 	libapp "github.com/KyberNetwork/tradelogs/internal/app"
+	"github.com/KyberNetwork/tradelogs/internal/bigquery"
 	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	"github.com/KyberNetwork/tradelogs/internal/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/internal/parser/kyberswap"
@@ -14,7 +15,8 @@ import (
 	"github.com/KyberNetwork/tradelogs/internal/parser/tokenlon"
 	"github.com/KyberNetwork/tradelogs/internal/parser/zxotc"
 	"github.com/KyberNetwork/tradelogs/internal/parser/zxrfq"
-	"github.com/KyberNetwork/tradelogs/internal/server"
+	server "github.com/KyberNetwork/tradelogs/internal/server/backfill"
+	tradelogs "github.com/KyberNetwork/tradelogs/internal/server/tradelogs"
 	"github.com/KyberNetwork/tradelogs/internal/storage"
 	"github.com/KyberNetwork/tradelogs/internal/worker"
 	"github.com/go-redis/redis/v8"
@@ -31,6 +33,7 @@ func main() {
 	app.Flags = append(app.Flags, libapp.RedisFlags()...)
 	app.Flags = append(app.Flags, libapp.EvmListenerFlags()...)
 	app.Flags = append(app.Flags, libapp.HTTPServerFlags()...)
+	app.Flags = append(app.Flags, libapp.BigqueryFlags()...)
 
 	if err := app.Run(os.Args); err != nil {
 		log.Panic(err)
@@ -76,9 +79,30 @@ func run(c *cli.Context) error {
 		return err
 	}
 
-	http := server.New(l, s, c.String(libapp.HTTPServerFlag.Name))
+	backfillWorker, err := bigquery.NewWorker(
+		libapp.BigqueryProjectIDFFromCli(c),
+		s,
+		kyberswap.MustNewParser(),
+		zxotc.MustNewParser(),
+		zxrfq.MustNewParser(),
+		tokenlon.MustNewParser(),
+		paraswap.MustNewParser(),
+	)
+	if err != nil {
+		l.Errorw("Error while init backfillWorker")
+		return err
+	}
+
+	httpBackfill := server.New(c.String(libapp.HTTPBackfillServerFlag.Name), backfillWorker)
 	go func() {
-		if err := http.Run(); err != nil {
+		if err := httpBackfill.Run(); err != nil {
+			panic(err)
+		}
+	}()
+
+	httpTradelogs := tradelogs.New(l, s, c.String(libapp.HTTPServerFlag.Name))
+	go func() {
+		if err := httpTradelogs.Run(); err != nil {
 			panic(err)
 		}
 	}()

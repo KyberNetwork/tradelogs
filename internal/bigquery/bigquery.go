@@ -83,7 +83,7 @@ func (w *Worker) queryDateData(
 			AND block_timestamp >= TIMESTAMP_SECONDS(@minTime)
 			AND block_timestamp <= TIMESTAMP_SECONDS(@maxTime) 
 			AND ARRAY_LENGTH(topics) > 0
-			AND topics[OFFSET(0)] IN @topics
+			AND topics[OFFSET(0)] IN UNNEST(@topics)
 		ORDER BY 
 			block_timestamp DESC
 		LIMIT @limit
@@ -157,6 +157,11 @@ func (w *Worker) parseLog(row BQLog) (storage.TradeLog, error) {
 	return ps.Parse(ehtLog, uint64(row.BlockTimestamp.Unix()))
 }
 
+func endOfDay(t time.Time) time.Time {
+	y, m, d := t.Date()
+	return time.Date(y, m, d, 23, 59, 59, 1e9-1, t.Location())
+}
+
 func (w *Worker) run(minTime, maxTime time.Time) {
 	l := w.l.With("minTime", minTime, "maxTime", maxTime)
 	l.Info("Start running worker")
@@ -166,7 +171,7 @@ func (w *Worker) run(minTime, maxTime time.Time) {
 		w.state = stateStopped
 	}()
 
-	temp := maxTime
+	temp := endOfDay(maxTime)
 	offset := int64(0)
 	minTs, maxTs := minTime.Unix(), maxTime.Unix()
 	for temp.After(minTime) {
@@ -187,7 +192,7 @@ func (w *Worker) run(minTime, maxTime time.Time) {
 				"err", err, "temp", temp, "offset", offset)
 			return
 		}
-		l.Infow("Successfully get logsFromRowIterator", "temp", temp, "count", count, "tradelogs", tradelogs)
+		l.Infow("Successfully get logsFromRowIterator", "temp", temp, "count", count)
 
 		err = w.storage.Insert(tradelogs)
 		if err != nil {
@@ -212,7 +217,7 @@ func (w *Worker) BackFillAllData() error {
 		return ErrWorkerRunning
 	}
 
-	go w.run(minBlockTime, time.Now())
+	go w.run(minBlockTime, time.Now().UTC())
 	return nil
 }
 
@@ -223,14 +228,14 @@ func (w *Worker) BackFillPartialData(fromTime, toTime int64) error {
 	}
 
 	// minTime = max(fromTime, minBlockTime)
-	minTime := time.Unix(fromTime, 0)
+	minTime := time.Unix(fromTime, 0).UTC()
 	if minTime.Before(minBlockTime) {
 		minTime = minBlockTime
 	}
 
 	// maxTime = min(toTime, now)
-	now := time.Now()
-	maxTime := time.Unix(toTime, 0)
+	now := time.Now().UTC()
+	maxTime := time.Unix(toTime, 0).UTC()
 	if maxTime.After(now) {
 		maxTime = now
 	}
