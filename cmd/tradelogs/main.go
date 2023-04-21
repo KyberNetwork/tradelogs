@@ -15,7 +15,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/internal/parser/tokenlon"
 	"github.com/KyberNetwork/tradelogs/internal/parser/zxotc"
 	"github.com/KyberNetwork/tradelogs/internal/parser/zxrfq"
-	server "github.com/KyberNetwork/tradelogs/internal/server/backfill"
+	backfill "github.com/KyberNetwork/tradelogs/internal/server/backfill"
 	tradelogs "github.com/KyberNetwork/tradelogs/internal/server/tradelogs"
 	"github.com/KyberNetwork/tradelogs/internal/storage"
 	"github.com/KyberNetwork/tradelogs/internal/worker"
@@ -93,7 +93,7 @@ func run(c *cli.Context) error {
 		return err
 	}
 
-	httpBackfill := server.New(c.String(libapp.HTTPBackfillServerFlag.Name), backfillWorker)
+	httpBackfill := backfill.New(c.String(libapp.HTTPBackfillServerFlag.Name), backfillWorker)
 	go func() {
 		if err := httpBackfill.Run(); err != nil {
 			panic(err)
