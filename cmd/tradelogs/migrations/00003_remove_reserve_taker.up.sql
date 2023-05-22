@@ -1,0 +1,1 @@
+DELETE FROM tradelogs WHERE taker = '0x807cf9a772d5a3f9cefbc1192e939d62f0d9bd38';

@@ -2,6 +2,7 @@ package kyberswap
 
 import (
 	"errors"
+
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/KyberNetwork/tradelogs/internal/storage"
@@ -57,10 +58,10 @@ func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error
 	}
 	res := storage.TradeLog{
 		Taker:            e.DstReceiver.String(),
-		MakerToken:       e.SrcToken.String(),
-		TakerToken:       e.DstToken.String(),
-		MakerTokenAmount: e.SpentAmount.String(),
-		TakerTokenAmount: e.ReturnAmount.String(),
+		MakerToken:       e.DstToken.String(),
+		TakerToken:       e.SrcToken.String(),
+		MakerTokenAmount: e.ReturnAmount.String(),
+		TakerTokenAmount: e.SpentAmount.String(),
 		ContractAddress:  e.Raw.Address.String(),
 		BlockNumber:      e.Raw.BlockNumber,
 		TxHash:           e.Raw.TxHash.String(),
