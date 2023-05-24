@@ -8,6 +8,8 @@ on:
         type: string
         required: true
 
+permissions: write-all
+
 jobs:
   prepare:
     runs-on: [ubuntu-22.04]
