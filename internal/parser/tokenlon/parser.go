@@ -62,7 +62,7 @@ func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error
 		MakerToken:       o.MakerAssetAddr.Hex(),
 		TakerToken:       o.TakerAssetAddr.Hex(),
 		MakerTokenAmount: o.MakerAssetAmount.String(),
-		TakerTokenAmount: o.SettleAmount.String(),
+		TakerTokenAmount: o.TakerAssetAmount.String(),
 		ContractAddress:  o.Raw.Address.String(),
 		BlockNumber:      o.Raw.BlockNumber,
 		TxHash:           o.Raw.TxHash.String(),
