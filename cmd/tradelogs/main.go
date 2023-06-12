@@ -10,6 +10,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/internal/bigquery"
 	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	"github.com/KyberNetwork/tradelogs/internal/evmlistenerclient"
+	"github.com/KyberNetwork/tradelogs/internal/parser/hashflow"
 	"github.com/KyberNetwork/tradelogs/internal/parser/kyberswap"
 	"github.com/KyberNetwork/tradelogs/internal/parser/paraswap"
 	"github.com/KyberNetwork/tradelogs/internal/parser/tokenlon"
@@ -73,6 +74,7 @@ func run(c *cli.Context) error {
 		zxrfq.MustNewParser(),
 		tokenlon.MustNewParser(),
 		paraswap.MustNewParser(),
+		hashflow.MustNewParser(),
 	)
 	if err != nil {
 		l.Errorw("Error while init worker")
@@ -87,6 +89,7 @@ func run(c *cli.Context) error {
 		zxrfq.MustNewParser(),
 		tokenlon.MustNewParser(),
 		paraswap.MustNewParser(),
+		hashflow.MustNewParser(),
 	)
 	if err != nil {
 		l.Errorw("Error while init backfillWorker")
