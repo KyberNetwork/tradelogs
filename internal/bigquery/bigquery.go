@@ -32,16 +32,16 @@ var (
 )
 
 type Worker struct {
-	l           *zap.SugaredLogger
-	client      *bigquery.Client
-	storage     *storage.Storage
-	parserMap   map[string]parser.Parser
-	queryTopics []string
-	state       WorkerState
+	l              *zap.SugaredLogger
+	client         *bigquery.Client
+	storage        *storage.Storage
+	parserTopicMap map[string]parser.Parser
+	parserNameMap  map[string]parser.Parser
+	state          WorkerState
 }
 
 func NewWorker(
-	projectID string, storage *storage.Storage, parsers ...parser.Parser,
+	projectID string, storage *storage.Storage, parserNameMap map[string]parser.Parser,
 ) (*Worker, error) {
 	client, err := bigquery.NewClient(
 		context.Background(),
@@ -51,29 +51,27 @@ func NewWorker(
 		return nil, err
 	}
 
-	p := make(map[string]parser.Parser)
-	topics := make([]string, 0)
-	for _, ps := range parsers {
-		psTopics := ps.Topics()
-		topics = append(topics, psTopics...)
-		for _, topic := range psTopics {
-			p[topic] = ps
+	parserTopicMap := make(map[string]parser.Parser)
+	for _, ps := range parserNameMap {
+		for _, topic := range ps.Topics() {
+			parserTopicMap[topic] = ps
 		}
 	}
 
 	return &Worker{
-		l:           zap.S(),
-		storage:     storage,
-		parserMap:   p,
-		client:      client,
-		queryTopics: topics,
-		state:       stateStopped,
+		l:              zap.S(),
+		client:         client,
+		storage:        storage,
+		parserTopicMap: parserTopicMap,
+		parserNameMap:  parserNameMap,
+		state:          stateStopped,
 	}, nil
 }
 
 func (w *Worker) queryDateData(
 	ctx context.Context, dateString string,
 	minTime, maxTime, offset int64,
+	topics []string,
 ) (*bigquery.RowIterator, error) {
 	q := w.client.Query(
 		`SELECT *
@@ -106,7 +104,7 @@ func (w *Worker) queryDateData(
 		},
 		{
 			Name:  "topics",
-			Value: w.queryTopics,
+			Value: topics,
 		},
 		{
 			Name:  "limit",
@@ -148,7 +146,7 @@ func (w *Worker) parseLog(row BQLog) (storage.TradeLog, error) {
 		return storage.TradeLog{}, ErrNoTopic
 	}
 
-	ps := w.parserMap[row.Topics[0]]
+	ps := w.parserTopicMap[row.Topics[0]]
 	if ps == nil {
 		return storage.TradeLog{}, fmt.Errorf("%w: %s", ErrNoTopic, row.Topics[0])
 	}
@@ -162,7 +160,7 @@ func endOfDay(t time.Time) time.Time {
 	return time.Date(y, m, d, 23, 59, 59, 1e9-1, t.Location())
 }
 
-func (w *Worker) run(minTime, maxTime time.Time) {
+func (w *Worker) run(minTime, maxTime time.Time, topics []string) {
 	l := w.l.With("minTime", minTime, "maxTime", maxTime)
 	l.Info("Start running worker")
 	w.state = stateRunning
@@ -178,7 +176,7 @@ func (w *Worker) run(minTime, maxTime time.Time) {
 		iter, err := w.queryDateData(
 			context.Background(),
 			temp.Format("2006-01-02"),
-			minTs, maxTs, offset,
+			minTs, maxTs, offset, topics,
 		)
 		if err != nil {
 			l.Errorw("Failed to queryDateData", "err", err, "temp", temp, "offset", offset)
@@ -211,18 +209,49 @@ func (w *Worker) run(minTime, maxTime time.Time) {
 	l.Info("Backfill successfully!")
 }
 
+func (w *Worker) topicsFromExchanges(exchanges []string) ([]string, error) {
+	topics := make([]string, 0)
+	if len(exchanges) == 0 {
+		for topic := range w.parserTopicMap {
+			topics = append(topics, topic)
+		}
+		return topics, nil
+	}
+
+	for _, ex := range exchanges {
+		parser, ok := w.parserNameMap[ex]
+		if !ok {
+			return nil, fmt.Errorf("%w: %s", ErrNoParser, ex)
+		}
+		topics = append(topics, parser.Topics()...)
+	}
+	return topics, nil
+}
+
 // BackFillAllData fills data from minBlockTime to now.
-func (w *Worker) BackFillAllData() error {
+func (w *Worker) BackFillAllData(exchanges []string) error {
+	topics, err := w.topicsFromExchanges(exchanges)
+	if err != nil {
+		w.l.Errorw("Failed to get topicsFromExchanges", "err", err)
+		return err
+	}
+
 	if w.state == stateRunning {
 		return ErrWorkerRunning
 	}
 
-	go w.run(minBlockTime, time.Now().UTC())
+	go w.run(minBlockTime, time.Now().UTC(), topics)
 	return nil
 }
 
 // BackFillPartialData fills data fromTime, toTime (unix seconds).
-func (w *Worker) BackFillPartialData(fromTime, toTime int64) error {
+func (w *Worker) BackFillPartialData(fromTime, toTime int64, exchanges []string) error {
+	topics, err := w.topicsFromExchanges(exchanges)
+	if err != nil {
+		w.l.Errorw("Failed to get topicsFromExchanges", "err", err)
+		return err
+	}
+
 	if w.state == stateRunning {
 		return ErrWorkerRunning
 	}
@@ -239,6 +268,6 @@ func (w *Worker) BackFillPartialData(fromTime, toTime int64) error {
 	if maxTime.After(now) {
 		maxTime = now
 	}
-	go w.run(minTime, maxTime)
+	go w.run(minTime, maxTime, topics)
 	return nil
 }

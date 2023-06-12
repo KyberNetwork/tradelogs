@@ -10,6 +10,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/internal/bigquery"
 	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	"github.com/KyberNetwork/tradelogs/internal/evmlistenerclient"
+	"github.com/KyberNetwork/tradelogs/internal/parser"
 	"github.com/KyberNetwork/tradelogs/internal/parser/hashflow"
 	"github.com/KyberNetwork/tradelogs/internal/parser/kyberswap"
 	"github.com/KyberNetwork/tradelogs/internal/parser/paraswap"
@@ -81,16 +82,15 @@ func run(c *cli.Context) error {
 		return err
 	}
 
-	backfillWorker, err := bigquery.NewWorker(
-		libapp.BigqueryProjectIDFFromCli(c),
-		s,
-		kyberswap.MustNewParser(),
-		zxotc.MustNewParser(),
-		zxrfq.MustNewParser(),
-		tokenlon.MustNewParser(),
-		paraswap.MustNewParser(),
-		hashflow.MustNewParser(),
-	)
+	parserMap := map[string]parser.Parser{
+		"kyberswap": kyberswap.MustNewParser(),
+		"zxotc":     zxotc.MustNewParser(),
+		"zxrfq":     zxrfq.MustNewParser(),
+		"tokenlon":  tokenlon.MustNewParser(),
+		"paraswap":  paraswap.MustNewParser(),
+		"hashflow":  hashflow.MustNewParser(),
+	}
+	backfillWorker, err := bigquery.NewWorker(libapp.BigqueryProjectIDFFromCli(c), s, parserMap)
 	if err != nil {
 		l.Errorw("Error while init backfillWorker")
 		return err
