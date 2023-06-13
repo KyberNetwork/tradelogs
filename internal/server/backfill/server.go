@@ -74,7 +74,10 @@ func (s *Server) backfill(c *gin.Context) {
 		return
 	}
 
-	exchanges := strings.Split(query.Exchanges, ",")
+	var exchanges []string
+	if query.Exchanges != "" {
+		exchanges = strings.Split(query.Exchanges, ",")
+	}
 	s.l.Infow("Request backfill", "query", query)
 	if query.FromTime == 0 || query.ToTime == 0 {
 		err = s.bq.BackFillAllData(exchanges)
