@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/KyberNetwork/tradelogs/internal/bigquery"
@@ -62,8 +63,9 @@ func responseErr(c *gin.Context, err error) {
 func (s *Server) backfill(c *gin.Context) {
 	var (
 		query struct {
-			FromTime int64 `form:"from_time" json:"from_time,omitempty"` // milliseconds
-			ToTime   int64 `form:"to_time" json:"to_time,omitempty"`     // milliseconds
+			FromTime  int64  `form:"from_time" json:"from_time,omitempty"` // milliseconds
+			ToTime    int64  `form:"to_time" json:"to_time,omitempty"`     // milliseconds
+			Exchanges string `form:"exchanges" json:"exchanges,omitempty"`
 		}
 		err = c.ShouldBind(&query)
 	)
@@ -72,11 +74,15 @@ func (s *Server) backfill(c *gin.Context) {
 		return
 	}
 
+	var exchanges []string
+	if query.Exchanges != "" {
+		exchanges = strings.Split(query.Exchanges, ",")
+	}
 	s.l.Infow("Request backfill", "query", query)
 	if query.FromTime == 0 || query.ToTime == 0 {
-		err = s.bq.BackFillAllData()
+		err = s.bq.BackFillAllData(exchanges)
 	} else {
-		err = s.bq.BackFillPartialData(query.FromTime/1000, query.ToTime/1000)
+		err = s.bq.BackFillPartialData(query.FromTime/1000, query.ToTime/1000, exchanges)
 	}
 	if err != nil {
 		responseErr(c, err)
