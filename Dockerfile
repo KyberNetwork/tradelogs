@@ -1,5 +1,5 @@
 ## BUILDER
-FROM golang:1.20 as builder
+FROM golang:1.20-bullseye as builder
 
 WORKDIR /src
 
@@ -9,7 +9,7 @@ RUN go build -o app ./cmd/tradelogs
 
 
 ## DEPLOY
-FROM debian:buster
+FROM debian:bullseye
 
 RUN apt-get update && \
     apt install -y ca-certificates && \
