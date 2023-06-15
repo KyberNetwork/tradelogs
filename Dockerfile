@@ -1,5 +1,5 @@
 ## BUILDER
-FROM golang:1.19-bullsey as builder
+FROM golang:1.20-bullsey as builder
 
 WORKDIR /src
 
