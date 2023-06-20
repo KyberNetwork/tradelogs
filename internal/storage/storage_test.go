@@ -30,6 +30,11 @@ func TestSimple(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, json.NewDecoder(byteValue).Decode(&tradelogs), "failed to parse tradelogs")
 	assert.NoError(t, s.Insert(tradelogs), "failed to insert tradelogs")
+	// test reinsert
+	byteValue, err = os.Open("test_2.json")
+	assert.NoError(t, err)
+	assert.NoError(t, json.NewDecoder(byteValue).Decode(&tradelogs), "failed to parse tradelogs 2")
+	assert.NoError(t, s.Insert(tradelogs), "failed to insert tradelogs 2")
 
 	testcase := []TestCase{
 		{
@@ -67,7 +72,7 @@ func TestSimple(t *testing.T) {
 					MakerToken:       "0x6b175474e89094c44da98b954eedeac495271d0f",
 					TakerToken:       "0xdac17f958d2ee523a2206206994597c13d831ec7",
 					MakerTokenAmount: "94808075134364237824",
-					TakerTokenAmount: "94804533",
+					TakerTokenAmount: "999999999", // should match test_2.json instead of test.json
 					ContractAddress:  "0xdef1c0ded9bec7f1a1670819833240f027b25eff",
 					BlockNumber:      16232117,
 					TxHash:           "0x0e0ec48f90f388a31c637a61ac769b9d0facebff207cb6dc8cf4fc2dacefa55f",

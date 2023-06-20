@@ -36,7 +36,22 @@ func (s *Storage) Insert(orders []TradeLog) error {
 			order.Serialize()...,
 		)
 	}
-	q, p, err := b.Suffix("ON CONFLICT(block_number, log_index) DO NOTHING").ToSql()
+	q, p, err := b.Suffix(`ON CONFLICT(block_number, log_index) DO UPDATE 
+		SET 
+			order_hash=excluded.order_hash,
+			maker=excluded.maker,
+			taker=excluded.taker,
+			maker_token=excluded.maker_token,
+			taker_token=excluded.taker_token,
+			maker_token_amount=excluded.maker_token_amount,
+			taker_token_amount=excluded.taker_token_amount,
+			contract_address=excluded.contract_address,
+			block_number=excluded.block_number,
+			tx_hash=excluded.tx_hash,
+			log_index=excluded.log_index,
+			timestamp=excluded.timestamp,
+			event_hash=excluded.event_hash
+	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
 		return err
