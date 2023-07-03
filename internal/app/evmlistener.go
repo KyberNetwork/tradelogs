@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/KyberNetwork/tradelogs/internal/evmlistenerclient"
+	"github.com/KyberNetwork/tradelogs/pkg/evmlistenerclient"
 	"github.com/urfave/cli"
 )
 
