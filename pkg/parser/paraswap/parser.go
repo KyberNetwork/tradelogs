@@ -3,7 +3,7 @@ package paraswap
 import (
 	"errors"
 
-	"github.com/KyberNetwork/tradelogs/internal/storage"
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"

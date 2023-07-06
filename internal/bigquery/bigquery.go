@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/KyberNetwork/tradelogs/internal/storage"
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
