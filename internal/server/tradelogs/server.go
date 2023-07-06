@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/KyberNetwork/tradelogs/internal/storage"
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"

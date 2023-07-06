@@ -5,7 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/KyberNetwork/tradelogs/internal/storage"
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 )
