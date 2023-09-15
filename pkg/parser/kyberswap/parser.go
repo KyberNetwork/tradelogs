@@ -57,6 +57,7 @@ func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error
 		return storage.TradeLog{}, err
 	}
 	res := storage.TradeLog{
+		Maker:            e.Sender.String(),
 		Taker:            e.DstReceiver.String(),
 		MakerToken:       e.DstToken.String(),
 		TakerToken:       e.SrcToken.String(),
