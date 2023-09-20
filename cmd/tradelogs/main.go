@@ -16,6 +16,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/hashflow"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/kyberswap"
+	"github.com/KyberNetwork/tradelogs/pkg/parser/native"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/paraswap"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/tokenlon"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxotc"
@@ -76,6 +77,7 @@ func run(c *cli.Context) error {
 		tokenlon.MustNewParser(),
 		paraswap.MustNewParser(),
 		hashflow.MustNewParser(),
+		native.MustNewParser(),
 	)
 	if err != nil {
 		l.Errorw("Error while init worker")
@@ -89,6 +91,7 @@ func run(c *cli.Context) error {
 		"tokenlon":  tokenlon.MustNewParser(),
 		"paraswap":  paraswap.MustNewParser(),
 		"hashflow":  hashflow.MustNewParser(),
+		"native":    native.MustNewParser(),
 	}
 	backfillWorker, err := bigquery.NewWorker(libapp.BigqueryProjectIDFFromCli(c), s, parserMap)
 	if err != nil {
