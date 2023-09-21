@@ -16,6 +16,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/hashflow"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/kyberswap"
+	kyberswaprfq "github.com/KyberNetwork/tradelogs/pkg/parser/kyberswap_rfq"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/native"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/paraswap"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/tokenlon"
@@ -78,6 +79,7 @@ func run(c *cli.Context) error {
 		paraswap.MustNewParser(),
 		hashflow.MustNewParser(),
 		native.MustNewParser(),
+		kyberswaprfq.MustNewParser(),
 	)
 	if err != nil {
 		l.Errorw("Error while init worker")
@@ -85,13 +87,14 @@ func run(c *cli.Context) error {
 	}
 
 	parserMap := map[string]parser.Parser{
-		"kyberswap": kyberswap.MustNewParser(),
-		"zxotc":     zxotc.MustNewParser(),
-		"zxrfq":     zxrfq.MustNewParser(),
-		"tokenlon":  tokenlon.MustNewParser(),
-		"paraswap":  paraswap.MustNewParser(),
-		"hashflow":  hashflow.MustNewParser(),
-		"native":    native.MustNewParser(),
+		"kyberswap":    kyberswap.MustNewParser(),
+		"zxotc":        zxotc.MustNewParser(),
+		"zxrfq":        zxrfq.MustNewParser(),
+		"tokenlon":     tokenlon.MustNewParser(),
+		"paraswap":     paraswap.MustNewParser(),
+		"hashflow":     hashflow.MustNewParser(),
+		"native":       native.MustNewParser(),
+		"kyberswaprfq": kyberswaprfq.MustNewParser(),
 	}
 	backfillWorker, err := bigquery.NewWorker(libapp.BigqueryProjectIDFFromCli(c), s, parserMap)
 	if err != nil {
