@@ -15,6 +15,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/hashflow"
+	hashflowv3 "github.com/KyberNetwork/tradelogs/pkg/parser/hashflow_v3"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/kyberswap"
 	kyberswaprfq "github.com/KyberNetwork/tradelogs/pkg/parser/kyberswap_rfq"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/native"
@@ -80,6 +81,7 @@ func run(c *cli.Context) error {
 		hashflow.MustNewParser(),
 		native.MustNewParser(),
 		kyberswaprfq.MustNewParser(),
+		hashflowv3.MustNewParser(),
 	)
 	if err != nil {
 		l.Errorw("Error while init worker")
@@ -95,6 +97,7 @@ func run(c *cli.Context) error {
 		"hashflow":     hashflow.MustNewParser(),
 		"native":       native.MustNewParser(),
 		"kyberswaprfq": kyberswaprfq.MustNewParser(),
+		"hashflowv3":   hashflowv3.MustNewParser(),
 	}
 	backfillWorker, err := bigquery.NewWorker(libapp.BigqueryProjectIDFFromCli(c), s, parserMap)
 	if err != nil {
