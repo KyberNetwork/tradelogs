@@ -81,6 +81,7 @@ func run(c *cli.Context) error {
 		hashflow.MustNewParser(),
 		native.MustNewParser(),
 		kyberswaprfq.MustNewParser(),
+		hashflowv3.MustNewParser(),
 	)
 	if err != nil {
 		l.Errorw("Error while init worker")
