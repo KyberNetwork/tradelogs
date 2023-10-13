@@ -61,7 +61,7 @@ func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error
 		Taker:            o.Recipient.String(),
 		MakerToken:       o.TokenOut.String(),
 		TakerToken:       o.TokenIn.String(),
-		MakerTokenAmount: o.AmountOut.String(),
+		MakerTokenAmount: o.AmountOut.Abs(o.AmountOut).String(),
 		TakerTokenAmount: o.AmountIn.String(),
 		ContractAddress:  o.Raw.Address.String(),
 		BlockNumber:      o.Raw.BlockNumber,
