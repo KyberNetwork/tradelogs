@@ -5,9 +5,9 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/pkg/convert"
 
-	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"go.uber.org/zap"
 )
 

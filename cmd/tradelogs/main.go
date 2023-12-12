@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/KyberNetwork/tradelogs/pkg/parser"
+	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinch"
 	"log"
 	"os"
 
@@ -13,7 +15,6 @@ import (
 	tradelogs "github.com/KyberNetwork/tradelogs/internal/server/tradelogs"
 	"github.com/KyberNetwork/tradelogs/internal/worker"
 	"github.com/KyberNetwork/tradelogs/pkg/evmlistenerclient"
-	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/hashflow"
 	hashflowv3 "github.com/KyberNetwork/tradelogs/pkg/parser/hashflow_v3"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/kyberswap"
@@ -39,6 +40,7 @@ func main() {
 	app.Flags = append(app.Flags, libapp.EvmListenerFlags()...)
 	app.Flags = append(app.Flags, libapp.HTTPServerFlags()...)
 	app.Flags = append(app.Flags, libapp.BigqueryFlags()...)
+	app.Flags = append(app.Flags, libapp.RPCNodeFlags()...)
 
 	if err := app.Run(os.Args); err != nil {
 		log.Panic(err)
@@ -72,6 +74,7 @@ func run(c *cli.Context) error {
 		l.Errorw("Error while init listener service")
 		return err
 	}
+
 	w, err := worker.New(l, s, listener,
 		kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
@@ -98,7 +101,9 @@ func run(c *cli.Context) error {
 		"native":       native.MustNewParser(),
 		"kyberswaprfq": kyberswaprfq.MustNewParser(),
 		"hashflowv3":   hashflowv3.MustNewParser(),
+		"1inch":        oneinch.MustNewParser(c.String(libapp.RPCUrlFlagName)),
 	}
+
 	backfillWorker, err := bigquery.NewWorker(libapp.BigqueryProjectIDFFromCli(c), s, parserMap)
 	if err != nil {
 		l.Errorw("Error while init backfillWorker")
