@@ -8,11 +8,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"io"
 	"net/http"
+	"time"
 )
 
 type Client struct {
-	rpcUrl    string
-	ethClient *ethclient.Client
+	httpClient *http.Client
+	rpcUrl     string
+	ethClient  *ethclient.Client
 }
 
 func NewClient(rpcUrl string) (*Client, error) {
@@ -21,6 +23,9 @@ func NewClient(rpcUrl string) (*Client, error) {
 		return nil, err
 	}
 	return &Client{
+		httpClient: &http.Client{
+			Timeout: 5 * time.Second,
+		},
 		rpcUrl:    rpcUrl,
 		ethClient: ethClient,
 	}, nil
@@ -47,7 +52,6 @@ func (c *Client) FetchTraceCall(ctx context.Context, txHash string) (types.CallF
 		return types.CallFrame{}, err
 	}
 
-	client := &http.Client{}
 	req, err := http.NewRequest("POST", c.rpcUrl, bytes.NewBuffer(b))
 
 	if err != nil {
@@ -55,7 +59,7 @@ func (c *Client) FetchTraceCall(ctx context.Context, txHash string) (types.CallF
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	res, err := client.Do(req)
+	res, err := c.httpClient.Do(req)
 	if err != nil {
 		return types.CallFrame{}, err
 	}

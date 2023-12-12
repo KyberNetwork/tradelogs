@@ -85,6 +85,8 @@ func TestParseOneinchTradeLog(t *testing.T) {
 
 		require.Equal(t, true, strings.EqualFold("0x807cF9A772d5a3f9CeFBc1192e939D62f0D9bD38", order.Maker))
 		require.Equal(t, strings.ToLower("0xdac3a1ba8fa517c1d98ffecf092b2ad167440131b19dee3d782d0d7eadce01a2"), order.OrderHash)
+		require.Equal(t, "25583325494215510852", order.MakerTokenAmount)
+		require.Equal(t, "40450976402181226773533785758", order.TakerTokenAmount)
 	}
 
 }
