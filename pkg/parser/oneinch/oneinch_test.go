@@ -17,7 +17,7 @@ import (
 )
 
 func TestFetchEvent(t *testing.T) {
-	t.Skip()
+	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
 	p := MustNewParser(os.Getenv("RPC_URL"))
 	require.Equal(t, p.abi.Events[FilledEvent].ID, common.HexToHash("0xc3b639f02b125bfa160e50739b8c44eb2d1b6908e2b6d5925c6d770f2ca78127"))
 	client, err := ethclient.Dial("https://ethereum.kyberengineering.io")
@@ -40,6 +40,7 @@ func TestFetchEvent(t *testing.T) {
 }
 
 func TestParseEvent(t *testing.T) {
+	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
 	eventRaw := `{"address":"0x1111111254eeb25477b68fb85ed929f73a960582",
 	"topics":["0xc3b639f02b125bfa160e50739b8c44eb2d1b6908e2b6d5925c6d770f2ca78127"],
 	"data":"0x59c1fba2238e5e61f38c5860e11430b52c4dc7eb787b84dba76a8aff988ff7660000000000000000000000000000000000000000000000000000000015ebf670",
@@ -60,6 +61,7 @@ func TestParseEvent(t *testing.T) {
 }
 
 func TestParseOneinchTradeLog(t *testing.T) {
+	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
 	p := MustNewParser(os.Getenv("RPC_URL"))
 
 	client, err := ethclient.Dial(os.Getenv("RPC_URL"))
