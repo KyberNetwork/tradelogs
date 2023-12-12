@@ -10,6 +10,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"strings"
 )
@@ -67,7 +68,7 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	res := storage.TradeLog{
+	order := storage.TradeLog{
 		OrderHash:        common.Hash(e.OrderHash).String(),
 		MakerTokenAmount: e.MakingAmount.String(),
 		ContractAddress:  e.Raw.Address.String(),
@@ -78,20 +79,20 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 		EventHash:        p.eventHash,
 	}
 
-	res, err = p.detectOneInchRfqTrade(res, log.TxHash.String(), blockTime)
+	order, err = p.detectOneInchRfqTrade(order, log, blockTime)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	return res, nil
+	return order, nil
 }
 
-func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog, txHash string, blockTimestamp uint64) (storage.TradeLog, error) {
-	traceCall, err := p.rpcNode.FetchTraceCall(context.Background(), txHash)
+func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog, log ethereumTypes.Log, blockTimestamp uint64) (storage.TradeLog, error) {
+	traceCall, err := p.rpcNode.FetchTraceCall(context.Background(), order.TxHash)
 	if err != nil {
 		return order, err
 	}
 
-	order, err = p.recursiveDetectOneInchRFQTrades(order, traceCall, blockTimestamp)
+	order, err = p.recursiveDetectOneInchRFQTrades(order, log, traceCall, blockTimestamp)
 	if err != nil {
 		return order, err
 	}
@@ -99,11 +100,11 @@ func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog, txHash string, bl
 	return order, nil
 }
 
-func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, traceCall types.CallFrame, blockTimestamp uint64) (storage.TradeLog, error) {
+func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, log ethereumTypes.Log, traceCall types.CallFrame, blockTimestamp uint64) (storage.TradeLog, error) {
 	var (
 		err error
 	)
-	isOneInchRFQTrade := p.isOneInchRFQTrades(traceCall.Logs)
+	isOneInchRFQTrade := p.isOneInchRFQTrades(log, traceCall.Logs)
 
 	if isOneInchRFQTrade {
 		contractCall, err := decoder.Decode(OneinchMetaData.ABI, traceCall.Input)
@@ -115,7 +116,7 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 	}
 
 	for _, subCall := range traceCall.Calls {
-		tradeLog, err = p.recursiveDetectOneInchRFQTrades(tradeLog, subCall, blockTimestamp)
+		tradeLog, err = p.recursiveDetectOneInchRFQTrades(tradeLog, log, subCall, blockTimestamp)
 		if err != nil {
 			return tradeLog, err
 		}
@@ -123,7 +124,7 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 	return tradeLog, nil
 }
 
-func (p *Parser) isOneInchRFQTrades(eventLogs []types.CallLog) bool {
+func (p *Parser) isOneInchRFQTrades(originalLog ethereumTypes.Log, eventLogs []types.CallLog) bool {
 	for _, eventLog := range eventLogs {
 		if len(eventLog.Topics) == 0 {
 			continue
@@ -132,8 +133,36 @@ func (p *Parser) isOneInchRFQTrades(eventLogs []types.CallLog) bool {
 		if !strings.EqualFold(eventLog.Topics[0].String(), p.eventHash) {
 			continue
 		}
+
+		if !p.isSameEventLog(originalLog, eventLog) {
+			continue
+		}
+
 		return true
 	}
 
 	return false
+}
+
+// compares two event logs to determine the extract rfq order
+// replaces by the log index in the future(if the debug_traceTransaction endpoint supports the log index)
+func (p *Parser) isSameEventLog(originalLog ethereumTypes.Log, eventLog types.CallLog) bool {
+	// need to compare with the original log to get extract the order
+	if eventLog.Data != hexutil.Encode(originalLog.Data) || !strings.EqualFold(eventLog.Address.String(), eventLog.Address.String()) {
+		return false
+	}
+
+	isSameTopics := true
+	for idx, topic := range originalLog.Topics {
+		if len(eventLog.Topics) < idx {
+			isSameTopics = false
+			break
+		}
+		comparedTopic := eventLog.Topics[idx]
+		if topic.String() != comparedTopic.String() {
+			isSameTopics = false
+			break
+		}
+	}
+	return isSameTopics
 }

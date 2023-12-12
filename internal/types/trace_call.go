@@ -12,7 +12,6 @@ type TraceCallResponse struct {
 }
 
 type CallLog struct {
-	Index   uint           `json:"index"`
 	Address common.Address `json:"address"`
 	Topics  []common.Hash  `json:"topics"`
 	Data    string         `json:"data"`
@@ -20,7 +19,6 @@ type CallLog struct {
 
 func (l CallLog) ToEthereumLog() ethereumTypes.Log {
 	return ethereumTypes.Log{
-		Index:   l.Index,
 		Address: l.Address,
 		Topics:  l.Topics,
 		Data:    common.Hex2Bytes(l.Data),
