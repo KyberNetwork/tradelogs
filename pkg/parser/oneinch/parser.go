@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/lru"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"strings"
 )
@@ -26,6 +27,8 @@ type Parser struct {
 	ps        *OneinchFilterer
 	eventHash string
 	rpcNode   *rpcnode.Client
+	// stores the last trace_calls by the tx_hash to reduce the requests when the transaction has more than one oneinch RFQ order
+	latestTraceCall lru.BasicLRU[string, types.CallFrame]
 }
 
 func MustNewParser(rpcUrl string) *Parser {
@@ -47,10 +50,11 @@ func MustNewParser(rpcUrl string) *Parser {
 		panic(fmt.Errorf("failed to init the rpc node client, err: %w", err))
 	}
 	return &Parser{
-		ps:        ps,
-		abi:       ab,
-		eventHash: event.ID.String(),
-		rpcNode:   rpcNode,
+		ps:              ps,
+		abi:             ab,
+		eventHash:       event.ID.String(),
+		rpcNode:         rpcNode,
+		latestTraceCall: lru.NewBasicLRU[string, types.CallFrame](10), // assumes one block hasn't more than 10 oneinch RFQ orders
 	}
 }
 
@@ -87,9 +91,18 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 }
 
 func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog, log ethereumTypes.Log, blockTimestamp uint64) (storage.TradeLog, error) {
-	traceCall, err := p.rpcNode.FetchTraceCall(context.Background(), order.TxHash)
-	if err != nil {
-		return order, err
+	var (
+		traceCall types.CallFrame
+		err       error
+	)
+	if value, found := p.latestTraceCall.Get(order.TxHash); found {
+		traceCall = value
+	} else {
+		traceCall, err = p.rpcNode.FetchTraceCall(context.Background(), order.TxHash)
+		if err != nil {
+			return order, err
+		}
+		p.latestTraceCall.Add(order.TxHash, traceCall)
 	}
 
 	order, err = p.recursiveDetectOneInchRFQTrades(order, log, traceCall, blockTimestamp)
