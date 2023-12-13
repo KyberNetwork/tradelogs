@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/KyberNetwork/tradelogs/internal/types"
+	"github.com/KyberNetwork/tradelogs/pkg/abitypes"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
@@ -13,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/lru"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 	"strings"
 )
 
@@ -20,7 +22,20 @@ const (
 	FilledEvent = "OrderFilledRFQ"
 )
 
+var (
+	RFQOrderOutputArgument abi.Arguments
+)
+
 var ErrInvalidOneInchFilledTopic = errors.New("invalid oneinch order filled topic")
+
+func init() {
+	// uint256 filledMakingAmount, uint256 filledTakingAmount, bytes32 orderHash
+	RFQOrderOutputArgument = abi.Arguments{
+		{Name: "filledMakingAmount", Type: abitypes.Uint256},
+		{Name: "filledTakingAmount", Type: abitypes.Uint256},
+		{Name: "orderHash", Type: abitypes.Bytes32},
+	}
+}
 
 type Parser struct {
 	abi       *abi.ABI
@@ -83,14 +98,43 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 		EventHash:        p.eventHash,
 	}
 
-	order, err = p.detectOneInchRfqTrade(order, log, blockTime)
+	order, err = p.detectOneInchRfqTrade(order)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
 	return order, nil
 }
 
-func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog, log ethereumTypes.Log, blockTimestamp uint64) (storage.TradeLog, error) {
+func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall types.CallFrame) (storage.TradeLog, error) {
+	output := internalCall.Output
+
+	if output == "" {
+		return order, errors.New("the output is blank")
+	}
+	filledMakingAmount, filledTakingAmount, orderHash, err := p.decodeOutput(output)
+	if err != nil {
+		return order, err
+	}
+
+	order.OrderHash = orderHash
+	order.MakerTokenAmount = filledMakingAmount
+	order.TakerTokenAmount = filledTakingAmount
+	order.EventHash = p.eventHash
+
+	contractCall, err := decoder.Decode(p.abi, internalCall.Input)
+	if err != nil {
+		return order, err
+	}
+
+	order, err = ToTradeLog(order, contractCall)
+	if err != nil {
+		return order, err
+	}
+
+	return order, nil
+}
+
+func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog) (storage.TradeLog, error) {
 	var (
 		traceCall types.CallFrame
 		err       error
@@ -105,7 +149,7 @@ func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog, log ethereumTypes
 		p.latestTraceCall.Add(order.TxHash, traceCall)
 	}
 
-	order, err = p.recursiveDetectOneInchRFQTrades(order, log, traceCall, blockTimestamp)
+	order, err = p.recursiveDetectOneInchRFQTrades(order, traceCall)
 	if err != nil {
 		return order, err
 	}
@@ -113,23 +157,18 @@ func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog, log ethereumTypes
 	return order, nil
 }
 
-func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, log ethereumTypes.Log, traceCall types.CallFrame, blockTimestamp uint64) (storage.TradeLog, error) {
+func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, traceCall types.CallFrame) (storage.TradeLog, error) {
 	var (
 		err error
 	)
-	isOneInchRFQTrade := p.isOneInchRFQTrades(log, traceCall.Logs)
+	isOneInchRFQTrade := p.isOneInchRFQTrades(tradeLog.OrderHash, traceCall)
 
 	if isOneInchRFQTrade {
-		contractCall, err := decoder.Decode(OneinchMetaData.ABI, traceCall.Input)
-		if err != nil {
-			return tradeLog, err
-		}
-
-		return ToTradeLog(tradeLog, contractCall)
+		return p.ParseFromInternalCall(tradeLog, traceCall)
 	}
 
 	for _, subCall := range traceCall.Calls {
-		tradeLog, err = p.recursiveDetectOneInchRFQTrades(tradeLog, log, subCall, blockTimestamp)
+		tradeLog, err = p.recursiveDetectOneInchRFQTrades(tradeLog, subCall)
 		if err != nil {
 			return tradeLog, err
 		}
@@ -137,8 +176,8 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, log 
 	return tradeLog, nil
 }
 
-func (p *Parser) isOneInchRFQTrades(originalLog ethereumTypes.Log, eventLogs []types.CallLog) bool {
-	for _, eventLog := range eventLogs {
+func (p *Parser) isOneInchRFQTrades(orderHash string, traceCall types.CallFrame) bool {
+	for _, eventLog := range traceCall.Logs {
 		if len(eventLog.Topics) == 0 {
 			continue
 		}
@@ -147,35 +186,43 @@ func (p *Parser) isOneInchRFQTrades(originalLog ethereumTypes.Log, eventLogs []t
 			continue
 		}
 
-		if !p.isSameEventLog(originalLog, eventLog) {
-			continue
+		_, _, orderHashFromOutput, err := p.decodeOutput(traceCall.Output)
+		if err != nil {
+			return false
 		}
-
-		return true
+		return orderHash == orderHashFromOutput
 	}
-
 	return false
 }
 
-// compares two event logs to determine the extract rfq order
-// replaces by the log index in the future(if the debug_traceTransaction endpoint supports the log index)
-func (p *Parser) isSameEventLog(originalLog ethereumTypes.Log, eventLog types.CallLog) bool {
-	// need to compare with the original log to get extract the order
-	if eventLog.Data != hexutil.Encode(originalLog.Data) || !strings.EqualFold(eventLog.Address.String(), eventLog.Address.String()) {
-		return false
+func (p *Parser) decodeOutput(output string) (string, string, string, error) {
+	bytes, err := hexutil.Decode(output)
+	if err != nil {
+		return "", "", "", err
+	}
+	outputParams, err := RFQOrderOutputArgument.Unpack(bytes)
+	if err != nil {
+		return "", "", "", err
 	}
 
-	isSameTopics := true
-	for idx, topic := range originalLog.Topics {
-		if len(eventLog.Topics) < idx {
-			isSameTopics = false
-			break
-		}
-		comparedTopic := eventLog.Topics[idx]
-		if topic.String() != comparedTopic.String() {
-			isSameTopics = false
-			break
-		}
+	if len(outputParams) < 3 {
+		return "", "", "", err
 	}
-	return isSameTopics
+
+	filledMakingAmountFromOutput, ok := outputParams[0].(*big.Int)
+	if !ok {
+		return "", "", "", errors.New("cant convert the filledMakingAmount from the output")
+	}
+
+	filledTakingAmountFromOutput, ok := outputParams[1].(*big.Int)
+	if !ok {
+		return "", "", "", errors.New("cant convert the filledTakingAmount from the output")
+	}
+	orderHashParams, ok := outputParams[2].([32]byte)
+	if !ok {
+		return "", "", "", errors.New("cant convert the order hash from the output")
+	}
+
+	orderHash := hexutil.Encode(orderHashParams[:])
+	return filledMakingAmountFromOutput.String(), filledTakingAmountFromOutput.String(), orderHash, nil
 }

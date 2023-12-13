@@ -2,21 +2,16 @@ package decoder
 
 import (
 	"encoding/hex"
+	"fmt"
 	"github.com/KyberNetwork/tradelogs/internal/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"strings"
 )
 
-func Decode(abiStr string, input string) (*types.ContractCall, error) {
-	ABI, err := abi.JSON(strings.NewReader(abiStr))
-	if err != nil {
-		return nil, err
+func Decode(ABI *abi.ABI, input string) (*types.ContractCall, error) {
+	if ABI == nil {
+		return nil, fmt.Errorf("missing abi")
 	}
-	if err != nil {
-		return nil, err
-	}
-
 	inputBytes := common.FromHex(input)
 	method, err := ABI.MethodById(inputBytes)
 	if err != nil {
