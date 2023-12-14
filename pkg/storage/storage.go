@@ -36,7 +36,7 @@ func (s *Storage) Insert(orders []TradeLog) error {
 			order.Serialize()...,
 		)
 	}
-	q, p, err := b.Suffix(`ON CONFLICT(block_number, log_index, order_hash) DO UPDATE 
+	q, p, err := b.Suffix(`ON CONFLICT(block_number, log_index) DO UPDATE 
 		SET 
 			order_hash=excluded.order_hash,
 			maker=excluded.maker,
