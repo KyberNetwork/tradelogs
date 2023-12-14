@@ -1,7 +1,6 @@
 package bigquery
 
 import (
-	internalTypes "github.com/KyberNetwork/tradelogs/internal/types"
 	"strings"
 	"time"
 
@@ -44,24 +43,5 @@ func (log BQLog) ToEthLog() types.Log {
 		TxIndex:     uint(log.TxIndex),
 		BlockHash:   common.HexToHash(log.BlockHash),
 		Index:       uint(log.Index),
-	}
-}
-
-type BQTraceCall struct {
-	TransactionHash string    `bigquery:"transaction_hash"`
-	FromAddress     string    `bigquery:"from_address"`
-	ToAddress       string    `bigquery:"to_address"`
-	Input           string    `bigquery:"input"`
-	Output          string    `bigquery:"output"`
-	BlockTimestamp  time.Time `bigquery:"block_timestamp"`
-	BlockNumber     int64     `bigquery:"block_number"`
-}
-
-func (b BQTraceCall) ToTraceCall() internalTypes.CallFrame {
-	return internalTypes.CallFrame{
-		From:   b.FromAddress,
-		To:     b.ToAddress,
-		Input:  b.Input,
-		Output: b.Output,
 	}
 }

@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	backfillWorker "github.com/KyberNetwork/tradelogs/internal/backfill"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinch"
 	"log"
 	"os"
 
 	libapp "github.com/KyberNetwork/tradelogs/internal/app"
+	"github.com/KyberNetwork/tradelogs/internal/bigquery"
 	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	backfill "github.com/KyberNetwork/tradelogs/internal/server/backfill"
 	tradelogs "github.com/KyberNetwork/tradelogs/internal/server/tradelogs"
@@ -75,7 +75,6 @@ func run(c *cli.Context) error {
 		return err
 	}
 
-	oneinchParser := oneinch.MustNewParser(c.String(libapp.RPCUrlFlagName))
 	w, err := worker.New(l, s, listener,
 		kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
@@ -86,7 +85,6 @@ func run(c *cli.Context) error {
 		native.MustNewParser(),
 		kyberswaprfq.MustNewParser(),
 		hashflowv3.MustNewParser(),
-		oneinchParser,
 	)
 	if err != nil {
 		l.Errorw("Error while init worker")
@@ -103,9 +101,10 @@ func run(c *cli.Context) error {
 		"native":       native.MustNewParser(),
 		"kyberswaprfq": kyberswaprfq.MustNewParser(),
 		"hashflowv3":   hashflowv3.MustNewParser(),
+		"1inch":        oneinch.MustNewParser(c.String(libapp.RPCUrlFlagName)),
 	}
 
-	backfillWorker, err := backfillWorker.NewWorker(libapp.BigqueryProjectIDFFromCli(c), s, parserMap, oneinchParser)
+	backfillWorker, err := bigquery.NewWorker(libapp.BigqueryProjectIDFFromCli(c), s, parserMap)
 	if err != nil {
 		l.Errorw("Error while init backfillWorker")
 		return err
