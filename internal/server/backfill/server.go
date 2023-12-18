@@ -50,7 +50,7 @@ func (s *Server) Run() error {
 func (s *Server) register() {
 	pprof.Register(s.r, "/debug")
 	s.r.POST("/backfill", s.backfill)
-
+	s.r.POST("/backfill-1inch", s.backfillOneinch)
 }
 
 func responseErr(c *gin.Context, err error) {
@@ -90,6 +90,29 @@ func (s *Server) backfill(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"time":    time.Now().UnixMilli(),
+	})
+}
+
+func (s *Server) backfillOneinch(c *gin.Context) {
+	var (
+		query BackFillOneInchRequest
+	)
+	if err := c.ShouldBind(&query); err != nil {
+		responseErr(c, err)
+		return
+	}
+
+	tradeLogs := query.ToTradeLogs()
+
+	err := s.bq.BackfillOneInchRFQ(tradeLogs)
+	if err != nil {
+		responseErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Backfill 1inch rfq orders successfully",
 		"success": true,
 		"time":    time.Now().UnixMilli(),
 	})
