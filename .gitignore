@@ -4,3 +4,6 @@ cmd/*/*
 !cmd/*/migrations
 */cmd/*/*
 !*/cmd/*/*.go
+.idea
+.env.example
+.env
