@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/bigquery"
-	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"go.uber.org/zap"
 	"google.golang.org/api/iterator"
 )
@@ -269,5 +269,15 @@ func (w *Worker) BackFillPartialData(fromTime, toTime int64, exchanges []string)
 		maxTime = now
 	}
 	go w.run(minTime, maxTime, topics)
+	return nil
+}
+
+func (w *Worker) BackfillOneInchRFQ(tradeLogs []storage.TradeLog) error {
+	l := w.l.With("exchange", "1inch")
+	err := w.storage.Insert(tradeLogs)
+	if err != nil {
+		l.Errorw("Failed to insert the trade logs when backfilling the 1inch rfq trades", "err", err)
+		return err
+	}
 	return nil
 }
