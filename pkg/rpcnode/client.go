@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/KyberNetwork/tradelogs/internal/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"io"
 	"net/http"
-	"time"
+
+	"github.com/KyberNetwork/tradelogs/internal/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 type Client struct {
@@ -17,17 +17,15 @@ type Client struct {
 	ethClient  *ethclient.Client
 }
 
-func NewClient(rpcUrl string) (*Client, error) {
+func NewClient(httpClient *http.Client, rpcUrl string) (*Client, error) {
 	ethClient, err := ethclient.Dial(rpcUrl)
 	if err != nil {
 		return nil, err
 	}
 	return &Client{
-		httpClient: &http.Client{
-			Timeout: 5 * time.Second,
-		},
-		rpcUrl:    rpcUrl,
-		ethClient: ethClient,
+		httpClient: httpClient,
+		rpcUrl:     rpcUrl,
+		ethClient:  ethClient,
 	}, nil
 }
 

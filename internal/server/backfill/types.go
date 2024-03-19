@@ -34,9 +34,6 @@ func (rfqOrders BackFillOneInchRequest) ToTradeLogs() []storage.TradeLog {
 		if order.EventHash != oneinchRfqEventHash {
 			continue
 		}
-		if order.LogIndex < 0 || order.BlockNumber < 0 {
-			continue
-		}
 		if order.TxHash == "" {
 			continue
 		}
