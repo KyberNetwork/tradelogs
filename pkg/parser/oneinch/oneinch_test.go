@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"math/big"
-	"os"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
+	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -16,11 +18,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const rpcURL = ""
+
 func TestFetchEvent(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
-	p := MustNewParser(os.Getenv("RPC_URL"))
+	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	if err != nil {
+		panic(err)
+	}
+	traceCalls := tracecall.NewCache(rpcClient)
+	p := MustNewParser(traceCalls)
 	require.Equal(t, p.abi.Events[FilledEvent].ID, common.HexToHash("0xc3b639f02b125bfa160e50739b8c44eb2d1b6908e2b6d5925c6d770f2ca78127"))
-	client, err := ethclient.Dial("https://ethereum.kyberengineering.io")
+	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
 	logs, err := client.FilterLogs(context.Background(), ethereum.FilterQuery{
 		BlockHash: nil,
@@ -53,7 +62,12 @@ func TestParseEvent(t *testing.T) {
 	event := types.Log{}
 	err := json.Unmarshal([]byte(eventRaw), &event)
 	require.NoError(t, err)
-	p := MustNewParser(os.Getenv("RPC_URL"))
+	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	if err != nil {
+		panic(err)
+	}
+	traceCalls := tracecall.NewCache(rpcClient)
+	p := MustNewParser(traceCalls)
 	log, err := p.Parse(event, uint64(time.Now().Unix()))
 	require.NoError(t, err)
 	require.Equal(t, log.EventHash, p.eventHash)
@@ -62,9 +76,13 @@ func TestParseEvent(t *testing.T) {
 
 func TestParseOneinchTradeLog(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
-	p := MustNewParser(os.Getenv("RPC_URL"))
-
-	client, err := ethclient.Dial(os.Getenv("RPC_URL"))
+	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	if err != nil {
+		panic(err)
+	}
+	traceCalls := tracecall.NewCache(rpcClient)
+	p := MustNewParser(traceCalls)
+	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
 
 	receipt, err := client.TransactionReceipt(context.Background(), common.HexToHash("0xda842bb20353947c3363384fd25f89e1f72c8039bd23efb2d796bd7363892333"))
