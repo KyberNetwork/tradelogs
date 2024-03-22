@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -73,3 +74,8 @@ func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error
 	}
 	return res, nil
 }
+
+func (p *Parser) Exchange() string {
+	return parser.ExKsRFQ
+}
+

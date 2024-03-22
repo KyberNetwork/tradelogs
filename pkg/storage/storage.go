@@ -27,7 +27,6 @@ func (s *Storage) Insert(orders []TradeLog) error {
 	if len(orders) == 0 {
 		return nil
 	}
-	s.l.Debugw("Request insert", "orders", orders)
 	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(tradeLogsTable).Columns(
 		tradelogsColumns()...,
 	)

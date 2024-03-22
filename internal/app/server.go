@@ -18,9 +18,22 @@ var HTTPBackfillServerFlag = cli.StringFlag{
 	Value:  "localhost:8081",
 }
 
+var DuneURLFlag = cli.StringFlag{
+	Name:   "dune-url",
+	EnvVar: "DUNE_URL",
+	Value:  "https://api.dune.com/api",
+}
+
+var DuneKeyFlag = cli.StringFlag{
+	Name:   "dune-key",
+	EnvVar: "DUNE_KEY",
+}
+
 func HTTPServerFlags() []cli.Flag {
 	return []cli.Flag{
 		HTTPServerFlag,
 		HTTPBackfillServerFlag,
+		DuneURLFlag,
+		DuneKeyFlag,
 	}
 }
