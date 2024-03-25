@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"time"
 )
@@ -118,50 +119,87 @@ type DuneLog struct {
 	TxTo            string `json:"tx_to"`
 }
 
-func (c *Client) GetLastestExecuteResult(queryID int64, limit, offset uint64) ([]DuneLog, uint64, error) {
+func (c *Client) GetLastestExecuteResult(queryID int64, limit, offset uint64, out any) (uint64, error) {
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/v1/query/%d/results?allow_partial_results=true&limit=%d&offset=%d", c.baseURL, queryID, limit, offset), nil)
 	if err != nil {
-		return nil, 0, err
+		return 0, err
 	}
 	req.Header.Set("x-dune-api-key", c.apiKey)
 	res, err := c.c.Do(req)
 	if err != nil {
-		return nil, 0, err
+		return 0, err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, 0, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+		return 0, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
 	var data map[string]interface{}
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
-		return nil, 0, fmt.Errorf("failed to decode JSON response: %v", err)
+		return 0, fmt.Errorf("failed to decode JSON response: %v", err)
 	}
 	result, ok := data["result"].(map[string]interface{})
 	if !ok {
-		return nil, 0, fmt.Errorf("error when parse result")
+		return 0, fmt.Errorf("error when parse result")
 	}
 	metadata, ok := result["metadata"].(map[string]interface{})
 	if !ok {
-		return nil, 0, fmt.Errorf("error when parse metadata")
+		return 0, fmt.Errorf("error when parse metadata")
 	}
 	rowCount, ok := metadata["total_row_count"].(float64)
 	if !ok {
-		return nil, 0, fmt.Errorf("error when parse row count")
+		return 0, fmt.Errorf("error when parse row count")
 	}
 	rows, ok := result["rows"].([]interface{})
 	if !ok {
-		return nil, 0, fmt.Errorf("error when parse rows")
+		return 0, fmt.Errorf("error when parse rows")
 	}
 	jsonData, err := json.Marshal(rows)
 	if err != nil {
-		return nil, 0, err
+		return 0, err
 	}
-	ret := []DuneLog{}
-	if err = json.Unmarshal(jsonData, &ret); err != nil {
-		return nil, 0, err
+	if err = json.Unmarshal(jsonData, out); err != nil {
+		return 0, err
 	}
 
-	return ret, uint64(rowCount), nil
+	return uint64(rowCount), nil
+}
+
+type OneInchDuneLog struct {
+	ContractAddress string `json:"contract_address"`
+	EventIndex      uint64 `json:"evt_index"`
+	TxHash          string `json:"call_tx_hash"`
+	BlockTime       string `json:"call_block_time"`
+	BlockNumber     uint64 `json:"call_block_number"`
+	Order           string `json:"order"`
+	Output0         BigInt `json:"output_0"`
+	Output1         BigInt `json:"output_1"`
+	Output2         string `json:"output_2"`
+}
+
+type BigInt struct {
+	*big.Int
+}
+
+func (b *BigInt) UnmarshalJSON(data []byte) error {
+	var num json.Number
+	if err := json.Unmarshal(data, &num); err != nil {
+		return err
+	}
+
+	b.Int = new(big.Int)
+	b.Int, _ = b.Int.SetString(num.String(), 10)
+	return nil
+}
+
+func (b *BigInt) MarshalJSON() ([]byte, error) {
+	if b.Int == nil {
+		return []byte("null"), nil
+	}
+	return []byte(b.String()), nil
+}
+
+func (b *BigInt) Hex() string {
+	return "0x" + b.Text(16)
 }
