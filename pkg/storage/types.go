@@ -47,3 +47,11 @@ func (o *TradeLog) Serialize() []interface{} {
 		o.EventHash,
 	}
 }
+
+type BackfillQuery struct {
+	QueryID   int64  `json:"query_id" binding:"required"`
+	FromBlock uint64 `json:"from_block" binding:"required"`
+	ToBlock   uint64 `json:"to_block" binding:"required"`
+	EventHash string `json:"event_hash"`
+	Exchange  string `json:"exchange"`
+}

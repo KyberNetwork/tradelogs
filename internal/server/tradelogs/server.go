@@ -56,12 +56,15 @@ func (s *Server) register() {
 	s.r.GET("/tradelogs", s.getTradeLogs)
 
 }
+
 func responseErr(c *gin.Context, status int, err error) {
 	c.JSON(http.StatusBadRequest, gin.H{
 		"success": false,
 		"error":   err.Error(),
+		"status": status,
 	})
 }
+
 func (s *Server) getTradeLogs(c *gin.Context) {
 	var (
 		query storage.TradeLogsQuery

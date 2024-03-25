@@ -9,6 +9,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/internal/types"
 	"github.com/KyberNetwork/tradelogs/pkg/abitypes"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
+	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -212,4 +213,8 @@ func (p *Parser) decodeOutput(output string) (string, string, string, error) {
 
 	orderHash := hexutil.Encode(orderHashParams[:])
 	return filledMakingAmountFromOutput.String(), filledTakingAmountFromOutput.String(), orderHash, nil
+}
+
+func (p *Parser) Exchange() string {
+	return parser.Ex1Inch
 }

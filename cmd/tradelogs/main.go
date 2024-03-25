@@ -8,13 +8,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/KyberNetwork/tradelogs/pkg/dune"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinch"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 
 	libapp "github.com/KyberNetwork/tradelogs/internal/app"
-	"github.com/KyberNetwork/tradelogs/internal/bigquery"
 	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	backfill "github.com/KyberNetwork/tradelogs/internal/server/backfill"
 	tradelogs "github.com/KyberNetwork/tradelogs/internal/server/tradelogs"
@@ -92,8 +92,7 @@ func run(c *cli.Context) error {
 	}
 	traceCalls := tracecall.NewCache(rpcClient)
 
-	w, err := worker.New(l, s, listener,
-		kyberswap.MustNewParser(),
+	parsers := []parser.Parser{kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
 		zxrfq.MustNewParser(),
 		tokenlon.MustNewParser(),
@@ -103,35 +102,22 @@ func run(c *cli.Context) error {
 		kyberswaprfq.MustNewParser(),
 		hashflowv3.MustNewParser(),
 		oneinch.MustNewParser(traceCalls),
-	)
+	}
+
+	w, err := worker.New(l, s, listener, parsers...)
 	if err != nil {
 		l.Errorw("Error while init worker")
 		return err
 	}
-	parserMap := map[string]parser.Parser{
-		"kyberswap":    kyberswap.MustNewParser(),
-		"zxotc":        zxotc.MustNewParser(),
-		"zxrfq":        zxrfq.MustNewParser(),
-		"tokenlon":     tokenlon.MustNewParser(),
-		"paraswap":     paraswap.MustNewParser(),
-		"hashflow":     hashflow.MustNewParser(),
-		"native":       native.MustNewParser(),
-		"kyberswaprfq": kyberswaprfq.MustNewParser(),
-		"hashflowv3":   hashflowv3.MustNewParser(),
-		"1inch":        oneinch.MustNewParser(traceCalls),
-	}
 
-	backfillWorker, err := bigquery.NewWorker(libapp.BigqueryProjectIDFFromCli(c), s, parserMap)
-	if err != nil {
-		l.Errorw("Error while init backfillWorker")
-	} else {
-		httpBackfill := backfill.New(c.String(libapp.HTTPBackfillServerFlag.Name), backfillWorker)
-		go func() {
-			if err := httpBackfill.Run(); err != nil {
-				panic(err)
-			}
-		}()
-	}
+	httpBackfill := backfill.New(c.String(libapp.HTTPBackfillServerFlag.Name),
+		backfill.NewDuneWoker(dune.NewClient(c.String(libapp.DuneURLFlag.Name), c.String(libapp.DuneKeyFlag.Name), httpClient), s),
+		parsers)
+	go func() {
+		if err := httpBackfill.Run(); err != nil {
+			panic(err)
+		}
+	}()
 
 	httpTradelogs := tradelogs.New(l, s, c.String(libapp.HTTPServerFlag.Name))
 	go func() {
