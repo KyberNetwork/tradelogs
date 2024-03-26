@@ -14,6 +14,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	OneInchV6EventHash = "0xfec331350fce78ba658e082a71da20ac9f8d798a99b3c79681c8440cbfe77e07"
+)
+
 // Server to serve the service.
 type Server struct {
 	l        *zap.SugaredLogger
@@ -166,7 +170,7 @@ func (s *Server) backfillOneinch(c *gin.Context) {
 		return
 	}
 
-	if err := s.dune.backfillOneInch(s.l.With("reqID", xid.New().String()), params.QueryID, params.EventHash); err != nil {
+	if err := s.dune.backfillOneInch(s.l.With("reqID", xid.New().String()), params.QueryID, OneInchV6EventHash); err != nil {
 		responseErr(c, err)
 		return
 	}
