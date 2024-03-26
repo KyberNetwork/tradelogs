@@ -165,9 +165,9 @@ func (d *DuneWorker) backfillOneInch(l *zap.SugaredLogger, queryID int64, eventH
 }
 
 type OneInchOrder struct {
-	Maker      dune.BigInt `json:"maker"`
-	MakerAsset dune.BigInt `json:"makerAsset"`
-	TakerAsset dune.BigInt `json:"takerAsset"`
+	Maker      storage.BigInt `json:"maker"`
+	MakerAsset storage.BigInt `json:"makerAsset"`
+	TakerAsset storage.BigInt `json:"takerAsset"`
 }
 
 func OneInchDuneLogToTrade(l dune.OneInchDuneLog, eventHash string) (storage.TradeLog, error) {

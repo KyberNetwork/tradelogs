@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"net/http"
 	"time"
+
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
 )
 
 type Client struct {
@@ -167,39 +168,13 @@ func (c *Client) GetLastestExecuteResult(queryID int64, limit, offset uint64, ou
 }
 
 type OneInchDuneLog struct {
-	ContractAddress string `json:"contract_address"`
-	EventIndex      uint64 `json:"evt_index"`
-	TxHash          string `json:"call_tx_hash"`
-	BlockTime       string `json:"call_block_time"`
-	BlockNumber     uint64 `json:"call_block_number"`
-	Order           string `json:"order"`
-	Output0         BigInt `json:"output_0"`
-	Output1         BigInt `json:"output_1"`
-	Output2         string `json:"output_2"`
-}
-
-type BigInt struct {
-	*big.Int
-}
-
-func (b *BigInt) UnmarshalJSON(data []byte) error {
-	var num json.Number
-	if err := json.Unmarshal(data, &num); err != nil {
-		return err
-	}
-
-	b.Int = new(big.Int)
-	b.Int, _ = b.Int.SetString(num.String(), 10)
-	return nil
-}
-
-func (b *BigInt) MarshalJSON() ([]byte, error) {
-	if b.Int == nil {
-		return []byte("null"), nil
-	}
-	return []byte(b.String()), nil
-}
-
-func (b *BigInt) Hex() string {
-	return "0x" + b.Text(16)
+	ContractAddress string         `json:"contract_address"`
+	EventIndex      uint64         `json:"evt_index"`
+	TxHash          string         `json:"call_tx_hash"`
+	BlockTime       string         `json:"call_block_time"`
+	BlockNumber     uint64         `json:"call_block_number"`
+	Order           string         `json:"order"`
+	Output0         storage.BigInt `json:"output_0"`
+	Output1         storage.BigInt `json:"output_1"`
+	Output2         string         `json:"output_2"`
 }
