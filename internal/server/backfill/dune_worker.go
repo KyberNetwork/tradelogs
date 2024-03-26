@@ -13,8 +13,10 @@ import (
 )
 
 const (
-	limit = 100
-	retry = 5
+	limit              = 100
+	retry              = 5
+	OneInchV5EventHash = "0xc3b639f02b125bfa160e50739b8c44eb2d1b6908e2b6d5925c6d770f2ca78127"
+	OneInchV6EventHash = "0xfec331350fce78ba658e082a71da20ac9f8d798a99b3c79681c8440cbfe77e07"
 )
 
 type DuneWorker struct {
@@ -128,7 +130,7 @@ func DuneLogToETHLog(log dune.DuneLog) types.Log {
 	}
 }
 
-func (d *DuneWorker) backfillOneInch(l *zap.SugaredLogger, queryID int64, eventHash string) error {
+func (d *DuneWorker) backfillOneInch(l *zap.SugaredLogger, queryID int64, version string) error {
 	var progress uint64 = 0
 	errCount := 0
 	for {
@@ -147,7 +149,7 @@ func (d *DuneWorker) backfillOneInch(l *zap.SugaredLogger, queryID int64, eventH
 
 		l.Infow("collected data", "progress", progress, "len", len(logs), "total", rowCount)
 		for _, l := range logs {
-			parse, err := OneInchDuneLogToTrade(l, eventHash)
+			parse, err := OneInchDuneLogToTrade(l, version)
 			if err != nil {
 				return err
 			}
@@ -164,28 +166,67 @@ func (d *DuneWorker) backfillOneInch(l *zap.SugaredLogger, queryID int64, eventH
 	return nil
 }
 
-type OneInchOrder struct {
+type OneInchOrderV6 struct {
 	Maker      storage.BigInt `json:"maker"`
 	MakerAsset storage.BigInt `json:"makerAsset"`
 	TakerAsset storage.BigInt `json:"takerAsset"`
 }
 
-func OneInchDuneLogToTrade(l dune.OneInchDuneLog, eventHash string) (storage.TradeLog, error) {
+type OneInchOrderV5 struct {
+	Maker      string `json:"maker"`
+	MakerAsset string `json:"makerAsset"`
+	TakerAsset string `json:"takerAsset"`
+}
+
+func OneInchDuneLogToTrade(l dune.OneInchDuneLog, version string) (storage.TradeLog, error) {
 	ts, err := time.Parse("2006-01-02 15:04:05.999 UTC", l.BlockTime)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	order := OneInchOrder{}
-	if err := json.Unmarshal([]byte(l.Order), &order); err != nil {
-		return storage.TradeLog{}, err
+	makerTokenAmount, takerTokenAmount, maker, makerAsset, takerAsset, eventHash := "", "", "", "", "", ""
+	switch version {
+	case "v5":
+		order := OneInchOrderV5{}
+		if err := json.Unmarshal([]byte(l.Order), &order); err != nil {
+			return storage.TradeLog{}, err
+		}
+		maker = order.Maker
+		makerAsset = order.MakerAsset
+		takerAsset = order.TakerAsset
+		if err := json.Unmarshal(l.Output0, &makerTokenAmount); err != nil {
+			return storage.TradeLog{}, err
+		}
+		if err := json.Unmarshal(l.Output1, &takerTokenAmount); err != nil {
+			return storage.TradeLog{}, err
+		}
+		eventHash = OneInchV5EventHash
+	default:
+		order := OneInchOrderV6{}
+		if err := json.Unmarshal([]byte(l.Order), &order); err != nil {
+			return storage.TradeLog{}, err
+		}
+		maker = order.Maker.Hex()
+		makerAsset = order.MakerAsset.Hex()
+		takerAsset = order.TakerAsset.Hex()
+		var tmp storage.BigInt
+		if err := json.Unmarshal(l.Output0, &tmp); err != nil {
+			return storage.TradeLog{}, err
+		}
+		makerTokenAmount = tmp.String()
+		if err := json.Unmarshal(l.Output1, &tmp); err != nil {
+			return storage.TradeLog{}, err
+		}
+		takerTokenAmount = tmp.String()
+		eventHash = OneInchV6EventHash
 	}
+
 	return storage.TradeLog{
 		OrderHash:        l.Output2,
-		Maker:            order.Maker.Hex(),
-		MakerToken:       order.MakerAsset.Hex(),
-		TakerToken:       order.TakerAsset.Hex(),
-		MakerTokenAmount: l.Output0.String(),
-		TakerTokenAmount: l.Output1.String(),
+		Maker:            maker,
+		MakerToken:       makerAsset,
+		TakerToken:       takerAsset,
+		MakerTokenAmount: makerTokenAmount,
+		TakerTokenAmount: takerTokenAmount,
 		ContractAddress:  l.ContractAddress,
 		BlockNumber:      l.BlockNumber,
 		TxHash:           l.TxHash,
