@@ -166,13 +166,13 @@ func (c *Client) GetLastestExecuteResult(queryID int64, limit, offset uint64, ou
 }
 
 type OneInchDuneLog struct {
-	ContractAddress string          `json:"contract_address"`
-	EventIndex      uint64          `json:"evt_index"`
-	TxHash          string          `json:"call_tx_hash"`
-	BlockTime       string          `json:"call_block_time"`
-	BlockNumber     uint64          `json:"call_block_number"`
-	Order           string          `json:"order"`
-	Output0         json.RawMessage `json:"output_0"`
-	Output1         json.RawMessage `json:"output_1"`
-	Output2         string          `json:"output_2"`
+	ContractAddress string `json:"contract_address"`
+	EventIndex      uint64 `json:"evt_index"`
+	TxHash          string `json:"call_tx_hash"`
+	BlockTime       string `json:"call_block_time"`
+	BlockNumber     uint64 `json:"call_block_number"`
+	Order           string `json:"order"`
+	Output0         string `json:"output_0"`
+	Output1         string `json:"output_1"`
+	Output2         string `json:"output_2"`
 }

@@ -183,7 +183,7 @@ func OneInchDuneLogToTrade(l dune.OneInchDuneLog, version string) (storage.Trade
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	makerTokenAmount, takerTokenAmount, maker, makerAsset, takerAsset, eventHash := "", "", "", "", "", ""
+	maker, makerAsset, takerAsset, eventHash := "", "", "", ""
 	switch version {
 	case "v5":
 		order := OneInchOrderV5{}
@@ -193,12 +193,6 @@ func OneInchDuneLogToTrade(l dune.OneInchDuneLog, version string) (storage.Trade
 		maker = order.Maker
 		makerAsset = order.MakerAsset
 		takerAsset = order.TakerAsset
-		if err := json.Unmarshal(l.Output0, &makerTokenAmount); err != nil {
-			return storage.TradeLog{}, err
-		}
-		if err := json.Unmarshal(l.Output1, &takerTokenAmount); err != nil {
-			return storage.TradeLog{}, err
-		}
 		eventHash = OneInchV5EventHash
 	default:
 		order := OneInchOrderV6{}
@@ -208,15 +202,6 @@ func OneInchDuneLogToTrade(l dune.OneInchDuneLog, version string) (storage.Trade
 		maker = order.Maker.Hex()
 		makerAsset = order.MakerAsset.Hex()
 		takerAsset = order.TakerAsset.Hex()
-		var tmp storage.BigInt
-		if err := json.Unmarshal(l.Output0, &tmp); err != nil {
-			return storage.TradeLog{}, err
-		}
-		makerTokenAmount = tmp.String()
-		if err := json.Unmarshal(l.Output1, &tmp); err != nil {
-			return storage.TradeLog{}, err
-		}
-		takerTokenAmount = tmp.String()
 		eventHash = OneInchV6EventHash
 	}
 
@@ -225,8 +210,8 @@ func OneInchDuneLogToTrade(l dune.OneInchDuneLog, version string) (storage.Trade
 		Maker:            maker,
 		MakerToken:       makerAsset,
 		TakerToken:       takerAsset,
-		MakerTokenAmount: makerTokenAmount,
-		TakerTokenAmount: takerTokenAmount,
+		MakerTokenAmount: l.Output0,
+		TakerTokenAmount: l.Output1,
 		ContractAddress:  l.ContractAddress,
 		BlockNumber:      l.BlockNumber,
 		TxHash:           l.TxHash,
