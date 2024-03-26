@@ -1,6 +1,10 @@
 package storage
 
-import "strings"
+import (
+	"encoding/json"
+	"math/big"
+	"strings"
+)
 
 type TradeLog struct {
 	OrderHash        string `db:"order_hash" json:"order_hash,omitempty"`
@@ -54,4 +58,30 @@ type BackfillQuery struct {
 	ToBlock   uint64 `json:"to_block" binding:"required"`
 	EventHash string `json:"event_hash"`
 	Exchange  string `json:"exchange"`
+}
+
+type BigInt struct {
+	*big.Int
+}
+
+func (b *BigInt) UnmarshalJSON(data []byte) error {
+	var num json.Number
+	if err := json.Unmarshal(data, &num); err != nil {
+		return err
+	}
+
+	b.Int = new(big.Int)
+	b.Int, _ = b.Int.SetString(num.String(), 10)
+	return nil
+}
+
+func (b *BigInt) MarshalJSON() ([]byte, error) {
+	if b.Int == nil {
+		return []byte("null"), nil
+	}
+	return []byte(b.String()), nil
+}
+
+func (b *BigInt) Hex() string {
+	return "0x" + b.Text(16)
 }

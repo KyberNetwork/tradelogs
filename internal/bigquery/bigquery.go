@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/bigquery"
@@ -36,12 +37,12 @@ type Worker struct {
 	client         *bigquery.Client
 	storage        *storage.Storage
 	parserTopicMap map[string]parser.Parser
-	parserNameMap  map[string]parser.Parser
+	parserNameMap  []parser.Parser
 	state          WorkerState
 }
 
 func NewWorker(
-	projectID string, storage *storage.Storage, parserNameMap map[string]parser.Parser,
+	projectID string, storage *storage.Storage, parsers []parser.Parser,
 ) (*Worker, error) {
 	client, err := bigquery.NewClient(
 		context.Background(),
@@ -52,7 +53,7 @@ func NewWorker(
 	}
 
 	parserTopicMap := make(map[string]parser.Parser)
-	for _, ps := range parserNameMap {
+	for _, ps := range parsers {
 		for _, topic := range ps.Topics() {
 			parserTopicMap[topic] = ps
 		}
@@ -63,7 +64,7 @@ func NewWorker(
 		client:         client,
 		storage:        storage,
 		parserTopicMap: parserTopicMap,
-		parserNameMap:  parserNameMap,
+		parserNameMap:  parsers,
 		state:          stateStopped,
 	}, nil
 }
@@ -219,11 +220,11 @@ func (w *Worker) topicsFromExchanges(exchanges []string) ([]string, error) {
 	}
 
 	for _, ex := range exchanges {
-		parser, ok := w.parserNameMap[ex]
-		if !ok {
-			return nil, fmt.Errorf("%w: %s", ErrNoParser, ex)
+		for _, ps := range w.parserNameMap {
+			if strings.EqualFold(ps.Exchange(), ex) {
+				topics = append(topics, ps.Topics()...)
+			}
 		}
-		topics = append(topics, parser.Topics()...)
 	}
 	return topics, nil
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 
 	libapp "github.com/KyberNetwork/tradelogs/internal/app"
+	"github.com/KyberNetwork/tradelogs/internal/bigquery"
 	"github.com/KyberNetwork/tradelogs/internal/dbutil"
 	backfill "github.com/KyberNetwork/tradelogs/internal/server/backfill"
 	tradelogs "github.com/KyberNetwork/tradelogs/internal/server/tradelogs"
@@ -109,8 +110,12 @@ func run(c *cli.Context) error {
 		l.Errorw("Error while init worker")
 		return err
 	}
+	bigQueryWorker, err := bigquery.NewWorker(libapp.BigqueryProjectIDFFromCli(c), s, parsers)
+	if err != nil {
+		l.Errorw("error when init big query worker", "error", err)
+	}
 
-	httpBackfill := backfill.New(c.String(libapp.HTTPBackfillServerFlag.Name),
+	httpBackfill := backfill.New(c.String(libapp.HTTPBackfillServerFlag.Name), bigQueryWorker,
 		backfill.NewDuneWoker(dune.NewClient(c.String(libapp.DuneURLFlag.Name), c.String(libapp.DuneKeyFlag.Name), httpClient), s),
 		parsers)
 	go func() {

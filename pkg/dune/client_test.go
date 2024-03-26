@@ -28,7 +28,8 @@ func TestDuneState(t *testing.T) {
 func TestDuneGetLastestResults(t *testing.T) {
 	t.Skip()
 	c := NewClient("https://api.dune.com/api", key, http.DefaultClient)
-	res, rowcount, err := c.GetLastestExecuteResult(3551570, 10, 1)
+	res := []OneInchDuneLog{}
+	_, err := c.GetLastestExecuteResult(3559230, 5, 1, &res)
 	require.NoError(t, err)
-	t.Log(res, rowcount)
+	t.Logf("%+v", res)
 }
