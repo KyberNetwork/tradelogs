@@ -1,4 +1,4 @@
-package oneinch
+package oneinchv6
 
 import (
 	"errors"
@@ -15,11 +15,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/lru"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 const (
-	FilledEvent = "OrderFilledRFQ"
+	FilledEvent = "OrderFilled"
 )
 
 var (
@@ -38,18 +39,19 @@ func init() {
 }
 
 type Parser struct {
-	abi        *abi.ABI
-	ps         *OneinchFilterer
-	eventHash  string
-	traceCalls *tracecall.Cache
+	abi            *abi.ABI
+	ps             *Oneinchv6Filterer
+	eventHash      string
+	traceCalls     *tracecall.Cache
+	orderHashCount lru.BasicLRU[string, int]
 }
 
 func MustNewParser(cache *tracecall.Cache) *Parser {
-	ps, err := NewOneinchFilterer(common.Address{}, nil)
+	ps, err := NewOneinchv6Filterer(common.Address{}, nil)
 	if err != nil {
 		panic(err)
 	}
-	ab, err := OneinchMetaData.GetAbi()
+	ab, err := Oneinchv6MetaData.GetAbi()
 	if err != nil {
 		panic(err)
 	}
@@ -59,10 +61,11 @@ func MustNewParser(cache *tracecall.Cache) *Parser {
 	}
 
 	return &Parser{
-		ps:         ps,
-		abi:        ab,
-		eventHash:  event.ID.String(),
-		traceCalls: cache,
+		ps:             ps,
+		abi:            ab,
+		eventHash:      event.ID.String(),
+		traceCalls:     cache,
+		orderHashCount: lru.NewBasicLRU[string, int](100),
 	}
 }
 
@@ -76,19 +79,18 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
 		return storage.TradeLog{}, ErrInvalidOneInchFilledTopic
 	}
-	e, err := p.ps.ParseOrderFilledRFQ(log)
+	e, err := p.ps.ParseOrderFilled(log)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
 	order := storage.TradeLog{
-		OrderHash:        common.Hash(e.OrderHash).String(),
-		MakerTokenAmount: e.MakingAmount.String(),
-		ContractAddress:  e.Raw.Address.String(),
-		BlockNumber:      e.Raw.BlockNumber,
-		TxHash:           e.Raw.TxHash.String(),
-		LogIndex:         uint64(e.Raw.Index),
-		Timestamp:        blockTime * 1000,
-		EventHash:        p.eventHash,
+		OrderHash:       common.Hash(e.OrderHash).String(),
+		ContractAddress: e.Raw.Address.String(),
+		BlockNumber:     e.Raw.BlockNumber,
+		TxHash:          e.Raw.TxHash.String(),
+		LogIndex:        uint64(e.Raw.Index),
+		Timestamp:       blockTime * 1000,
+		EventHash:       p.eventHash,
 	}
 	order, err = p.detectOneInchRfqTrade(order)
 	if err != nil {
@@ -136,8 +138,8 @@ func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog) (storage.TradeLog
 		return order, err
 	}
 
-	order, err = p.recursiveDetectOneInchRFQTrades(order, traceCall)
-
+	count := 0
+	order, err = p.recursiveDetectOneInchRFQTrades(order, traceCall, &count)
 	if err != nil {
 		return order, err
 	}
@@ -145,18 +147,17 @@ func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog) (storage.TradeLog
 	return order, nil
 }
 
-func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, traceCall types.CallFrame) (storage.TradeLog, error) {
+func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, traceCall types.CallFrame, count *int) (storage.TradeLog, error) {
 	var (
 		err error
 	)
-	isOneInchRFQTrade := p.isOneInchRFQTrades(tradeLog.MakerTokenAmount, tradeLog.OrderHash, traceCall)
-
+	isOneInchRFQTrade := p.isOneInchRFQTrades(tradeLog.OrderHash, traceCall, count)
 	if isOneInchRFQTrade {
 		return p.ParseFromInternalCall(tradeLog, traceCall)
 	}
 
 	for _, subCall := range traceCall.Calls {
-		tradeLog, err = p.recursiveDetectOneInchRFQTrades(tradeLog, subCall)
+		tradeLog, err = p.recursiveDetectOneInchRFQTrades(tradeLog, subCall, count)
 		if err == nil {
 			return tradeLog, nil
 		}
@@ -164,7 +165,7 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 	return tradeLog, ErrNotFoundTraceCall
 }
 
-func (p *Parser) isOneInchRFQTrades(makingAmountOrder string, orderHash string, traceCall types.CallFrame) bool {
+func (p *Parser) isOneInchRFQTrades(orderHash string, traceCall types.CallFrame, count *int) bool {
 	for _, eventLog := range traceCall.Logs {
 		if len(eventLog.Topics) == 0 {
 			continue
@@ -174,11 +175,24 @@ func (p *Parser) isOneInchRFQTrades(makingAmountOrder string, orderHash string, 
 			continue
 		}
 
-		makingAmount, _, orderHashFromOutput, err := p.decodeOutput(traceCall.Output)
+		_, _, orderHashFromOutput, err := p.decodeOutput(traceCall.Output)
 		if err != nil {
 			return false
 		}
-		return orderHash == orderHashFromOutput && makingAmount == makingAmountOrder
+
+		if orderHash != orderHashFromOutput {
+			return false
+		}
+		last, ok := p.orderHashCount.Get(orderHash)
+		if !ok {
+			last = 0
+		}
+		if last != *count {
+			*count += 1
+			return false
+		}
+		p.orderHashCount.Add(orderHash, last+1)
+		return true
 	}
 	return false
 }
