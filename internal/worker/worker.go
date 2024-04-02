@@ -7,7 +7,6 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
-	"github.com/gammazero/workerpool"
 	"go.uber.org/zap"
 )
 
@@ -54,10 +53,8 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 	var (
-		insertOrders         []storage.TradeLog
-		deleteBlocks         []uint64
-		wp                   = workerpool.New(100)
-		insertOrdersResultCh = make(chan parseEventLogResult)
+		insertOrders []storage.TradeLog
+		deleteBlocks []uint64
 	)
 
 	for _, message := range m {
@@ -70,39 +67,16 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 				if ps == nil {
 					continue
 				}
-				// Create new instance of req for the goroutine. Can remove these variables after go1.22
-				block := block
-				log := log
-				wp.Submit(func() {
-					order, err := ps.Parse(convert.ToETHLog(log), block.Timestamp)
-					if err != nil {
-						insertOrdersResultCh <- parseEventLogResult{
-							err: err,
-						}
-						return
-					}
-					insertOrdersResultCh <- parseEventLogResult{
-						tradeLogOrder: order,
-						err:           nil,
-					}
-				})
+				order, err := ps.Parse(convert.ToETHLog(log), block.Timestamp)
+				if err != nil {
+					continue
+				}
+				insertOrders = append(insertOrders, order)
 			}
 		}
 		for _, block := range message.RevertedBlocks {
 			deleteBlocks = append(deleteBlocks, block.Number.Uint64())
 		}
-	}
-
-	go func() {
-		wp.StopWait()
-		close(insertOrdersResultCh)
-	}()
-
-	for result := range insertOrdersResultCh {
-		if result.err != nil {
-			return result.err
-		}
-		insertOrders = append(insertOrders, result.tradeLogOrder)
 	}
 
 	err := w.s.Delete(deleteBlocks)
