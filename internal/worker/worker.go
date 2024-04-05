@@ -44,9 +44,11 @@ func (w *Worker) Run(ctx context.Context) error {
 			continue
 		}
 		if err := w.processMessages(m); err != nil {
+			w.l.Errorw("Error when proccess msg", "error", err)
 			return err
 		}
 		if err := w.listener.Ack(ctx, m); err != nil {
+			w.l.Errorw("Error when ack msg", "error", err)
 			return err
 		}
 	}
@@ -69,6 +71,7 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 				}
 				order, err := ps.Parse(convert.ToETHLog(log), block.Timestamp)
 				if err != nil {
+					w.l.Errorw("error when parse log", "log", log, "order", order, "err", err)
 					continue
 				}
 				insertOrders = append(insertOrders, order)

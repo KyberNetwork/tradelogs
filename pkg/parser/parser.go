@@ -14,6 +14,7 @@ const (
 	ExHashflow      = "hashflow"
 	ExKsRFQ         = "kyberswapRFQ"
 	Ex1Inch         = "1inch"
+	Ex1InchV6       = "1inchV6"
 	ExHashflowV3    = "hashflowV3"
 	ExParaswapTaker = "paraswap_taker"
 	ExUniswapX      = "uniswapx"
