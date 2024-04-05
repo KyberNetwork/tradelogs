@@ -92,7 +92,7 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 	}
 	order, err = p.detectOneInchRfqTrade(order)
 	if err != nil {
-		return storage.TradeLog{}, err
+		return order, err
 	}
 	return order, nil
 }
@@ -137,7 +137,6 @@ func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog) (storage.TradeLog
 	}
 
 	order, err = p.recursiveDetectOneInchRFQTrades(order, traceCall)
-
 	if err != nil {
 		return order, err
 	}
@@ -149,9 +148,8 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 	var (
 		err error
 	)
-	isOneInchRFQTrade := p.isOneInchRFQTrades(tradeLog.MakerTokenAmount, tradeLog.OrderHash, traceCall)
 
-	if isOneInchRFQTrade {
+	if p.isOneInchRFQTrades(tradeLog.MakerTokenAmount, tradeLog.OrderHash, traceCall) {
 		return p.ParseFromInternalCall(tradeLog, traceCall)
 	}
 
@@ -178,6 +176,7 @@ func (p *Parser) isOneInchRFQTrades(makingAmountOrder string, orderHash string, 
 		if err != nil {
 			return false
 		}
+
 		return orderHash == orderHashFromOutput && makingAmount == makingAmountOrder
 	}
 	return false
