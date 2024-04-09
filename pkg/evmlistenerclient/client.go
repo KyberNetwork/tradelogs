@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	blockTime = 12 * time.Second
+	BlockTime = 12 * time.Second
 )
 
 type Config struct {
@@ -120,7 +120,7 @@ func (c *Client) Consume(
 	streams, err := c.client.XRead(ctx, &redis.XReadArgs{
 		Streams: []string{c.config.Topic, id},
 		Count:   1,
-		Block:   blockTime,
+		Block:   BlockTime,
 	}).Result()
 
 	if err != nil {
