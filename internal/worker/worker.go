@@ -81,6 +81,18 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 
 	for _, message := range m {
 		for _, block := range message.NewBlocks {
+			for _, block := range message.RevertedBlocks {
+				deleteBlocks = append(deleteBlocks, block.Number.Uint64())
+				for _, k := range w.errLogs.Keys() {
+					l, ok := w.errLogs.Peek(k)
+					if !ok {
+						continue
+					}
+					if l.log.BlockHash == block.Hash {
+						w.errLogs.Remove(k)
+					}
+				}
+			}
 			for _, log := range block.Logs {
 				if len(log.Topics) == 0 {
 					continue
@@ -99,18 +111,6 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 					continue
 				}
 				insertOrders = append(insertOrders, order)
-			}
-		}
-		for _, block := range message.RevertedBlocks {
-			deleteBlocks = append(deleteBlocks, block.Number.Uint64())
-			for _, k := range w.errLogs.Keys() {
-				l, ok := w.errLogs.Peek(k)
-				if !ok {
-					continue
-				}
-				if l.log.BlockNumber == block.Number.Uint64() {
-					w.errLogs.Remove(k)
-				}
 			}
 		}
 	}
