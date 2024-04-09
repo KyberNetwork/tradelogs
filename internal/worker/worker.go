@@ -74,12 +74,11 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 }
 func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
-	var (
-		insertOrders []storage.TradeLog
-		deleteBlocks []uint64
-	)
-
 	for _, message := range m {
+		var (
+			insertOrders []storage.TradeLog
+			deleteBlocks []uint64
+		)
 		for _, block := range message.NewBlocks {
 			for _, block := range message.RevertedBlocks {
 				deleteBlocks = append(deleteBlocks, block.Number.Uint64())
@@ -113,16 +112,15 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 				insertOrders = append(insertOrders, order)
 			}
 		}
+
+		if err := w.s.Delete(deleteBlocks); err != nil {
+			return err
+		}
+		if err := w.s.Insert(insertOrders); err != nil {
+			return err
+		}
 	}
 
-	err := w.s.Delete(deleteBlocks)
-	if err != nil {
-		return err
-	}
-	err = w.s.Insert(insertOrders)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
