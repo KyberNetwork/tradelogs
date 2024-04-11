@@ -46,6 +46,14 @@ func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.C
 func (w *Worker) Run(ctx context.Context) error {
 	retryTimer := time.NewTicker(evmlistenerclient.BlockTime)
 	for {
+		select {
+		case <-retryTimer.C:
+			if err := w.retryParseLog(); err != nil {
+				w.l.Errorw("error when retry parse log", "err", err)
+				return err
+			}
+		default:
+		}
 		m, err := w.listener.GConsume(ctx)
 		if err != nil {
 			w.l.Errorw("Error while consume in group")
@@ -62,14 +70,6 @@ func (w *Worker) Run(ctx context.Context) error {
 		if err := w.listener.Ack(ctx, m); err != nil {
 			w.l.Errorw("Error when ack msg", "error", err)
 			return err
-		}
-		select {
-		case <-retryTimer.C:
-			if err := w.retryParseLog(); err != nil {
-				w.l.Errorw("error when retry parse log", "err", err)
-				return err
-			}
-		default:
 		}
 	}
 }
@@ -126,7 +126,9 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 
 func (w *Worker) retryParseLog() error {
 	insertOrders := []storage.TradeLog{}
-	for _, k := range w.errLogs.Keys() {
+	keys := w.errLogs.Keys()
+	w.l.Infow("start retry logs", "len", len(keys))
+	for _, k := range keys {
 		l, ok := w.errLogs.Peek(k)
 		if !ok {
 			continue
@@ -137,9 +139,12 @@ func (w *Worker) retryParseLog() error {
 		}
 		order, err := ps.Parse(convert.ToETHLog(l.log), l.ts)
 		if err != nil {
+			w.l.Errorw("error when retry log", "log", l.log, "err", err)
 			continue
 		}
+
 		w.l.Infow("retry log successfully", "key", k, "parser", ps.Exchange())
+		panic("")
 		w.errLogs.Remove(k)
 		insertOrders = append(insertOrders, order)
 	}
