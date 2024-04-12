@@ -20,6 +20,7 @@ type TradeLog struct {
 	LogIndex         uint64 `db:"log_index" json:"log_index,omitempty"`
 	Timestamp        uint64 `db:"timestamp" json:"timestamp,omitempty"`
 	EventHash        string `db:"event_hash" json:"event_hash,omitempty"`
+	MakerTraits      string `db:"maker_traits" json:"maker_traits,omitempty"`
 }
 
 type TradeLogsQuery struct {
@@ -49,6 +50,7 @@ func (o *TradeLog) Serialize() []interface{} {
 		o.LogIndex,
 		o.Timestamp,
 		o.EventHash,
+		o.MakerTraits,
 	}
 }
 

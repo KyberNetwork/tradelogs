@@ -25,16 +25,23 @@ var (
 	}
 )
 
+type RegisterRequest struct {
+	EventHash string `form:"event_hash"`
+	Maker     string `form:"maker"`
+}
+
 // Server to serve the service.
 type Server struct {
 	r        *gin.Engine
 	bindAddr string
 	l        *zap.SugaredLogger
 	s        *storage.Storage
+	bc       *Broadcaster
 }
 
 // New returns a new server.
-func New(l *zap.SugaredLogger, s *storage.Storage, bindAddr string) *Server {
+func New(l *zap.SugaredLogger, s *storage.Storage, bindAddr string,
+	bc *Broadcaster) *Server {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 
@@ -43,6 +50,7 @@ func New(l *zap.SugaredLogger, s *storage.Storage, bindAddr string) *Server {
 		bindAddr: bindAddr,
 		l:        l,
 		s:        s,
+		bc:       bc,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -63,7 +71,7 @@ func (s *Server) Run() error {
 func (s *Server) register() {
 	pprof.Register(s.r, "/debug")
 	s.r.GET("/tradelogs", s.getTradeLogs)
-	s.r.GET("/1inchws", s.register1InchWS)
+	s.r.GET("/eventlogws", s.registerEventLogWS)
 }
 
 func responseErr(c *gin.Context, status int, err error) {
@@ -98,24 +106,19 @@ func (s *Server) getTradeLogs(c *gin.Context) {
 	})
 }
 
-func (s *Server) register1InchWS(c *gin.Context) {
-	clientID := c.Query("client_id")
-	if clientID == "" {
+func (s *Server) registerEventLogWS(c *gin.Context) {
+	var param RegisterRequest
+	if err := c.BindQuery(&param); err != nil {
 		responseErr(c, http.StatusBadRequest, fmt.Errorf("need client_id param"))
 		return
 	}
+
+	s.l.Infow("receive ws", "param", param)
 	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		s.l.Errorw("Failed to set websocket upgrade", "error", err)
+		responseErr(c, http.StatusInternalServerError, fmt.Errorf("can't create ws"))
 		return
 	}
-	s.l.Infow("receive ws", "client id", clientID)
-	for {
-		t, msg, err := conn.ReadMessage()
-		s.l.Infow("receive", "msg", msg)
-		if err != nil {
-			break
-		}
-		conn.WriteMessage(t, msg[:1])
-	}
+	s.bc.addConn(param.EventHash, param.Maker, conn)
 }

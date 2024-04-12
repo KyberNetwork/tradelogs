@@ -20,14 +20,16 @@ type EVMLog struct {
 }
 
 type Worker struct {
-	listener *evmlistenerclient.Client
-	l        *zap.SugaredLogger
-	s        *storage.Storage
-	p        map[string]parser.Parser
-	errLogs  lru.BasicLRU[string, EVMLog]
+	listener     *evmlistenerclient.Client
+	l            *zap.SugaredLogger
+	s            *storage.Storage
+	p            map[string]parser.Parser
+	errLogs      lru.BasicLRU[string, EVMLog]
+	tradeLogChan chan storage.TradeLog
 }
 
-func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.Client, parsers ...parser.Parser) (*Worker, error) {
+func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.Client, tradeLogChan chan storage.TradeLog,
+	parsers ...parser.Parser) (*Worker, error) {
 	p := make(map[string]parser.Parser)
 	for _, ps := range parsers {
 		for _, topic := range ps.Topics() {
@@ -35,11 +37,12 @@ func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.C
 		}
 	}
 	return &Worker{
-		listener: listener,
-		l:        l,
-		s:        s,
-		p:        p,
-		errLogs:  lru.NewBasicLRU[string, EVMLog](1000),
+		listener:     listener,
+		l:            l,
+		s:            s,
+		p:            p,
+		errLogs:      lru.NewBasicLRU[string, EVMLog](1000),
+		tradeLogChan: tradeLogChan,
 	}, nil
 }
 
@@ -119,6 +122,9 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 		if err := w.s.Insert(insertOrders); err != nil {
 			return err
 		}
+		for _, log := range insertOrders {
+			w.tradeLogChan <- log
+		}
 	}
 
 	return nil
@@ -144,13 +150,15 @@ func (w *Worker) retryParseLog() error {
 		}
 
 		w.l.Infow("retry log successfully", "key", k, "parser", ps.Exchange())
-		panic("")
 		w.errLogs.Remove(k)
 		insertOrders = append(insertOrders, order)
 	}
 
 	if err := w.s.Insert(insertOrders); err != nil {
 		return err
+	}
+	for _, log := range insertOrders {
+		w.tradeLogChan <- log
 	}
 	return nil
 }

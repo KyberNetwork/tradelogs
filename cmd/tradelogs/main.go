@@ -107,7 +107,8 @@ func run(c *cli.Context) error {
 		oneinchv6.MustNewParser(traceCalls),
 	}
 
-	w, err := worker.New(l, s, listener, parsers...)
+	tradeLogChan := make(chan storage.TradeLog, 1000)
+	w, err := worker.New(l, s, listener, tradeLogChan, parsers...)
 	if err != nil {
 		l.Errorw("Error while init worker")
 		return err
@@ -126,7 +127,10 @@ func run(c *cli.Context) error {
 		}
 	}()
 
-	httpTradelogs := tradelogs.New(l, s, c.String(libapp.HTTPServerFlag.Name))
+	bc := tradelogs.NewBroadcaster(tradeLogChan)
+	go bc.BroadcastLog()
+	go bc.CheckDisconnect()
+	httpTradelogs := tradelogs.New(l, s, c.String(libapp.HTTPServerFlag.Name), bc)
 	go func() {
 		if err := httpTradelogs.Run(); err != nil {
 			panic(err)
