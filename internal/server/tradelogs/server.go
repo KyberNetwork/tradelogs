@@ -109,7 +109,7 @@ func (s *Server) getTradeLogs(c *gin.Context) {
 func (s *Server) registerEventLogWS(c *gin.Context) {
 	var param RegisterRequest
 	if err := c.BindQuery(&param); err != nil {
-		responseErr(c, http.StatusBadRequest, fmt.Errorf("need client_id param"))
+		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
 
