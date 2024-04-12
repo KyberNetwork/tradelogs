@@ -47,15 +47,15 @@ func (b *Broadcaster) BroadcastLog() {
 }
 
 func (b *Broadcaster) addConn(event, maker string, conn *websocket.Conn) {
-	ID := xid.New().String()
-	b.l.Infow("connected socket", "id", ID)
+	id := xid.New().String()
+	b.l.Infow("connected socket", "id", id)
 	b.mu.Lock()
 	cons, ok := b.clients[combine(event, maker)]
 	if !ok {
 		cons = map[string]Con{}
 	}
-	cons[ID] = Con{
-		id:        ID,
+	cons[id] = Con{
+		id:        id,
 		ws:        conn,
 		maker:     maker,
 		eventHash: event,
