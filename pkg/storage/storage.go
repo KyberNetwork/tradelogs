@@ -49,7 +49,8 @@ func (s *Storage) Insert(orders []TradeLog) error {
 			tx_hash=excluded.tx_hash,
 			log_index=excluded.log_index,
 			timestamp=excluded.timestamp,
-			event_hash=excluded.event_hash
+			event_hash=excluded.event_hash,
+			maker_traits=excluded.maker_traits
 	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
@@ -128,5 +129,6 @@ func tradelogsColumns() []string {
 		"log_index",
 		"timestamp",
 		"event_hash",
+		"maker_traits",
 	}
 }

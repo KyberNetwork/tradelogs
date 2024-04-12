@@ -2,6 +2,7 @@ package tracecall
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/KyberNetwork/tradelogs/internal/types"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
@@ -28,6 +29,9 @@ func (c *Cache) GetTraceCall(tx string) (types.CallFrame, error) {
 	data, err := c.rpcClient.FetchTraceCall(context.Background(), tx)
 	if err != nil {
 		return types.CallFrame{}, err
+	}
+	if data.From == "" {
+		return types.CallFrame{}, fmt.Errorf("trace call not found")
 	}
 	c.latestTraceCall.Add(tx, data)
 	return data, nil

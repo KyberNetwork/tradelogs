@@ -9,12 +9,26 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
 var (
 	maxTimeRange uint64 = uint64(7 * 24 * time.Hour.Milliseconds())
+	wsupgrader          = websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		// Allow connections from any Origin
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
 )
+
+type RegisterRequest struct {
+	EventHash string `form:"event_hash"`
+	Maker     string `form:"maker"`
+}
 
 // Server to serve the service.
 type Server struct {
@@ -22,10 +36,12 @@ type Server struct {
 	bindAddr string
 	l        *zap.SugaredLogger
 	s        *storage.Storage
+	bc       *Broadcaster
 }
 
 // New returns a new server.
-func New(l *zap.SugaredLogger, s *storage.Storage, bindAddr string) *Server {
+func New(l *zap.SugaredLogger, s *storage.Storage, bindAddr string,
+	bc *Broadcaster) *Server {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 
@@ -34,6 +50,7 @@ func New(l *zap.SugaredLogger, s *storage.Storage, bindAddr string) *Server {
 		bindAddr: bindAddr,
 		l:        l,
 		s:        s,
+		bc:       bc,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -54,14 +71,14 @@ func (s *Server) Run() error {
 func (s *Server) register() {
 	pprof.Register(s.r, "/debug")
 	s.r.GET("/tradelogs", s.getTradeLogs)
-
+	s.r.GET("/eventlogws", s.registerEventLogWS)
 }
 
 func responseErr(c *gin.Context, status int, err error) {
 	c.JSON(http.StatusBadRequest, gin.H{
 		"success": false,
 		"error":   err.Error(),
-		"status": status,
+		"status":  status,
 	})
 }
 
@@ -87,4 +104,21 @@ func (s *Server) getTradeLogs(c *gin.Context) {
 		"success": true,
 		"data":    data,
 	})
+}
+
+func (s *Server) registerEventLogWS(c *gin.Context) {
+	var param RegisterRequest
+	if err := c.BindQuery(&param); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+
+	s.l.Infow("receive ws", "param", param)
+	conn, err := wsupgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		s.l.Errorw("Failed to set websocket upgrade", "error", err)
+		responseErr(c, http.StatusInternalServerError, fmt.Errorf("can't create ws"))
+		return
+	}
+	s.bc.addConn(param.EventHash, param.Maker, conn)
 }

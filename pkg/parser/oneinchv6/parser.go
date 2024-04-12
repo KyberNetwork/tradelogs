@@ -25,7 +25,7 @@ const (
 
 var (
 	ErrInvalidOneInchFilledTopic = errors.New("invalid oneinch order filled topic")
-	ErrNotFoundTraceCall         = errors.New("not found trace call")
+	ErrNotFoundLog               = errors.New("not found log")
 	RFQOrderOutputArgument       abi.Arguments
 )
 
@@ -152,7 +152,7 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 	var (
 		err error
 	)
-	if p.isOneInchRFQTrades(tradeLog.OrderHash, traceCall, count) {
+	if p.isOneInchRFQTrades(tradeLog.TxHash, tradeLog.OrderHash, traceCall, count) {
 		return p.ParseFromInternalCall(tradeLog, traceCall)
 	}
 
@@ -163,10 +163,10 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 		}
 	}
 
-	return tradeLog, ErrNotFoundTraceCall
+	return tradeLog, ErrNotFoundLog
 }
 
-func (p *Parser) isOneInchRFQTrades(orderHash string, traceCall types.CallFrame, count *int) bool {
+func (p *Parser) isOneInchRFQTrades(txHash, orderHash string, traceCall types.CallFrame, count *int) bool {
 	for _, eventLog := range traceCall.Logs {
 		if len(eventLog.Topics) == 0 {
 			continue
@@ -184,7 +184,7 @@ func (p *Parser) isOneInchRFQTrades(orderHash string, traceCall types.CallFrame,
 		if orderHash != orderHashFromOutput {
 			return false
 		}
-		last, ok := p.orderHashCount.Get(orderHash)
+		last, ok := p.orderHashCount.Get(fmt.Sprintf("%s-%s", txHash, orderHash))
 		if !ok {
 			last = 0
 		}
@@ -192,7 +192,7 @@ func (p *Parser) isOneInchRFQTrades(orderHash string, traceCall types.CallFrame,
 			*count += 1
 			return false
 		}
-		p.orderHashCount.Add(orderHash, last+1)
+		p.orderHashCount.Add(fmt.Sprintf("%s-%s", txHash, orderHash), last+1)
 		return true
 	}
 	return false

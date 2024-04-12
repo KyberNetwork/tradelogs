@@ -33,6 +33,7 @@ func ToTradeLog(tradeLog storage.TradeLog, contractCall *types.ContractCall) (st
 		tradeLog.MakerToken = "0x" + rfqOrder.MakerAsset.Text(16)
 		tradeLog.TakerToken = "0x" + rfqOrder.TakerAsset.Text(16)
 		tradeLog.Maker = "0x" + rfqOrder.Maker.Text(16)
+		tradeLog.MakerTraits = rfqOrder.MakerTraits.String()
 	}
 
 	return tradeLog, nil

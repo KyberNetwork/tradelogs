@@ -20,14 +20,16 @@ type EVMLog struct {
 }
 
 type Worker struct {
-	listener *evmlistenerclient.Client
-	l        *zap.SugaredLogger
-	s        *storage.Storage
-	p        map[string]parser.Parser
-	errLogs  lru.BasicLRU[string, EVMLog]
+	listener     *evmlistenerclient.Client
+	l            *zap.SugaredLogger
+	s            *storage.Storage
+	p            map[string]parser.Parser
+	errLogs      lru.BasicLRU[string, EVMLog]
+	tradeLogChan chan storage.TradeLog
 }
 
-func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.Client, parsers ...parser.Parser) (*Worker, error) {
+func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.Client, tradeLogChan chan storage.TradeLog,
+	parsers ...parser.Parser) (*Worker, error) {
 	p := make(map[string]parser.Parser)
 	for _, ps := range parsers {
 		for _, topic := range ps.Topics() {
@@ -35,17 +37,26 @@ func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.C
 		}
 	}
 	return &Worker{
-		listener: listener,
-		l:        l,
-		s:        s,
-		p:        p,
-		errLogs:  lru.NewBasicLRU[string, EVMLog](1000),
+		listener:     listener,
+		l:            l,
+		s:            s,
+		p:            p,
+		errLogs:      lru.NewBasicLRU[string, EVMLog](1000),
+		tradeLogChan: tradeLogChan,
 	}, nil
 }
 
 func (w *Worker) Run(ctx context.Context) error {
 	retryTimer := time.NewTicker(evmlistenerclient.BlockTime)
 	for {
+		select {
+		case <-retryTimer.C:
+			if err := w.retryParseLog(); err != nil {
+				w.l.Errorw("error when retry parse log", "err", err)
+				return err
+			}
+		default:
+		}
 		m, err := w.listener.GConsume(ctx)
 		if err != nil {
 			w.l.Errorw("Error while consume in group")
@@ -62,14 +73,6 @@ func (w *Worker) Run(ctx context.Context) error {
 		if err := w.listener.Ack(ctx, m); err != nil {
 			w.l.Errorw("Error when ack msg", "error", err)
 			return err
-		}
-		select {
-		case <-retryTimer.C:
-			if err := w.retryParseLog(); err != nil {
-				w.l.Errorw("error when retry parse log", "err", err)
-				return err
-			}
-		default:
 		}
 	}
 }
@@ -119,6 +122,9 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 		if err := w.s.Insert(insertOrders); err != nil {
 			return err
 		}
+		for _, log := range insertOrders {
+			w.tradeLogChan <- log
+		}
 	}
 
 	return nil
@@ -126,7 +132,9 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 
 func (w *Worker) retryParseLog() error {
 	insertOrders := []storage.TradeLog{}
-	for _, k := range w.errLogs.Keys() {
+	keys := w.errLogs.Keys()
+	w.l.Infow("start retry logs", "len", len(keys))
+	for _, k := range keys {
 		l, ok := w.errLogs.Peek(k)
 		if !ok {
 			continue
@@ -137,8 +145,10 @@ func (w *Worker) retryParseLog() error {
 		}
 		order, err := ps.Parse(convert.ToETHLog(l.log), l.ts)
 		if err != nil {
+			w.l.Errorw("error when retry log", "log", l.log, "err", err)
 			continue
 		}
+
 		w.l.Infow("retry log successfully", "key", k, "parser", ps.Exchange())
 		w.errLogs.Remove(k)
 		insertOrders = append(insertOrders, order)
@@ -146,6 +156,9 @@ func (w *Worker) retryParseLog() error {
 
 	if err := w.s.Insert(insertOrders); err != nil {
 		return err
+	}
+	for _, log := range insertOrders {
+		w.tradeLogChan <- log
 	}
 	return nil
 }
