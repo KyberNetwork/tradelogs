@@ -49,6 +49,19 @@ func (b *Broadcaster) BroadcastLog() {
 func (b *Broadcaster) addConn(event, maker string, conn *websocket.Conn) {
 	id := xid.New().String()
 	b.l.Infow("connected socket", "id", id)
+	go func() {
+		msgType, msg, err := conn.ReadMessage()
+		b.l.Infow("read msg result", "id", id, "msgType", msgType, "msg", msg, "err", err)
+		if err != nil {
+			b.mu.Lock()
+			e, ok := b.clients[fmt.Sprintf("%s-%s", event, maker)]
+			if !ok {
+				return
+			}
+			delete(e, id)
+			b.mu.Unlock()
+		}
+	}()
 	b.mu.Lock()
 	cons, ok := b.clients[combine(event, maker)]
 	if !ok {
@@ -68,20 +81,11 @@ func combine(event, maker string) string {
 	return fmt.Sprintf("%s-%s", event, maker)
 }
 
-func (b *Broadcaster) CheckDisconnect() {
-	for {
-		b.mu.Lock()
-		for _, cons := range b.clients {
-			for id, c := range cons {
-				if _, _, err := c.ws.ReadMessage(); err != nil {
-					if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway, websocket.CloseNoStatusReceived) {
-						b.l.Infow("socket is closed", "id", id)
-						delete(cons, id)
-					}
-				}
-			}
+func (b *Broadcaster) Test() {
+	for range time.NewTicker(time.Second * 5).C {
+		b.tradeLogChan <- storage.TradeLog{
+			EventHash: "0xac75f773e3a92f1a02b12134d65e1f47f8a14eabe4eaf1e24624918e6a8b269f",
+			Maker:     "0x807cF9A772d5a3f9CeFBc1192e939D62f0D9bD38",
 		}
-		b.mu.Unlock()
-		time.Sleep(time.Minute)
 	}
 }

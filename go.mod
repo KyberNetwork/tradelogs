@@ -5,7 +5,6 @@ go 1.21.1
 require (
 	cloud.google.com/go/bigquery v1.56.0
 	github.com/KyberNetwork/cclog v1.1.0
-	github.com/KyberNetwork/tradinglib v0.4.19
 	github.com/TheZeroSlave/zapsentry v1.20.2
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/getsentry/sentry-go v0.26.0
@@ -34,6 +33,7 @@ require (
 	github.com/apache/arrow/go/v12 v12.0.0 // indirect
 	github.com/apache/thrift v0.16.0 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
+	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.2 // indirect
 	github.com/bytedance/sonic v1.10.2 // indirect
 	github.com/cespare/cp v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
