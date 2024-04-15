@@ -129,7 +129,6 @@ func run(c *cli.Context) error {
 
 	bc := tradelogs.NewBroadcaster(tradeLogChan)
 	go bc.BroadcastLog()
-	go bc.CheckDisconnect()
 	httpTradelogs := tradelogs.New(l, s, c.String(libapp.HTTPServerFlag.Name), bc)
 	go func() {
 		if err := httpTradelogs.Run(); err != nil {
