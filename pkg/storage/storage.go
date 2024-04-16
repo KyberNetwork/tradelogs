@@ -9,7 +9,23 @@ import (
 	"go.uber.org/zap"
 )
 
-const tradeLogsTable = "tradelogs"
+const (
+	tradeLogsTable = "tradelogs"
+	errorLogsTable = "errorlogs"
+)
+
+type EVMLog struct {
+	Address     string `db:"address"`
+	Topics      string `db:"topics"`
+	Data        []byte `db:"data"`
+	BlockNumber uint64 `db:"block_number"`
+	TxHash      string `db:"tx_hash"`
+	TxIndex     uint   `db:"tx_index"`
+	BlockHash   string `db:"block_hash"`
+	Index       uint   `db:"log_index"`
+	Removed     bool   `db:"removed"`
+	Time        uint64 `db:"time"`
+}
 
 type Storage struct {
 	db *sqlx.DB
@@ -131,4 +147,78 @@ func tradelogsColumns() []string {
 		"event_hash",
 		"maker_traits",
 	}
+}
+
+func (s *Storage) InsertErrorLog(log EVMLog) error {
+	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(errorLogsTable).Columns(
+		[]string{"address", "topics", "data", "block_number", "tx_hash",
+			"tx_index", "block_hash", "log_index", "time"}...,
+	).Values(log.Address, log.Topics, log.Data, log.BlockNumber, log.TxHash,
+		log.TxIndex, log.BlockHash, log.Index, log.Time)
+	q, p, err := b.Suffix(`ON CONFLICT(block_number, log_index) DO UPDATE 
+		SET 
+		address=excluded.address,
+		topics=excluded.topics,
+		data=excluded.data,
+		block_number=excluded.block_number,
+		tx_hash=excluded.tx_hash,
+		tx_index=excluded.tx_index,
+		block_hash=excluded.block_hash,
+		log_index=excluded.log_index,
+		time=excluded.time
+	`).ToSql()
+	if err != nil {
+		s.l.Errorw("Error build insert", "error", err)
+		return err
+	}
+	if _, err := s.db.Exec(q, p...); err != nil {
+		s.l.Errorw("Error exec insert", "sql", q, "arg", p, "error", err)
+		return err
+	}
+	return nil
+}
+
+func (s *Storage) GetErrorLogs() ([]EVMLog, error) {
+	q, p, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Select("*").
+		From(errorLogsTable).ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []EVMLog
+	if err := s.db.Select(&result, q, p...); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (s *Storage) DeleteErrorLogsWithBlock(block_hash string) error {
+	q, p, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Delete(errorLogsTable).
+		Where(squirrel.Eq{"block_hash": block_hash}).
+		ToSql()
+	if err != nil {
+		s.l.Errorw("Error while delete", "block_number", block_hash, "error", err)
+		return err
+	}
+	if _, err := s.db.Exec(q, p...); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Storage) DeleteErrorLogsWithLogIndex(block uint64, logIndex uint) error {
+	q, p, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Delete(errorLogsTable).
+		Where(squirrel.Eq{"block_number": block, "log_index": logIndex}).
+		ToSql()
+	if err != nil {
+		s.l.Errorw("Error while delete", "block_number", block, "log_index", logIndex, "error", err)
+		return err
+	}
+	if _, err := s.db.Exec(q, p...); err != nil {
+		return err
+	}
+	return nil
 }

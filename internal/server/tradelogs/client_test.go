@@ -19,10 +19,20 @@ const (
 func TestWSClient(t *testing.T) {
 	t.Skip()
 	for {
-		conn, _, err := websocket.DefaultDialer.Dial(url2, nil)
+		conn, _, err := websocket.DefaultDialer.Dial(url1, nil)
 		if err != nil {
 			log.Fatal("dial:", err)
 		}
+		conn.SetPongHandler(func(appData string) error {
+			log.Println("pong", appData)
+			return nil
+		})
+		go func() {
+			for range time.NewTicker(time.Second).C {
+				log.Println("ping")
+				_ = conn.WriteMessage(websocket.PingMessage, []byte{})
+			}
+		}()
 		for range time.NewTicker(time.Second).C {
 			if _, data, err := conn.ReadMessage(); err == nil {
 				var l storage.TradeLog
@@ -31,6 +41,7 @@ func TestWSClient(t *testing.T) {
 				log.Println("receive:", l)
 			} else {
 				conn.Close()
+				log.Println("err", err)
 				break
 			}
 		}
