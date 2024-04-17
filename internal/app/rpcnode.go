@@ -11,6 +11,7 @@ var (
 		Name:   RPCUrlFlagName,
 		EnvVar: "RPC_URL",
 		Usage:  "RPC node url",
+		Value:  "https://ethereum.kyberengineering.io/trading-ethereum",
 	}
 )
 

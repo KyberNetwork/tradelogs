@@ -58,6 +58,7 @@ func (b *Broadcaster) addConn(event, maker string, conn *websocket.Conn) {
 			if !ok {
 				return
 			}
+			conn.Close()
 			delete(e, id)
 			b.mu.Unlock()
 		}
