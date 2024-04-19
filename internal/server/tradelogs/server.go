@@ -120,5 +120,5 @@ func (s *Server) registerEventLogWS(c *gin.Context) {
 		responseErr(c, http.StatusInternalServerError, fmt.Errorf("can't create ws"))
 		return
 	}
-	s.bc.addConn(param.EventHash, param.Maker, conn)
+	s.bc.newConn(param.EventHash, param.Maker, conn)
 }
