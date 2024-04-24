@@ -79,3 +79,7 @@ func (p *Parser) Exchange() string {
 	return parser.ExKsRFQ
 }
 
+func (p *Parser) UseTraceCall() bool {
+	return false
+}
+

@@ -233,3 +233,7 @@ func (p *Parser) decodeOutput(output string) (string, string, string, error) {
 func (p *Parser) Exchange() string {
 	return parser.Ex1InchV6
 }
+
+func (p *Parser) UseTraceCall() bool {
+	return true
+}
