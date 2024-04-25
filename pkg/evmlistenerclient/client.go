@@ -17,6 +17,7 @@ const (
 
 var (
 	BlockTime = 12 * time.Second
+	RetryTime = 2 * time.Second
 )
 
 type Config struct {

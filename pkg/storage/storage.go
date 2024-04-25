@@ -222,3 +222,21 @@ func (s *Storage) DeleteErrorLogsWithLogIndex(block uint64, logIndex uint) error
 	}
 	return nil
 }
+
+func (s *Storage) GetErrorLogsSince(t int64) ([]EVMLog, error) {
+	q, p, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Select("*").
+		From(errorLogsTable).
+		Where(squirrel.GtOrEq{"time": t}).
+		ToSql()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var result []EVMLog
+	if err := s.db.Select(&result, q, p...); err != nil {
+		return nil, err
+	}
+	return result, nil
+}

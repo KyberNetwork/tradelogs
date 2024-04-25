@@ -12,6 +12,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinch"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinchv6"
+	"github.com/KyberNetwork/tradelogs/pkg/parser/uniswapx"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 
@@ -105,6 +106,7 @@ func run(c *cli.Context) error {
 		hashflowv3.MustNewParser(),
 		oneinch.MustNewParser(traceCalls),
 		oneinchv6.MustNewParser(traceCalls),
+		uniswapx.MustNewParser(traceCalls),
 	}
 
 	tradeLogChan := make(chan storage.TradeLog, 1000)

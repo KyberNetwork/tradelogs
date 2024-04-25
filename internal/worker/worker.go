@@ -39,7 +39,8 @@ func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.C
 }
 
 func (w *Worker) Run(ctx context.Context) error {
-	retryTimer := time.NewTicker(evmlistenerclient.BlockTime)
+	retryTimer := time.NewTicker(evmlistenerclient.RetryTime)
+	defer retryTimer.Stop()
 	for {
 		select {
 		case <-retryTimer.C:
@@ -127,7 +128,7 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 
 func (w *Worker) retryParseLog() error {
 	insertOrders := []storage.TradeLog{}
-	logs, err := w.s.GetErrorLogs()
+	logs, err := w.s.GetErrorLogsSince(time.Now().Add(-time.Hour * 24).Unix())
 	if err != nil {
 		return err
 	}

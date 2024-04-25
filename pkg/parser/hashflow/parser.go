@@ -77,3 +77,7 @@ func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error
 func (p *Parser) Exchange() string {
 	return parser.ExHashflow
 }
+
+func (p *Parser) UseTraceCall() bool {
+	return false
+}
