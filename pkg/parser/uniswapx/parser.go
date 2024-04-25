@@ -30,11 +30,8 @@ type ResolvedOrder struct {
 		AdditionalValidationContract common.Address "json:\"additionalValidationContract\""
 		AdditionalValidationData     []uint8        "json:\"additionalValidationData\""
 	} "json:\"info\""
-	DecayStartTime         *big.Int       "json:\"decayStartTime\""
-	DecayEndTime           *big.Int       "json:\"decayEndTime\""
-	ExclusiveFiller        common.Address "json:\"exclusiveFiller\""
-	ExclusivityOverrideBps *big.Int       "json:\"exclusivityOverrideBps\""
-	InputToken             struct {
+	Cosigner   common.Address "json:\"cosigner\""
+	InputToken struct {
 		InputToken       common.Address "json:\"inputToken\""
 		InputStartAmount *big.Int       "json:\"inputStartAmount\""
 		InputEndAmount   *big.Int       "json:\"inputEndAmount\""
@@ -45,6 +42,17 @@ type ResolvedOrder struct {
 		EndAmount   *big.Int       "json:\"endAmount\""
 		Recipient   common.Address "json:\"recipient\""
 	} "json:\"outputs\""
+	CosignerData struct {
+		DecayStartTime         *big.Int       "json:\"decayStartTime\""
+		DecayEndTime           *big.Int       "json:\"decayEndTime\""
+		ExclusiveFiller        common.Address "json:\"exclusiveFiller\""
+		ExclusivityOverrideBps *big.Int       "json:\"exclusivityOverrideBps\""
+		InputOverride          *big.Int       "json:\"inputOverride\""
+		OutputOverrides        []struct {
+			Override *big.Int "json:\"override\""
+		} "json:\"outputOverrides\""
+	}
+	Cosignature []uint8 "json:\"cosignature\""
 }
 
 var (
@@ -60,10 +68,7 @@ var (
 			{Name: "additionalValidationContract", Type: "address"},
 			{Name: "additionalValidationData", Type: "bytes"}},
 		},
-		{Name: "decayStartTime", Type: "uint256"},
-		{Name: "decayEndTime", Type: "uint256"},
-		{Name: "exclusiveFiller", Type: "address"},
-		{Name: "exclusivityOverrideBps", Type: "uint256"},
+		{Name: "cosigner", Type: "address"},
 		{Name: "inputToken", Type: "tuple", Components: []abi.ArgumentMarshaling{
 			{Name: "inputToken", Type: "address"},
 			{Name: "inputStartAmount", Type: "uint256"},
@@ -75,6 +80,16 @@ var (
 			{Name: "endAmount", Type: "uint256"},
 			{Name: "recipient", Type: "address"},
 		}},
+		{Name: "cosignerData", Type: "tuple", Components: []abi.ArgumentMarshaling{
+			{Name: "decayStartTime", Type: "uint256"},
+			{Name: "decayEndTime", Type: "uint256"},
+			{Name: "exclusiveFiller", Type: "address"},
+			{Name: "exclusivityOverrideBps", Type: "uint256"},
+			{Name: "inputOverride", Type: "uint256"},
+			{Name: "outputOverrides", Type: "tuple[]", Components: []abi.ArgumentMarshaling{
+				{Name: "override", Type: "uint256"}}}},
+		},
+		{Name: "cosignature", Type: "bytes"},
 	})
 	OrderArguments = abi.Arguments{{Type: OrderTuple}}
 )
@@ -217,27 +232,32 @@ func (p *Parser) updateOrder(from string, internal storage.TradeLog, parsed []in
 		return storage.TradeLog{}, err
 	}
 
-	internal.TakerToken = resolvedOrder[0].InputToken.InputToken.String()
-	internal.MakerToken = resolvedOrder[0].Outputs[0].Token.String()
-	internal.TakerTokenAmount = resolvedOrder[0].InputToken.InputStartAmount.String()
-	internal.MakerTokenAmount = resolvedOrder[0].Outputs[0].StartAmount.String()
-	internal.TakerTokenAmount = decay(resolvedOrder[0].InputToken.InputStartAmount,
-		resolvedOrder[0].InputToken.InputEndAmount,
-		resolvedOrder[0].DecayStartTime,
-		resolvedOrder[0].DecayEndTime,
-		big.NewInt(int64(internal.Timestamp/1000))).String()
-
-	outputAmount := decay(resolvedOrder[0].Outputs[0].StartAmount,
-		resolvedOrder[0].Outputs[0].EndAmount,
-		resolvedOrder[0].DecayStartTime,
-		resolvedOrder[0].DecayEndTime,
-		big.NewInt(int64(internal.Timestamp/1000)))
-	if checkExclusivity(resolvedOrder[0].ExclusiveFiller, common.HexToAddress(from), resolvedOrder[0].DecayStartTime.Uint64(), internal.Timestamp/1000) {
-		internal.MakerTokenAmount = outputAmount.String()
-		return internal, nil
+	order := resolvedOrder[0]
+	if order.CosignerData.InputOverride.Cmp(big.NewInt(0)) != 0 {
+		order.InputToken.InputStartAmount = order.CosignerData.InputOverride
+	}
+	for i := range order.Outputs {
+		if order.CosignerData.OutputOverrides[i].Override.Cmp(big.NewInt(0)) != 0 {
+			order.Outputs[i].StartAmount = order.CosignerData.OutputOverrides[i].Override
+		}
 	}
 
-	internal.MakerTokenAmount = handleOverride(outputAmount, resolvedOrder[0].ExclusivityOverrideBps, big.NewInt(10000)).String()
+	internal.TakerToken = order.InputToken.InputToken.String()
+	internal.MakerToken = order.Outputs[0].Token.String()
+
+	internal.TakerTokenAmount = decay(order.InputToken.InputStartAmount,
+		order.InputToken.InputEndAmount,
+		order.CosignerData.DecayStartTime,
+		order.CosignerData.DecayEndTime,
+		big.NewInt(int64(internal.Timestamp/1000))).String()
+
+	makerAmount := big.NewInt(0)
+	for _, o := range order.Outputs {
+		makerAmount = makerAmount.Add(makerAmount, decay(o.StartAmount, o.EndAmount,
+			order.CosignerData.DecayStartTime, order.CosignerData.DecayEndTime,
+			big.NewInt(int64(internal.Timestamp/1000))))
+	}
+	internal.MakerTokenAmount = makerAmount.String()
 	return internal, nil
 }
 
@@ -263,17 +283,17 @@ func decay(startAmount, endAmount, decayStartTime, decayEndTime, blockTime *big.
 	return
 }
 
-func handleOverride(amount, exclusivityOverrideBps, BPS *big.Int) *big.Int {
-	return mulDiv(amount, new(big.Int).Add(exclusivityOverrideBps, BPS), BPS)
-}
+// func handleOverride(amount, exclusivityOverrideBps, BPS *big.Int) *big.Int {
+// 	return mulDiv(amount, new(big.Int).Add(exclusivityOverrideBps, BPS), BPS)
+// }
 
 func mulDiv(a, b, c *big.Int) *big.Int {
 	return new(big.Int).Div(new(big.Int).Mul(a, b), c)
 }
 
-func checkExclusivity(exclusive, sender common.Address, exclusivityEndTime, ts uint64) bool {
-	return exclusive == common.Address{} || ts > exclusivityEndTime || exclusive == sender
-}
+// func checkExclusivity(exclusive, sender common.Address, exclusivityEndTime, ts uint64) bool {
+// 	return exclusive == common.Address{} || ts > exclusivityEndTime || exclusive == sender
+// }
 
 func (p *Parser) Exchange() string {
 	return parser.ExUniswapX
