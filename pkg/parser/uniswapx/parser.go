@@ -58,8 +58,31 @@ type ResolvedOrder struct {
 var (
 	ErrInvalidOneInchFilledTopic = errors.New("invalid uniswapx order filled topic")
 	ErrUpdateOrder               = errors.New("can't update order")
+)
 
-	OrderTuple, _ = abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+type Parser struct {
+	abi            *abi.ABI
+	ps             *UniswapxFilterer
+	eventHash      string
+	traceCalls     *tracecall.Cache
+	orderArguments abi.Arguments
+}
+
+func MustNewParser(cache *tracecall.Cache) *Parser {
+	ps, err := NewUniswapxFilterer(common.Address{}, nil)
+	if err != nil {
+		panic(err)
+	}
+	ab, err := UniswapxMetaData.GetAbi()
+	if err != nil {
+		panic(err)
+	}
+	event, ok := ab.Events[FilledEvent]
+	if !ok {
+		panic(fmt.Sprintf("no such event: %s", FilledEvent))
+	}
+
+	orderTuple, err := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
 		{Name: "info", Type: "tuple", Components: []abi.ArgumentMarshaling{
 			{Name: "reactor", Type: "address"},
 			{Name: "swapper", Type: "address"},
@@ -91,35 +114,16 @@ var (
 		},
 		{Name: "cosignature", Type: "bytes"},
 	})
-	OrderArguments = abi.Arguments{{Type: OrderTuple}}
-)
-
-type Parser struct {
-	abi        *abi.ABI
-	ps         *UniswapxFilterer
-	eventHash  string
-	traceCalls *tracecall.Cache
-}
-
-func MustNewParser(cache *tracecall.Cache) *Parser {
-	ps, err := NewUniswapxFilterer(common.Address{}, nil)
 	if err != nil {
-		panic(err)
-	}
-	ab, err := UniswapxMetaData.GetAbi()
-	if err != nil {
-		panic(err)
-	}
-	event, ok := ab.Events[FilledEvent]
-	if !ok {
-		panic(fmt.Sprintf("no such event: %s", FilledEvent))
+		panic("cant create order abi type")
 	}
 
 	return &Parser{
-		ps:         ps,
-		abi:        ab,
-		eventHash:  event.ID.String(),
-		traceCalls: cache,
+		ps:             ps,
+		abi:            ab,
+		eventHash:      event.ID.String(),
+		traceCalls:     cache,
+		orderArguments: abi.Arguments{{Type: orderTuple}},
 	}
 }
 
@@ -199,7 +203,7 @@ func (p *Parser) recursiveDetectRFQTrades(order storage.TradeLog, call types.Cal
 			inputOrder = inputOrders[0]
 		}
 
-		parsedOrder, err := OrderArguments.Unpack(inputOrder.Order)
+		parsedOrder, err := p.orderArguments.Unpack(inputOrder.Order)
 		if err != nil {
 			continue
 		}
