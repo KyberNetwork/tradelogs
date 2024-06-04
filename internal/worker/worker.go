@@ -128,7 +128,7 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 
 func (w *Worker) retryParseLog() error {
 	insertOrders := []storage.TradeLog{}
-	logs, err := w.s.GetErrorLogsSince(time.Now().Add(-time.Hour * 24).Unix())
+	logs, err := w.s.GetErrorLogsSince(time.Now().Add(-time.Minute * 5).Unix())
 	if err != nil {
 		return err
 	}

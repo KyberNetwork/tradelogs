@@ -10,6 +10,7 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/pkg/dune"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
+	"github.com/KyberNetwork/tradelogs/pkg/parser/bebop"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinch"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinchv6"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/uniswapx"
@@ -107,6 +108,7 @@ func run(c *cli.Context) error {
 		oneinch.MustNewParser(traceCalls),
 		oneinchv6.MustNewParser(traceCalls),
 		uniswapx.MustNewParser(traceCalls),
+		bebop.MustNewParser(traceCalls),
 	}
 
 	tradeLogChan := make(chan storage.TradeLog, 1000)
