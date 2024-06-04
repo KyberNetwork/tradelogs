@@ -19,6 +19,7 @@ const (
 	ExParaswapTaker = "paraswap_taker"
 	ExUniswapX      = "uniswapx"
 	ExNative        = "native"
+	ExBebop         = "bebop"
 )
 
 type Parser interface {
