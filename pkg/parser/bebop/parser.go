@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 const (
@@ -40,11 +41,42 @@ type SingleOrder struct {
 	Flags          *big.Int `json:"flags"`
 }
 
+type MultiOrder struct {
+	Expiry         *big.Int        `json:"expiry"`
+	TakerAddress   string          `json:"taker_address"`
+	MakerAddress   string          `json:"maker_address"`
+	MakerNonce     *big.Int        `json:"maker_nonce"`
+	TakerTokens    json.RawMessage `json:"taker_tokens"`
+	MakerTokens    json.RawMessage `json:"maker_tokens"`
+	TakerAmounts   json.RawMessage `json:"taker_amounts"`
+	MakerAmounts   json.RawMessage `json:"maker_amounts"`
+	Receiver       string          `json:"receiver"`
+	PackedCommands *big.Int        `json:"packed_commands"`
+	Flags          *big.Int        `json:"flags"`
+}
+
+type AggregateOrder struct {
+	Expiry         *big.Int        `json:"expiry"`
+	TakerAddress   string          `json:"taker_address"`
+	MakerAddresses json.RawMessage `json:"maker_addresses"`
+	MakerNonces    json.RawMessage `json:"maker_nonces"`
+	TakerTokens    json.RawMessage `json:"taker_tokens"`
+	MakerTokens    json.RawMessage `json:"maker_tokens"`
+	TakerAmounts   json.RawMessage `json:"taker_amounts"`
+	MakerAmounts   json.RawMessage `json:"maker_amounts"`
+	Receiver       string          `json:"receiver"`
+	PackedCommands *big.Int        `json:"packed_commands"`
+	Flags          *big.Int        `json:"flags"`
+}
+
 type Parser struct {
-	abi        *abi.ABI
-	ps         *BebopFilterer
-	eventHash  string
-	traceCalls *tracecall.Cache
+	abi                *abi.ABI
+	ps                 *BebopFilterer
+	eventHash          string
+	traceCalls         *tracecall.Cache
+	singleOrderFunc    sets.Set[string]
+	multiOrderFunc     sets.Set[string]
+	aggregateOrderFunc sets.Set[string]
 }
 
 func MustNewParser(tracecall *tracecall.Cache) *Parser {
@@ -61,10 +93,13 @@ func MustNewParser(tracecall *tracecall.Cache) *Parser {
 		panic("no such event: " + TradeEvent)
 	}
 	return &Parser{
-		ps:         ps,
-		abi:        &ab,
-		eventHash:  event.ID.String(),
-		traceCalls: tracecall,
+		ps:                 ps,
+		abi:                &ab,
+		eventHash:          event.ID.String(),
+		traceCalls:         tracecall,
+		singleOrderFunc:    sets.New("swapSingle", "swapSingleFromContract", "settleSingle", "settleSingleAndSignPermit", "settleSingleAndSignPermit2"),
+		multiOrderFunc:     sets.New("swapMulti", "settleMulti", "settleMultiAndSignPermit", "settleMultiAndSignPermit2"),
+		aggregateOrderFunc: sets.New("swapAggregate", "settleAggregate", "settleAggregateAndSignPermit", "settleAggregateAndSignPermit2"),
 	}
 }
 
@@ -146,24 +181,55 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 		if param.Name != OrderParam {
 			continue
 		}
-		var rfqOrder SingleOrder
-		bytes, err := json.Marshal(param.Value)
-		if err != nil {
-			return order, err
+		switch {
+		case p.singleOrderFunc.Has(contractCall.Name):
+			var rfqOrder SingleOrder
+			if err := unpackOrder(param.Value, &rfqOrder); err != nil {
+				return order, err
+			}
+			order.MakerToken = rfqOrder.MakerToken
+			order.TakerToken = rfqOrder.TakerToken
+			order.Maker = rfqOrder.MakerAddress
+			order.Taker = rfqOrder.TakerAddress
+			order.MakerTokenAmount = rfqOrder.MakerAmount.String()
+			order.TakerTokenAmount = rfqOrder.TakerAmount.String()
+		case p.multiOrderFunc.Has(contractCall.Name):
+			var rfqOrder MultiOrder
+			if err := unpackOrder(param.Value, &rfqOrder); err != nil {
+				return order, err
+			}
+			order.MakerToken = string(rfqOrder.MakerTokens)
+			order.TakerToken = string(rfqOrder.TakerTokens)
+			order.Maker = rfqOrder.MakerAddress
+			order.Taker = rfqOrder.TakerAddress
+			order.MakerTokenAmount = string(rfqOrder.MakerAmounts)
+			order.TakerTokenAmount = string(rfqOrder.TakerAmounts)
+		case p.aggregateOrderFunc.Has(contractCall.Name):
+			var rfqOrder AggregateOrder
+			if err := unpackOrder(param.Value, &rfqOrder); err != nil {
+				return order, err
+			}
+			order.MakerToken = string(rfqOrder.MakerTokens)
+			order.TakerToken = string(rfqOrder.TakerTokens)
+			order.Maker = string(rfqOrder.MakerAddresses)
+			order.Taker = rfqOrder.TakerAddress
+			order.MakerTokenAmount = string(rfqOrder.MakerAmounts)
+			order.TakerTokenAmount = string(rfqOrder.TakerAmounts)
 		}
-
-		if err := json.Unmarshal(bytes, &rfqOrder); err != nil {
-			return order, err
-		}
-		order.MakerToken = rfqOrder.MakerToken
-		order.TakerToken = rfqOrder.TakerToken
-		order.Maker = rfqOrder.MakerAddress
-		order.Taker = rfqOrder.TakerAddress
-		order.MakerTokenAmount = rfqOrder.MakerAmount.String()
-		order.TakerTokenAmount = rfqOrder.TakerAmount.String()
 	}
 
 	return order, nil
+}
+
+func unpackOrder(in, out interface{}) error {
+	bytes, err := json.Marshal(in)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(bytes, out); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (p *Parser) Exchange() string {
