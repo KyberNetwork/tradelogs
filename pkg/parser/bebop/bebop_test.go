@@ -32,8 +32,8 @@ func TestFetchEvent(t *testing.T) {
 	require.NoError(t, err)
 	logs, err := client.FilterLogs(context.Background(), ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(20009519),
-		ToBlock:   big.NewInt(20009519),
+		FromBlock: big.NewInt(20025442),
+		ToBlock:   big.NewInt(20025442),
 		Addresses: nil,
 		Topics: [][]common.Hash{
 			{
@@ -49,7 +49,7 @@ func TestFetchEvent(t *testing.T) {
 
 func TestParseEvent(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
-	eventRaw := `[{"address":"0xbbbbbbb520d69a9775e85b458c58c648259fad5f","topics":["0xadd7095becdaa725f0f33243630938c861b0bba83dfd217d4055701aa768ec2e","0x00000000000000000000000000000000bb6e24300f0812800000000000000000"],"data":"0x","blockNumber":"0x131522f","transactionHash":"0x1ced3e62f6e8083901b3d9365947f53edd28cf7901f79b25a9c8161f7b242b2c","transactionIndex":"0x3c","blockHash":"0xc41f37ec02be129d81f9f81527d52b37e00b2368a9ef418eda14f640662a600a","logIndex":"0xe3","removed":false}]`
+	eventRaw := `[{"address":"0xbbbbbbb520d69a9775e85b458c58c648259fad5f","topics":["0xadd7095becdaa725f0f33243630938c861b0bba83dfd217d4055701aa768ec2e","0x00000000000000000000000000000000b05c492e829fd9c00000000000000000"],"data":"0x","blockNumber":"0x1319062","transactionHash":"0x0f7567ffd5fc92aa552c5e6ebf8173514693aadd5a888c816b4735a931e8c8c3","transactionIndex":"0xe","blockHash":"0x3015d9d1960cab845f333c49f8cb0d81fa89b2c837de8ac22cd645810bb18c83","logIndex":"0x5a","removed":false}]`
 	events := []types.Log{}
 	err := json.Unmarshal([]byte(eventRaw), &events)
 	require.NoError(t, err)
