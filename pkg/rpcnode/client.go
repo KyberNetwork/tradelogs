@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -62,6 +63,10 @@ func (c *Client) FetchTraceCall(ctx context.Context, txHash string) (types.CallF
 		return types.CallFrame{}, err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return types.CallFrame{}, fmt.Errorf("error code %d", res.StatusCode)
+	}
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
