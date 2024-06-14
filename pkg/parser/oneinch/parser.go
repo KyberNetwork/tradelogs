@@ -24,7 +24,7 @@ const (
 
 var (
 	ErrInvalidOneInchFilledTopic = errors.New("invalid oneinch order filled topic")
-	ErrNotFoundTraceCall         = errors.New("not found trace call")
+	ErrNotFoundLog               = errors.New("not found log")
 	RFQOrderOutputArgument       abi.Arguments
 )
 
@@ -159,7 +159,7 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 			return tradeLog, nil
 		}
 	}
-	return tradeLog, ErrNotFoundTraceCall
+	return tradeLog, ErrNotFoundLog
 }
 
 func (p *Parser) isOneInchRFQTrades(makingAmountOrder string, orderHash string, traceCall types.CallFrame) bool {

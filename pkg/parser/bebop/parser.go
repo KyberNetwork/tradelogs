@@ -23,8 +23,8 @@ const (
 )
 
 var (
-	ErrTradeTopic        = errors.New("invalid trade topic")
-	ErrNotFoundTraceCall = errors.New("not found trace call")
+	ErrTradeTopic  = errors.New("invalid trade topic")
+	ErrNotFoundLog = errors.New("not found log")
 )
 
 type SingleOrder struct {
@@ -155,7 +155,7 @@ func (p *Parser) searchTradeLog(order storage.TradeLog, traceCall types.CallFram
 			return tradeLog, nil
 		}
 	}
-	return order, ErrNotFoundTraceCall
+	return order, ErrNotFoundLog
 }
 
 func (p *Parser) checkBebopTrade(traceCall types.CallFrame) bool {
