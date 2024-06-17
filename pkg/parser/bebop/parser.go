@@ -3,6 +3,7 @@ package bebop
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -145,7 +146,7 @@ func (p *Parser) parseTraceCall(order storage.TradeLog) (storage.TradeLog, error
 }
 
 func (p *Parser) searchTradeLog(order storage.TradeLog, traceCall types.CallFrame) (storage.TradeLog, error) {
-	if p.checkBebopTrade(traceCall) {
+	if p.checkBebopTrade(traceCall, order.OrderHash) {
 		return p.ParseFromInternalCall(order, traceCall)
 	}
 
@@ -155,15 +156,27 @@ func (p *Parser) searchTradeLog(order storage.TradeLog, traceCall types.CallFram
 			return tradeLog, nil
 		}
 	}
-	return order, ErrNotFoundLog
+	traceData, _ := json.Marshal(traceCall)
+	return order, fmt.Errorf("%w %s", ErrNotFoundLog, string(traceData))
 }
 
-func (p *Parser) checkBebopTrade(traceCall types.CallFrame) bool {
+func (p *Parser) checkBebopTrade(traceCall types.CallFrame, orderHash string) bool {
 	for _, eventLog := range traceCall.Logs {
-		if len(eventLog.Topics) == 0 {
+		if len(eventLog.Topics) < 2 {
 			continue
 		}
 		if !strings.EqualFold(eventLog.Topics[0].String(), p.eventHash) {
+			continue
+		}
+		x, ok := big.NewInt(0).SetString(orderHash, 10)
+		if !ok {
+			continue
+		}
+		y, ok := big.NewInt(0).SetString(eventLog.Topics[1].String()[2:], 16)
+		if !ok {
+			continue
+		}
+		if x.Cmp(y) != 0 {
 			continue
 		}
 		return true

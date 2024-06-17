@@ -57,7 +57,7 @@ type ResolvedOrder struct {
 
 var (
 	ErrInvalidOneInchFilledTopic = errors.New("invalid uniswapx order filled topic")
-	ErrUpdateOrder               = errors.New("can't update order")
+	ErrNotFoundLog               = errors.New("not found log")
 )
 
 type Parser struct {
@@ -207,7 +207,7 @@ func (p *Parser) recursiveDetectRFQTrades(order storage.TradeLog, call types.Cal
 		if err != nil {
 			continue
 		}
-		finalOrder, err := p.updateOrder(call.From, order, parsedOrder)
+		finalOrder, err := p.updateOrder(order, parsedOrder)
 		if err != nil {
 			continue
 		}
@@ -220,10 +220,11 @@ func (p *Parser) recursiveDetectRFQTrades(order storage.TradeLog, call types.Cal
 			return order, nil
 		}
 	}
-	return order, ErrUpdateOrder
+	traceData, _ := json.Marshal(call)
+	return order, fmt.Errorf("%w %s", ErrNotFoundLog, string(traceData))
 }
 
-func (p *Parser) updateOrder(from string, internal storage.TradeLog, parsed []interface{}) (storage.TradeLog, error) {
+func (p *Parser) updateOrder(internal storage.TradeLog, parsed []interface{}) (storage.TradeLog, error) {
 	data, err := json.Marshal(parsed)
 	if err != nil {
 		return storage.TradeLog{}, err
