@@ -1,6 +1,7 @@
 package oneinchv6
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -163,7 +164,8 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 		}
 	}
 
-	return tradeLog, ErrNotFoundLog
+	traceData, _ := json.Marshal(traceCall)
+	return tradeLog, fmt.Errorf("%w %s", ErrNotFoundLog, string(traceData))
 }
 
 func (p *Parser) isOneInchRFQTrades(txHash, orderHash string, traceCall types.CallFrame, count *int) bool {
