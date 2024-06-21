@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/KyberNetwork/tradelogs/internal/types"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 

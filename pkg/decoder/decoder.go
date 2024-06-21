@@ -3,7 +3,7 @@ package decoder
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/KyberNetwork/tradelogs/internal/types"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 )
