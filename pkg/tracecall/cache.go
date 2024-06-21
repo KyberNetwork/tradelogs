@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/KyberNetwork/tradelogs/internal/types"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/ethereum/go-ethereum/common/lru"
 )
