@@ -6,9 +6,11 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+
+	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 const (
@@ -49,7 +51,7 @@ func (p *Parser) Topics() []string {
 	}
 }
 
-func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error) {
+func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
 		return storage.TradeLog{}, ErrInvalidKSFilledTopic
 	}
@@ -83,3 +85,6 @@ func (p *Parser) UseTraceCall() bool {
 	return false
 }
 
+func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error) {
+	return p.Parse(log, 0)
+}

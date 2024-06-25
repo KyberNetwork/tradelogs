@@ -7,12 +7,12 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/KyberNetwork/tradelogs/pkg/abitypes"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -74,23 +74,11 @@ func (p *Parser) Topics() []string {
 }
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storage.TradeLog{}, ErrInvalidOneInchFilledTopic
-	}
-	e, err := p.ps.ParseOrderFilledRFQ(log)
+	order, err := p.buildOrderByLog(log)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	order := storage.TradeLog{
-		OrderHash:        common.Hash(e.OrderHash).String(),
-		MakerTokenAmount: e.MakingAmount.String(),
-		ContractAddress:  e.Raw.Address.String(),
-		BlockNumber:      e.Raw.BlockNumber,
-		TxHash:           e.Raw.TxHash.String(),
-		LogIndex:         uint64(e.Raw.Index),
-		Timestamp:        blockTime * 1000,
-		EventHash:        p.eventHash,
-	}
+	order.Timestamp = blockTime * 1000
 	order, err = p.detectOneInchRfqTrade(order)
 	if err != nil {
 		return order, err
@@ -222,4 +210,32 @@ func (p *Parser) Exchange() string {
 
 func (p *Parser) UseTraceCall() bool {
 	return true
+}
+
+func (p *Parser) buildOrderByLog(log ethereumTypes.Log) (storage.TradeLog, error) {
+	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
+		return storage.TradeLog{}, ErrInvalidOneInchFilledTopic
+	}
+	e, err := p.ps.ParseOrderFilledRFQ(log)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	order := storage.TradeLog{
+		OrderHash:        common.Hash(e.OrderHash).String(),
+		MakerTokenAmount: e.MakingAmount.String(),
+		ContractAddress:  e.Raw.Address.String(),
+		BlockNumber:      e.Raw.BlockNumber,
+		TxHash:           e.Raw.TxHash.String(),
+		LogIndex:         uint64(e.Raw.Index),
+		EventHash:        p.eventHash,
+	}
+	return order, nil
+}
+
+func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error) {
+	order, err := p.buildOrderByLog(log)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	return p.recursiveDetectOneInchRFQTrades(order, callFrame)
 }

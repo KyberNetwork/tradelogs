@@ -2,7 +2,8 @@ package parser
 
 import (
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
+	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 const (
@@ -23,8 +24,9 @@ const (
 )
 
 type Parser interface {
-	Parse(log types.Log, blockTime uint64) (storage.TradeLog, error)
+	Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error)
 	Topics() []string
 	Exchange() string
 	UseTraceCall() bool
+	ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error)
 }
