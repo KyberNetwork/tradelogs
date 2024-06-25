@@ -2,12 +2,13 @@ package hashflow
 
 import (
 	"errors"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 const (
@@ -48,7 +49,7 @@ func (p *Parser) Topics() []string {
 	}
 }
 
-func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error) {
+func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
 		return storage.TradeLog{}, ErrTradeTopic
 	}
@@ -72,6 +73,10 @@ func (p *Parser) Parse(log types.Log, blockTime uint64) (storage.TradeLog, error
 		EventHash:        p.eventHash,
 	}
 	return res, nil
+}
+
+func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error) {
+	return p.Parse(log, 0)
 }
 
 func (p *Parser) Exchange() string {

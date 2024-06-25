@@ -7,11 +7,11 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -111,23 +111,11 @@ func (p *Parser) Topics() []string {
 }
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storage.TradeLog{}, ErrTradeTopic
-	}
-	o, err := p.ps.ParseBebopOrder(log)
+	order, err := p.buildOrderByLog(log)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	order := storage.TradeLog{
-		OrderHash:       o.EventId.String(),
-		Maker:           log.Address.Hex(),
-		ContractAddress: o.Raw.Address.String(),
-		BlockNumber:     o.Raw.BlockNumber,
-		TxHash:          o.Raw.TxHash.String(),
-		LogIndex:        uint64(o.Raw.Index),
-		Timestamp:       blockTime * 1000,
-		EventHash:       p.eventHash,
-	}
+	order.Timestamp = blockTime * 1000
 	return p.parseTraceCall(order)
 }
 
@@ -251,4 +239,32 @@ func (p *Parser) Exchange() string {
 
 func (p *Parser) UseTraceCall() bool {
 	return true
+}
+
+func (p *Parser) buildOrderByLog(log ethereumTypes.Log) (storage.TradeLog, error) {
+	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
+		return storage.TradeLog{}, ErrTradeTopic
+	}
+	o, err := p.ps.ParseBebopOrder(log)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	order := storage.TradeLog{
+		OrderHash:       o.EventId.String(),
+		Maker:           log.Address.Hex(),
+		ContractAddress: o.Raw.Address.String(),
+		BlockNumber:     o.Raw.BlockNumber,
+		TxHash:          o.Raw.TxHash.String(),
+		LogIndex:        uint64(o.Raw.Index),
+		EventHash:       p.eventHash,
+	}
+	return order, nil
+}
+
+func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error) {
+	order, err := p.buildOrderByLog(log)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	return p.searchTradeLog(order, callFrame)
 }

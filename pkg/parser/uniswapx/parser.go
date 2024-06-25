@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -306,4 +306,8 @@ func (p *Parser) Exchange() string {
 
 func (p *Parser) UseTraceCall() bool {
 	return true
+}
+
+func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error) {
+	return p.Parse(log, 0)
 }
