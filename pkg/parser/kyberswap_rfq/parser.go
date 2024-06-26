@@ -129,6 +129,12 @@ func (p *Parser) getRFQOrderParams(callFrame *tradingTypes.CallFrame) (*OrderRFQ
 }
 
 func (p *Parser) GetExpiry(callFrame *tradingTypes.CallFrame) (uint64, error) {
-	// TODO: implement this
-	return 0, nil
+	rfqOrderParams, err := p.getRFQOrderParams(callFrame)
+	if err != nil {
+		return 0, err
+	}
+	if rfqOrderParams == nil {
+		return 0, errors.New("kyberswap rfq order is nil")
+	}
+	return rfqOrderParams.GetExpiry(), nil
 }

@@ -98,7 +98,7 @@ func (p *Parser) GetExpiry(callFrame *tradingTypes.CallFrame) (uint64, error) {
 		return 0, err
 	}
 	if rfqOrderParams == nil {
-		return 0, errors.New("oneinch order is nil")
+		return 0, errors.New("paraswap order is nil")
 	}
 	return uint64(rfqOrderParams.Expiry), nil
 }

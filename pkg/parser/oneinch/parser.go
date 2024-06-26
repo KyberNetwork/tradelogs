@@ -238,6 +238,7 @@ func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
+	order.Timestamp = blockTime
 	return p.recursiveDetectOneInchRFQTrades(order, callFrame)
 }
 
