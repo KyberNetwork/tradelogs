@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"math/big"
 	"strings"
 
@@ -248,11 +249,16 @@ func (p *Parser) UseTraceCall() bool {
 	return true
 }
 
-func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error) {
+func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	order, err := p.buildOrderByLog(log)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
 	count := 0
 	return p.recursiveDetectOneInchRFQTrades(order, callFrame, &count)
+}
+
+func (p *Parser) GetExpiry(callFrame *tradingTypes.CallFrame) (uint64, error) {
+	// TODO: implement this
+	return 0, nil
 }

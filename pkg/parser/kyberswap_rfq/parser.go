@@ -1,8 +1,12 @@
 package kyberswaprfq
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/KyberNetwork/tradelogs/pkg/decoder"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
@@ -15,6 +19,7 @@ import (
 
 const (
 	FilledEvent = "OrderFilledRFQ"
+	paramName   = "order"
 )
 
 var ErrInvalidKSFilledTopic = errors.New("invalid KS order filled topic")
@@ -85,6 +90,45 @@ func (p *Parser) UseTraceCall() bool {
 	return false
 }
 
-func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error) {
-	return p.Parse(log, 0)
+func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+	return p.Parse(log, blockTime)
+}
+
+func (p *Parser) getRFQOrderParams(callFrame *tradingTypes.CallFrame) (*OrderRFQ, error) {
+	var (
+		err error
+	)
+	contractCall := callFrame.ContractCall
+	if contractCall == nil {
+		contractCall, err = decoder.Decode(p.abi, hexutil.Encode(callFrame.Input))
+		if err != nil {
+			return nil, err
+		}
+		if contractCall == nil {
+			return nil, errors.New("missing contract_call")
+		}
+	}
+	for _, param := range contractCall.Params {
+		if param.Name != paramName {
+			continue
+		}
+
+		var rfqOrder OrderRFQ
+		bytes, err := json.Marshal(param.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal(bytes, &rfqOrder); err != nil {
+			return nil, err
+		}
+
+		return &rfqOrder, nil
+	}
+	return nil, nil
+}
+
+func (p *Parser) GetExpiry(callFrame *tradingTypes.CallFrame) (uint64, error) {
+	// TODO: implement this
+	return 0, nil
 }

@@ -35,6 +35,8 @@ github.com/KyberNetwork/cclog v1.1.0 h1:3gqKpSayABuTjS4J7H8qcQHrlfyggpjmHUnCYQT0
 github.com/KyberNetwork/cclog v1.1.0/go.mod h1:vf9+yocFGEyqqObn4Gr9rtj4ffnuKVpKWiSCtfsxIHg=
 github.com/KyberNetwork/evmlistener v0.4.7 h1:SlJwzqngj2N2ot/1M391GbwE/A6wyKfV9z1RIlxZpyI=
 github.com/KyberNetwork/evmlistener v0.4.7/go.mod h1:7ylrHTrF9bRJRcVdw02f4P2k3ohc1/gKGQ3HgaYtfE8=
+github.com/KyberNetwork/tradinglib v0.4.36 h1:h8+pKMPiqnR/3Q+wGq1JWYxP3qFJ3qXqsPJQETuJcFw=
+github.com/KyberNetwork/tradinglib v0.4.36/go.mod h1:3Ciie58Qmd0mFSnUWAg6phbalao6f2GGcAZ6nxw/lcQ=
 github.com/Masterminds/squirrel v1.5.4 h1:uUcX/aBc8O7Fg9kaISIUsHXdKuqehiXAMQTYX8afzqM=
 github.com/Masterminds/squirrel v1.5.4/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA400rg+riTZj10=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=

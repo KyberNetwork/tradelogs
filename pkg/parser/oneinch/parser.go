@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"math/big"
 	"strings"
 
@@ -232,10 +233,21 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log) (storage.TradeLog, error
 	return order, nil
 }
 
-func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error) {
+func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	order, err := p.buildOrderByLog(log)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
 	return p.recursiveDetectOneInchRFQTrades(order, callFrame)
+}
+
+func (p *Parser) GetExpiry(callFrame *tradingTypes.CallFrame) (uint64, error) {
+	rfqOrderParams, err := p.getRFQOrderParams(callFrame)
+	if err != nil {
+		return 0, err
+	}
+	if rfqOrderParams == nil {
+		return 0, errors.New("oneinch order is nil")
+	}
+	return rfqOrderParams.GetExpiry(), nil
 }
