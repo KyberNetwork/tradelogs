@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
@@ -80,8 +79,20 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 	return res, nil
 }
 
-func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	return p.Parse(log, blockTime)
+func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+	if callFrame == nil {
+		return storage.TradeLog{}, errors.New("missing call frame")
+	}
+	tradeLog, err := p.Parse(log, blockTime)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	orderRfq, err := p.getRFQOrderParams(callFrame)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	tradeLog.Expiry = uint64(orderRfq.QuoteExpiry)
+	return tradeLog, nil
 }
 
 func (p *Parser) Exchange() string {
@@ -90,17 +101,6 @@ func (p *Parser) Exchange() string {
 
 func (p *Parser) UseTraceCall() bool {
 	return false
-}
-
-func (p *Parser) GetExpiry(callFrame *tradingTypes.CallFrame) (uint64, error) {
-	rfqOrderParams, err := p.getRFQOrderParams(callFrame)
-	if err != nil {
-		return 0, err
-	}
-	if rfqOrderParams == nil {
-		return 0, errors.New("hashflow order is nil")
-	}
-	return uint64(rfqOrderParams.QuoteExpiry), nil
 }
 
 func (p *Parser) getRFQOrderParams(callFrame *tradingTypes.CallFrame) (*OrderRFQ, error) {

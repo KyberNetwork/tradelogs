@@ -67,6 +67,7 @@ func (s *Storage) Insert(orders []TradeLog) error {
 			timestamp=excluded.timestamp,
 			event_hash=excluded.event_hash,
 			maker_traits=excluded.maker_traits
+			expiration_date=excluded.expiration_date
 	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
@@ -146,6 +147,7 @@ func tradelogsColumns() []string {
 		"timestamp",
 		"event_hash",
 		"maker_traits",
+		"expiration_date",
 	}
 }
 

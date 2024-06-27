@@ -10,7 +10,6 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -90,8 +89,20 @@ func (p *Parser) UseTraceCall() bool {
 	return false
 }
 
-func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	return p.Parse(log, blockTime)
+func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+	if callFrame == nil {
+		return storage.TradeLog{}, errors.New("missing call frame")
+	}
+	tradeLog, err := p.Parse(log, blockTime)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	orderRfq, err := p.getRFQOrderParams(callFrame)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	tradeLog.Expiry = orderRfq.GetExpiry()
+	return tradeLog, nil
 }
 
 func (p *Parser) getRFQOrderParams(callFrame *tradingTypes.CallFrame) (*OrderRFQ, error) {
@@ -126,15 +137,4 @@ func (p *Parser) getRFQOrderParams(callFrame *tradingTypes.CallFrame) (*OrderRFQ
 		return &rfqOrder, nil
 	}
 	return nil, nil
-}
-
-func (p *Parser) GetExpiry(callFrame *tradingTypes.CallFrame) (uint64, error) {
-	rfqOrderParams, err := p.getRFQOrderParams(callFrame)
-	if err != nil {
-		return 0, err
-	}
-	if rfqOrderParams == nil {
-		return 0, errors.New("kyberswap rfq order is nil")
-	}
-	return rfqOrderParams.GetExpiry(), nil
 }

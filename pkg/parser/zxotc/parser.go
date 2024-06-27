@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -24,16 +23,16 @@ var ErrInvalidOTCTopic = errors.New("invalid OTCFilled topic")
 
 type Parser struct {
 	abi       *abi.ABI
-	ps        *OtcOrderFilledFilterer
+	ps        *ZeroXOTCFilterer
 	eventHash string
 }
 
 func MustNewParser() *Parser {
-	ps, err := NewOtcOrderFilledFilterer(common.Address{}, nil)
+	ps, err := NewZeroXOTCFilterer(common.Address{}, nil)
 	if err != nil {
 		panic(err)
 	}
-	ab, err := OtcOrderFilledMetaData.GetAbi()
+	ab, err := ZeroXOTCMetaData.GetAbi()
 	if err != nil {
 		panic(err)
 	}
@@ -88,19 +87,20 @@ func (p *Parser) UseTraceCall() bool {
 	return false
 }
 
-func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	return p.Parse(log, blockTime)
-}
-
-func (p *Parser) GetExpiry(callFrame *tradingTypes.CallFrame) (uint64, error) {
-	rfqOrderParams, err := p.getRFQOrderParams(callFrame)
+func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+	if callFrame == nil {
+		return storage.TradeLog{}, errors.New("missing call frame")
+	}
+	tradeLog, err := p.Parse(log, blockTime)
 	if err != nil {
-		return 0, err
+		return storage.TradeLog{}, err
 	}
-	if rfqOrderParams == nil {
-		return 0, errors.New("zerox order is nil")
+	orderRfq, err := p.getRFQOrderParams(callFrame)
+	if err != nil {
+		return storage.TradeLog{}, err
 	}
-	return rfqOrderParams.GetExpiry(), nil
+	tradeLog.Expiry = orderRfq.GetExpiry()
+	return tradeLog, nil
 }
 
 func (p *Parser) getRFQOrderParams(callFrame *tradingTypes.CallFrame) (*OrderRFQ, error) {

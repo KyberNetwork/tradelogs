@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"math/big"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -112,11 +112,10 @@ func (p *Parser) Topics() []string {
 }
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	order, err := p.buildOrderByLog(log)
+	order, err := p.buildOrderByLog(log, blockTime)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	order.Timestamp = blockTime * 1000
 	return p.parseTraceCall(order)
 }
 
@@ -195,6 +194,9 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 			order.Taker = rfqOrder.TakerAddress
 			order.MakerTokenAmount = rfqOrder.MakerAmount.String()
 			order.TakerTokenAmount = rfqOrder.TakerAmount.String()
+			if rfqOrder.Expiry != nil {
+				order.Expiry = rfqOrder.Expiry.Uint64()
+			}
 		case p.multiOrderFunc.Has(contractCall.Name):
 			var rfqOrder MultiOrder
 			if err := unpackOrder(param.Value, &rfqOrder); err != nil {
@@ -206,6 +208,9 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 			order.Taker = rfqOrder.TakerAddress
 			order.MakerTokenAmount = string(rfqOrder.MakerAmounts)
 			order.TakerTokenAmount = string(rfqOrder.TakerAmounts)
+			if rfqOrder.Expiry != nil {
+				order.Expiry = rfqOrder.Expiry.Uint64()
+			}
 		case p.aggregateOrderFunc.Has(contractCall.Name):
 			var rfqOrder AggregateOrder
 			if err := unpackOrder(param.Value, &rfqOrder); err != nil {
@@ -217,6 +222,9 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 			order.Taker = rfqOrder.TakerAddress
 			order.MakerTokenAmount = string(rfqOrder.MakerAmounts)
 			order.TakerTokenAmount = string(rfqOrder.TakerAmounts)
+			if rfqOrder.Expiry != nil {
+				order.Expiry = rfqOrder.Expiry.Uint64()
+			}
 		}
 	}
 
@@ -242,7 +250,7 @@ func (p *Parser) UseTraceCall() bool {
 	return true
 }
 
-func (p *Parser) buildOrderByLog(log ethereumTypes.Log) (storage.TradeLog, error) {
+func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
 		return storage.TradeLog{}, ErrTradeTopic
 	}
@@ -258,20 +266,18 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log) (storage.TradeLog, error
 		TxHash:          o.Raw.TxHash.String(),
 		LogIndex:        uint64(o.Raw.Index),
 		EventHash:       p.eventHash,
+		Timestamp:       blockTime * 1000,
 	}
 	return order, nil
 }
 
-func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	order, err := p.buildOrderByLog(log)
+func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+	if callFrame == nil {
+		return storage.TradeLog{}, errors.New("missing call frame")
+	}
+	order, err := p.buildOrderByLog(log, blockTime)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	order.Timestamp = blockTime
-	return p.searchTradeLog(order, callFrame)
-}
-
-func (p *Parser) GetExpiry(callFrame *tradingTypes.CallFrame) (uint64, error) {
-	// TODO: implement this
-	return 0, nil
+	return p.searchTradeLog(order, types.ConvertCallFrame(callFrame))
 }
