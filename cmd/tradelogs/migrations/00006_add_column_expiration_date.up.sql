@@ -1,1 +1,1 @@
-ALTER TABLE tradelogs ADD COLUMN IF NOT EXISTS expiration_date INTEGER;
+ALTER TABLE tradelogs ADD COLUMN IF NOT EXISTS expiration_date BIGINT;
