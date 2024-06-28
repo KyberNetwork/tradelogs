@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"math/big"
 
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -134,6 +135,19 @@ func (p *Parser) Topics() []string {
 }
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+	order, err := p.buildOrderByLog(log, blockTime)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+
+	order, err = p.detectRfqTrade(order)
+	if err != nil {
+		return order, err
+	}
+	return order, nil
+}
+
+func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
 		return storage.TradeLog{}, ErrInvalidOneInchFilledTopic
 	}
@@ -151,11 +165,6 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 		EventHash:       p.eventHash,
 		Maker:           e.Filler.String(),
 		Taker:           e.Swapper.String(),
-	}
-
-	order, err = p.detectRfqTrade(order)
-	if err != nil {
-		return order, err
 	}
 	return order, nil
 }
@@ -308,6 +317,17 @@ func (p *Parser) UseTraceCall() bool {
 	return true
 }
 
-func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error) {
-	return p.Parse(log, 0)
+func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+	if callFrame == nil {
+		return storage.TradeLog{}, errors.New("missing call frame")
+	}
+	order, err := p.buildOrderByLog(log, blockTime)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	order, err = p.recursiveDetectRFQTrades(order, types.ConvertCallFrame(callFrame))
+	if err != nil {
+		return order, err
+	}
+	return order, nil
 }

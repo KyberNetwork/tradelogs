@@ -3,9 +3,8 @@ package tracecall
 import (
 	"context"
 	"fmt"
-
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/common/lru"
 )
 

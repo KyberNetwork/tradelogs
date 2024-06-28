@@ -1,8 +1,12 @@
 package types
 
 import (
+	"encoding/hex"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 )
 
 type TraceCallResponse struct {
@@ -25,6 +29,8 @@ func (l CallLog) ToEthereumLog() ethereumTypes.Log {
 	}
 }
 
+// We will not using tradinglib.CallFrame because in the log field it required transactionHash
+// But when we get traceCall from not the response don't have transactionHash
 type CallFrame struct {
 	From    string      `json:"from"`
 	Gas     string      `json:"gas"`
@@ -36,4 +42,47 @@ type CallFrame struct {
 	Value   string      `json:"value"`
 	Type    string      `json:"type"`
 	Logs    []CallLog   `json:"logs"`
+}
+
+func ConvertCallFrame(callFrame *tradingTypes.CallFrame) CallFrame {
+	var result CallFrame
+
+	if callFrame == nil {
+		return CallFrame{}
+	}
+
+	for _, subCall := range callFrame.Calls {
+		if subCall != nil {
+			subCallFrame := ConvertCallFrame(subCall)
+			result.Calls = append(result.Calls, subCallFrame)
+		}
+	}
+
+	to := ""
+	if callFrame.To != nil {
+		to = callFrame.To.Hex()
+	}
+	gas := (*hexutil.Big)(big.NewInt(int64(callFrame.Gas))).String()
+	gasUsed := (*hexutil.Big)(big.NewInt(int64(callFrame.GasUsed))).String()
+	result.From = callFrame.From.String()
+	result.Gas = gas
+	result.GasUsed = gasUsed
+	result.To = to
+	result.Input = hexutil.Encode(callFrame.Input)
+	result.Output = hexutil.Encode(callFrame.Output)
+	result.Value = callFrame.Value.String()
+	result.Type = callFrame.Type.String()
+
+	for _, log := range callFrame.Logs {
+		result.Logs = append(result.Logs, convertLog(log))
+	}
+	return result
+}
+
+func convertLog(log *ethereumTypes.Log) CallLog {
+	return CallLog{
+		Address: log.Address,
+		Topics:  log.Topics,
+		Data:    hex.EncodeToString(log.Data),
+	}
 }

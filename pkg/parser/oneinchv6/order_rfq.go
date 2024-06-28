@@ -3,8 +3,8 @@ package oneinchv6
 import (
 	"encoding/json"
 	"errors"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 )
 
@@ -12,7 +12,7 @@ const (
 	paramName = "order"
 )
 
-func ToTradeLog(tradeLog storage.TradeLog, contractCall *types.ContractCall) (storage.TradeLog, error) {
+func ToTradeLog(tradeLog storage.TradeLog, contractCall *tradingTypes.ContractCall) (storage.TradeLog, error) {
 	if contractCall == nil {
 		return tradeLog, errors.New("contract call is empty")
 	}

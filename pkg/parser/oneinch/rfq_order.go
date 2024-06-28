@@ -3,15 +3,23 @@ package oneinch
 import (
 	"encoding/json"
 	"errors"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 )
 
 const (
 	paramName = "order"
 )
 
-func ToTradeLog(tradeLog storage.TradeLog, contractCall *types.ContractCall) (storage.TradeLog, error) {
+func GetExpiry(rfqOrder OrderRFQLibOrderRFQ) uint64 {
+	if rfqOrder.Info == nil {
+		return 0
+	}
+	expiry := rfqOrder.Info.Rsh(rfqOrder.Info, 64)
+	return expiry.Uint64()
+}
+
+func ToTradeLog(tradeLog storage.TradeLog, contractCall *tradingTypes.ContractCall) (storage.TradeLog, error) {
 	if contractCall == nil {
 		return tradeLog, errors.New("contract call is empty")
 	}
@@ -32,8 +40,8 @@ func ToTradeLog(tradeLog storage.TradeLog, contractCall *types.ContractCall) (st
 		tradeLog.MakerToken = rfqOrder.MakerAsset.String()
 		tradeLog.TakerToken = rfqOrder.TakerAsset.String()
 		tradeLog.Maker = rfqOrder.Maker.String()
+		tradeLog.Expiry = GetExpiry(rfqOrder)
 	}
 
 	return tradeLog, nil
-
 }

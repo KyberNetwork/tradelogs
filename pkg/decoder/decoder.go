@@ -3,12 +3,12 @@ package decoder
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func Decode(ABI *abi.ABI, input string) (*types.ContractCall, error) {
+func Decode(ABI *abi.ABI, input string) (*tradingTypes.ContractCall, error) {
 	if ABI == nil {
 		return nil, fmt.Errorf("missing abi")
 	}
@@ -30,13 +30,13 @@ func Decode(ABI *abi.ABI, input string) (*types.ContractCall, error) {
 
 	nonIndexedArgs := method.Inputs.NonIndexed()
 
-	contractCall := &types.ContractCall{
+	contractCall := &tradingTypes.ContractCall{
 		Name: method.Name,
 	}
 
 	for i, input := range inputs {
 		arg := nonIndexedArgs[i]
-		param := types.ContractCallParam{
+		param := tradingTypes.ContractCallParam{
 			Name:  arg.Name,
 			Value: input,
 			Type:  arg.Type.String(),

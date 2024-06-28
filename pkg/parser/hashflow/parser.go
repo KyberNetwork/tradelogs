@@ -1,11 +1,14 @@
 package hashflow
 
 import (
+	"encoding/json"
 	"errors"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
+	"github.com/KyberNetwork/tradelogs/pkg/decoder"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -13,6 +16,7 @@ import (
 
 const (
 	TradeEvent = "Trade"
+	paramName  = "quote"
 )
 
 var ErrTradeTopic = errors.New("invalid Trade topic")
@@ -75,8 +79,20 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 	return res, nil
 }
 
-func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log) (storage.TradeLog, error) {
-	return p.Parse(log, 0)
+func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+	if callFrame == nil {
+		return storage.TradeLog{}, errors.New("missing call frame")
+	}
+	tradeLog, err := p.Parse(log, blockTime)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	orderRfq, err := p.getRFQOrderParams(callFrame)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+	tradeLog.Expiry = uint64(orderRfq.QuoteExpiry)
+	return tradeLog, nil
 }
 
 func (p *Parser) Exchange() string {
@@ -85,4 +101,37 @@ func (p *Parser) Exchange() string {
 
 func (p *Parser) UseTraceCall() bool {
 	return false
+}
+
+func (p *Parser) getRFQOrderParams(callFrame *tradingTypes.CallFrame) (*OrderRFQ, error) {
+	var (
+		err error
+	)
+	contractCall := callFrame.ContractCall
+	if contractCall == nil {
+		contractCall, err = decoder.Decode(p.abi, hexutil.Encode(callFrame.Input))
+		if err != nil {
+			return nil, err
+		}
+		if contractCall == nil {
+			return nil, errors.New("missing contract_call")
+		}
+	}
+	for _, param := range contractCall.Params {
+		if param.Name != paramName {
+			continue
+		}
+
+		var rfqOrder OrderRFQ
+		bytes, err := json.Marshal(param.Value)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal(bytes, &rfqOrder); err != nil {
+			return nil, err
+		}
+		return &rfqOrder, nil
+	}
+	return nil, nil
 }
