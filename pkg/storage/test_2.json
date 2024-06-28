@@ -26,7 +26,8 @@
     "block_number": 16232116,
     "tx_hash": "0x170b3015ec0a5b5fb21d420a1586ce15e6b431ccdedb70b7989a7419c9d0bdd4",
     "log_index": 225,
-    "timestamp": 1671614099000
+    "timestamp": 1671614099000,
+    "expiration_date":1719507125
   },
   {
     "order_hash": "0x848a32ac2a8357254f49b4d4b5f4776f738b9d2c0a7381460908985898492120",
