@@ -2,10 +2,11 @@ package types
 
 import (
 	"encoding/hex"
-	"fmt"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 )
 
 type TraceCallResponse struct {
@@ -61,12 +62,14 @@ func ConvertCallFrame(callFrame *tradingTypes.CallFrame) CallFrame {
 	if callFrame.To != nil {
 		to = callFrame.To.Hex()
 	}
+	gas := (*hexutil.Big)(big.NewInt(int64(callFrame.Gas))).String()
+	gasUsed := (*hexutil.Big)(big.NewInt(int64(callFrame.GasUsed))).String()
 	result.From = callFrame.From.String()
-	result.Gas = fmt.Sprint(callFrame.Gas)
-	result.GasUsed = fmt.Sprint(callFrame.GasUsed)
+	result.Gas = gas
+	result.GasUsed = gasUsed
 	result.To = to
-	result.Input = hex.EncodeToString(callFrame.Input)
-	result.Output = hex.EncodeToString(callFrame.Output)
+	result.Input = hexutil.Encode(callFrame.Input)
+	result.Output = hexutil.Encode(callFrame.Output)
 	result.Value = callFrame.Value.String()
 	result.Type = callFrame.Type.String()
 

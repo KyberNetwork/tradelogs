@@ -11,7 +11,8 @@
     "block_number": 16232109,
     "tx_hash": "0xb61c3c802df945e215d6894a2bc3765e1175ebecdd7148dfc7aa5c9f599b9c13",
     "log_index": 198,
-    "timestamp": 1671614015000
+    "timestamp": 1671614015000,
+    "expiration_date":1719507125
   },
   {
     "order_hash": "0xf7a95955018a5e9d9ae23947537a5d8c810b6dae31989b44f6c19e77c0b60dc0",
@@ -39,7 +40,8 @@
     "block_number": 16232117,
     "tx_hash": "0x79d2de74ec15c1ef818f852ac3152c3fc8179c54f09495df8b00bf6461aef25b",
     "log_index": 152,
-    "timestamp": 1671614111000
+    "timestamp": 1671614111000,
+    "expiration_date":1719507125
   },
   {
     "order_hash": "0x199cdfca0dad729ec73c03b980964568ee18b7164b1ad42dcfeee05ca789555b",
@@ -53,6 +55,7 @@
     "block_number": 16232117,
     "tx_hash": "0x0e0ec48f90f388a31c637a61ac769b9d0facebff207cb6dc8cf4fc2dacefa55f",
     "log_index": 202,
-    "timestamp": 1671614111000
+    "timestamp": 1671614111000,
+    "expiration_date":1719507125
   }
 ]
