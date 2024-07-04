@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -68,6 +69,7 @@ func (b *Broadcaster) Test() {
 func (b *Broadcaster) removeConn(conn *websocket.Conn, id, event, maker string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	maker = strings.ToLower(maker)
 	e, ok := b.clients[fmt.Sprintf("%s-%s", event, maker)]
 	if !ok {
 		return
@@ -79,6 +81,7 @@ func (b *Broadcaster) removeConn(conn *websocket.Conn, id, event, maker string) 
 func (b *Broadcaster) addConn(conn *websocket.Conn, id, event, maker string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	maker = strings.ToLower(maker)
 	cons, ok := b.clients[combine(event, maker)]
 	if !ok {
 		cons = map[string]Con{}
@@ -95,7 +98,8 @@ func (b *Broadcaster) addConn(conn *websocket.Conn, id, event, maker string) {
 func (b *Broadcaster) writeEvent(log storage.TradeLog) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	cons := b.clients[combine(log.EventHash, log.Maker)]
+	maker := strings.ToLower(log.Maker)
+	cons := b.clients[combine(log.EventHash, maker)]
 	for _, c := range cons {
 		if err := c.ws.WriteJSON(log); err != nil {
 			b.l.Errorw("error when send msg", "err", err)

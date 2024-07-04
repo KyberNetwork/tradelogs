@@ -3,7 +3,9 @@ package oneinchv6
 import (
 	"encoding/json"
 	"errors"
+
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 )
@@ -30,9 +32,9 @@ func ToTradeLog(tradeLog storage.TradeLog, contractCall *tradingTypes.ContractCa
 			return tradeLog, err
 		}
 
-		tradeLog.MakerToken = "0x" + rfqOrder.MakerAsset.Text(16)
-		tradeLog.TakerToken = "0x" + rfqOrder.TakerAsset.Text(16)
-		tradeLog.Maker = "0x" + rfqOrder.Maker.Text(16)
+		tradeLog.MakerToken = common.BigToAddress(rfqOrder.MakerAsset).String()
+		tradeLog.TakerToken = common.BigToAddress(rfqOrder.TakerAsset).String()
+		tradeLog.Maker = common.BigToAddress(rfqOrder.Maker).String()
 		tradeLog.MakerTraits = rfqOrder.MakerTraits.String()
 	}
 
