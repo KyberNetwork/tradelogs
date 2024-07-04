@@ -32,9 +32,9 @@ func ToTradeLog(tradeLog storage.TradeLog, contractCall *tradingTypes.ContractCa
 			return tradeLog, err
 		}
 
-		tradeLog.MakerToken = "0x" + rfqOrder.MakerAsset.Text(16)
-		tradeLog.TakerToken = "0x" + rfqOrder.TakerAsset.Text(16)
-		tradeLog.Maker = common.HexToAddress("0x" + rfqOrder.Maker.Text(16)).String()
+		tradeLog.MakerToken = common.BigToAddress(rfqOrder.MakerAsset).String()
+		tradeLog.TakerToken = common.BigToAddress(rfqOrder.TakerAsset).String()
+		tradeLog.Maker = common.BigToAddress(rfqOrder.Maker).String()
 		tradeLog.MakerTraits = rfqOrder.MakerTraits.String()
 	}
 
