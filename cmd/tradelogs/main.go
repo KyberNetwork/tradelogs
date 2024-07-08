@@ -8,12 +8,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/KyberNetwork/go-binance/v2"
 	"github.com/KyberNetwork/tradelogs/pkg/dune"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/bebop"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinch"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinchv6"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/uniswapx"
+	"github.com/KyberNetwork/tradelogs/pkg/pricefiller"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 
@@ -50,6 +52,7 @@ func main() {
 	app.Flags = append(app.Flags, libapp.HTTPServerFlags()...)
 	app.Flags = append(app.Flags, libapp.BigqueryFlags()...)
 	app.Flags = append(app.Flags, libapp.RPCNodeFlags()...)
+	app.Flags = append(app.Flags, pricefiller.PriceFillerFlags()...)
 
 	if err := app.Run(os.Args); err != nil {
 		log.Panic(err)
@@ -111,8 +114,15 @@ func run(c *cli.Context) error {
 		bebop.MustNewParser(traceCalls),
 	}
 
+	binanceClient := binance.NewClient(c.String(pricefiller.BinanceAPIKeyFlag.Name), c.String(pricefiller.BinanceSecretKeyFlag.Name))
+	priceFiller, err := pricefiller.NewPriceFiller(binanceClient, s)
+	if err != nil {
+		l.Errorw("Error while init price filler")
+		return err
+	}
+
 	tradeLogChan := make(chan storage.TradeLog, 1000)
-	w, err := worker.New(l, s, listener, tradeLogChan, parsers...)
+	w, err := worker.New(l, s, listener, priceFiller, tradeLogChan, parsers...)
 	if err != nil {
 		l.Errorw("Error while init worker")
 		return err

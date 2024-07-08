@@ -67,7 +67,12 @@ func (s *Storage) Insert(orders []TradeLog) error {
 			timestamp=excluded.timestamp,
 			event_hash=excluded.event_hash,
 			maker_traits=excluded.maker_traits,
-			expiration_date=excluded.expiration_date
+			expiration_date=excluded.expiration_date,
+			maker_token_price=excluded.maker_token_price,
+    		taker_token_price=excluded.taker_token_price,
+    		maker_usd_amount=excluded.maker_usd_amount,
+    		taker_usd_amount=excluded.taker_usd_amount,
+    		state=excluded.state
 	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
@@ -94,13 +99,16 @@ func (s *Storage) Get(query TradeLogsQuery) ([]TradeLog, error) {
 	types := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		tag := string(types.Field(i).Tag.Get("form"))
-		if tag == "from_time" || tag == "to_time" {
+		if tag == "from_time" || tag == "to_time" || tag == "limit" {
 			continue
 		}
 		if v.Field(i).IsZero() {
 			continue
 		}
 		builder = builder.Where(squirrel.Eq{tag: strings.ToLower(v.Field(i).String())})
+	}
+	if query.Limit != 0 {
+		builder = builder.Limit(query.Limit)
 	}
 	q, p, err := builder.OrderBy("timestamp DESC").ToSql()
 	if err != nil {
@@ -148,6 +156,11 @@ func tradelogsColumns() []string {
 		"event_hash",
 		"maker_traits",
 		"expiration_date",
+		"maker_token_price",
+		"taker_token_price",
+		"maker_usd_amount",
+		"taker_usd_amount",
+		"state",
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/convert"
 	"github.com/KyberNetwork/tradelogs/pkg/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
+	"github.com/KyberNetwork/tradelogs/pkg/pricefiller"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"go.uber.org/zap"
 )
@@ -18,10 +19,12 @@ type Worker struct {
 	l            *zap.SugaredLogger
 	s            *storage.Storage
 	p            map[string]parser.Parser
+	priceGetter  *pricefiller.PriceFiller
 	tradeLogChan chan storage.TradeLog
 }
 
-func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.Client, tradeLogChan chan storage.TradeLog,
+func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.Client,
+	priceGetter *pricefiller.PriceFiller, tradeLogChan chan storage.TradeLog,
 	parsers ...parser.Parser) (*Worker, error) {
 	p := make(map[string]parser.Parser)
 	for _, ps := range parsers {
@@ -34,6 +37,7 @@ func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.C
 		l:            l,
 		s:            s,
 		p:            p,
+		priceGetter:  priceGetter,
 		tradeLogChan: tradeLogChan,
 	}, nil
 }
@@ -115,7 +119,7 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 		if err := w.s.Delete(deleteBlocks); err != nil {
 			return err
 		}
-		if err := w.s.Insert(insertOrders); err != nil {
+		if err := w.s.Insert(w.priceGetter.FullFillTradeLogs(insertOrders)); err != nil {
 			return err
 		}
 		for _, log := range insertOrders {
@@ -164,7 +168,7 @@ func (w *Worker) retryParseLog() error {
 		insertOrders = append(insertOrders, order)
 	}
 
-	if err := w.s.Insert(insertOrders); err != nil {
+	if err := w.s.Insert(w.priceGetter.FullFillTradeLogs(insertOrders)); err != nil {
 		return err
 	}
 	for _, log := range insertOrders {
