@@ -130,13 +130,13 @@ func (p *PriceFiller) runBackFillTradelogPriceRoutine() {
 			continue
 		}
 
-		filledTrades := p.FullFillTradeLogs(tradeLogs)
-		if err := p.s.Insert(filledTrades); err != nil {
+		p.FullFillTradeLogs(tradeLogs)
+		if err := p.s.Insert(tradeLogs); err != nil {
 			p.l.Errorw("Failed to insert tradeLogs", "err", err)
 			continue
 		}
 
-		p.l.Infow("backfill tradelog price successfully", "trades", filledTrades)
+		p.l.Infow("backfill tradelog price successfully", "trades", tradeLogs)
 	}
 }
 
@@ -193,20 +193,17 @@ func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (fl
 	return 0, 0, nil
 }
 
-func (p *PriceFiller) FullFillTradeLogs(tradeLogs []storage.TradeLog) []storage.TradeLog {
-	resp := make([]storage.TradeLog, len(tradeLogs))
+func (p *PriceFiller) FullFillTradeLogs(tradeLogs []storage.TradeLog) {
 	for idx, tradeLog := range tradeLogs {
 		// for the safety, sleep a bit to avoid Binance rate limit
 		time.Sleep(10 * time.Millisecond)
 		filledTradeLog, err := p.fullFillTradeLog(tradeLog)
 		if err != nil {
 			p.l.Errorw("Failed to fullFillTradeLog", "err", err, "tradeLog", tradeLog)
-			resp[idx] = tradeLog
 			continue
 		}
-		resp[idx] = filledTradeLog
+		tradeLogs[idx] = filledTradeLog
 	}
-	return resp
 }
 
 func (p *PriceFiller) getDecimals(address string) (int64, error) {

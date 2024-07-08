@@ -17,7 +17,7 @@ func TestFillPrice(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	newLogs := filler.FullFillTradeLogs([]storage.TradeLog{
+	tradeLogs := []storage.TradeLog{
 		{
 			Taker:            "0x807cf9a772d5a3f9cefbc1192e939d62f0d9bd38",
 			MakerToken:       "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
@@ -57,7 +57,8 @@ func TestFillPrice(t *testing.T) {
 			Timestamp:        1720061615000,
 			EventHash:        "0xd6d4f5681c246c9f42c203e287975af1601f8df8035a9251f79aab5c8f09e2f8",
 		},
-	})
+	}
+	filler.FullFillTradeLogs(tradeLogs)
 
-	t.Log(newLogs)
+	t.Log(tradeLogs)
 }

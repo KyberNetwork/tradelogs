@@ -119,7 +119,8 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 		if err := w.s.Delete(deleteBlocks); err != nil {
 			return err
 		}
-		if err := w.s.Insert(w.priceFiller.FullFillTradeLogs(insertOrders)); err != nil {
+		w.priceFiller.FullFillTradeLogs(insertOrders)
+		if err := w.s.Insert(insertOrders); err != nil {
 			return err
 		}
 		for _, log := range insertOrders {
@@ -168,7 +169,8 @@ func (w *Worker) retryParseLog() error {
 		insertOrders = append(insertOrders, order)
 	}
 
-	if err := w.s.Insert(w.priceFiller.FullFillTradeLogs(insertOrders)); err != nil {
+	w.priceFiller.FullFillTradeLogs(insertOrders)
+	if err := w.s.Insert(insertOrders); err != nil {
 		return err
 	}
 	for _, log := range insertOrders {
