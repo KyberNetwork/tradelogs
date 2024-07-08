@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/KyberNetwork/go-binance/v2"
@@ -33,6 +34,7 @@ type CoinInfo struct {
 type PriceFiller struct {
 	l              *zap.SugaredLogger
 	s              *storage.Storage
+	mu             sync.Mutex
 	ksClient       *KsClient
 	binanceClient  *binance.Client
 	mappedCoinInfo map[string]CoinInfo // address - coinInfo
@@ -162,7 +164,10 @@ func (p *PriceFiller) fullFillTradeLog(tradeLog storage.TradeLog) (storage.Trade
 }
 
 func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (float64, float64, error) {
-	if coin, ok := p.mappedCoinInfo[address]; ok {
+	p.mu.Lock()
+	coin, ok := p.mappedCoinInfo[address]
+	p.mu.Unlock()
+	if ok {
 		if coin.Decimals == 0 {
 			d, err := p.getDecimals(address)
 			if err != nil {
@@ -170,7 +175,9 @@ func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (fl
 				return 0, 0, err
 			}
 			coin.Decimals = d
+			p.mu.Lock()
 			p.mappedCoinInfo[address] = coin
+			p.mu.Unlock()
 		}
 
 		price, err := p.getPrice(coin.Coin, int64(at))
