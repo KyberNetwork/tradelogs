@@ -69,10 +69,10 @@ func (s *Storage) Insert(orders []TradeLog) error {
 			maker_traits=excluded.maker_traits,
 			expiration_date=excluded.expiration_date,
 			maker_token_price=excluded.maker_token_price,
-    		taker_token_price=excluded.taker_token_price,
-    		maker_usd_amount=excluded.maker_usd_amount,
-    		taker_usd_amount=excluded.taker_usd_amount,
-    		state=excluded.state
+			taker_token_price=excluded.taker_token_price,
+			maker_usd_amount=excluded.maker_usd_amount,
+			taker_usd_amount=excluded.taker_usd_amount,
+			state=excluded.state
 	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
