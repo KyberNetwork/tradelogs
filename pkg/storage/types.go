@@ -51,6 +51,10 @@ type TradeLogsQuery struct {
 }
 
 func (o *TradeLog) Serialize() []interface{} {
+	// set default state is new
+	if o.State == "" {
+		o.State = TradeLogStateNew
+	}
 	return []interface{}{
 		o.OrderHash,
 		strings.ToLower(o.Maker),
