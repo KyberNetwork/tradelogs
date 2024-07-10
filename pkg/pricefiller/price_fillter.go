@@ -40,9 +40,10 @@ type PriceFiller struct {
 	mappedCoinInfo map[string]CoinInfo // address - coinInfo
 }
 
-func NewPriceFiller(binanceClient *binance.Client, s *storage.Storage) (*PriceFiller, error) {
+func NewPriceFiller(l *zap.SugaredLogger, binanceClient *binance.Client,
+	s *storage.Storage) (*PriceFiller, error) {
 	p := &PriceFiller{
-		l:             zap.S(),
+		l:             l,
 		s:             s,
 		ksClient:      NewKsClient(),
 		binanceClient: binanceClient,
@@ -141,7 +142,8 @@ func (p *PriceFiller) runBackFillTradelogPriceRoutine() {
 }
 
 func (p *PriceFiller) fullFillTradeLog(tradeLog storage.TradeLog) (storage.TradeLog, error) {
-	makerPrice, makerUsdAmount, err := p.getPriceAndAmountUsd(tradeLog.MakerToken, tradeLog.MakerTokenAmount, int64(tradeLog.Timestamp))
+	makerPrice, makerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.MakerToken),
+		tradeLog.MakerTokenAmount, int64(tradeLog.Timestamp))
 	if err != nil {
 		p.l.Errorw("Failed to getPriceAndAmountUsd for maker", "err", err)
 		return tradeLog, err
@@ -150,7 +152,8 @@ func (p *PriceFiller) fullFillTradeLog(tradeLog storage.TradeLog) (storage.Trade
 	tradeLog.MakerTokenPrice = makerPrice
 	tradeLog.MakerUsdAmount = makerUsdAmount
 
-	takerPrice, takerUsdAmount, err := p.getPriceAndAmountUsd(tradeLog.TakerToken, tradeLog.TakerTokenAmount, int64(tradeLog.Timestamp))
+	takerPrice, takerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.TakerToken),
+		tradeLog.TakerTokenAmount, int64(tradeLog.Timestamp))
 	if err != nil {
 		p.l.Errorw("Failed to getPriceAndAmountUsd for taker", "err", err)
 		return tradeLog, err
