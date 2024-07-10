@@ -18,6 +18,8 @@ const (
 	NetworkETH                     = "ETH"
 	updateAllCoinInfoInterval      = time.Hour
 	backfillTradeLogsPriceInterval = time.Hour
+	addressETH                     = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+	coinUSDT                       = "USDT"
 )
 
 var (
@@ -47,6 +49,14 @@ func NewPriceFiller(l *zap.SugaredLogger, binanceClient *binance.Client,
 		s:             s,
 		ksClient:      NewKsClient(),
 		binanceClient: binanceClient,
+		mappedCoinInfo: map[string]CoinInfo{
+			addressETH: {
+				Coin:            "ETH",
+				Network:         NetworkETH,
+				ContractAddress: addressETH,
+				Decimals:        18,
+			},
+		},
 	}
 
 	if err := p.updateAllCoinInfo(); err != nil {
@@ -86,23 +96,25 @@ func (p *PriceFiller) updateAllCoinInfo() error {
 		return err
 	}
 
-	newMappedCoinInfo := make(map[string]CoinInfo)
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	for _, coinInfo := range resp {
 		for _, network := range coinInfo.NetworkList {
-			if network.Network == NetworkETH {
+			if network.Network == NetworkETH && network.ContractAddress != "" {
 				address := strings.ToLower(network.ContractAddress)
-				newMappedCoinInfo[address] = CoinInfo{
-					Coin:            network.Coin,
-					Network:         network.Network,
-					ContractAddress: address,
+				if _, ok := p.mappedCoinInfo[address]; !ok {
+					p.mappedCoinInfo[address] = CoinInfo{
+						Coin:            network.Coin,
+						Network:         network.Network,
+						ContractAddress: address,
+					}
 				}
 				break
 			}
 		}
 	}
 
-	p.l.Infow("New mapped coin info", "data", newMappedCoinInfo)
-	p.mappedCoinInfo = newMappedCoinInfo
+	p.l.Infow("New mapped coin info", "data", p.mappedCoinInfo)
 	return nil
 }
 
@@ -183,6 +195,9 @@ func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (fl
 			p.mu.Unlock()
 		}
 
+		if coin.Coin == coinUSDT {
+			return 1, calculateAmountUsd(rawAmt, coin.Decimals, 1), nil
+		}
 		price, err := p.getPrice(coin.Coin, int64(at))
 		if err != nil {
 			if !errors.Is(err, ErrNoPrice) {
