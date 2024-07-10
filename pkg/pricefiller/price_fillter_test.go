@@ -6,13 +6,14 @@ import (
 	"github.com/KyberNetwork/go-binance/v2"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/test-go/testify/require"
+	"go.uber.org/zap"
 )
 
 // go test -v -timeout 30s -run ^TestFillPrice$ github.com/KyberNetwork/tradelogs/pkg/pricefiller
 func TestFillPrice(t *testing.T) {
 	t.Skip("Need to add Binance credentials")
 	bClient := binance.NewClient("", "")
-	filler, err := NewPriceFiller(bClient, nil)
+	filler, err := NewPriceFiller(zap.S(), bClient, nil)
 	if err != nil {
 		require.NoError(t, err)
 	}

@@ -115,7 +115,7 @@ func run(c *cli.Context) error {
 	}
 
 	binanceClient := binance.NewClient(c.String(pricefiller.BinanceAPIKeyFlag.Name), c.String(pricefiller.BinanceSecretKeyFlag.Name))
-	priceFiller, err := pricefiller.NewPriceFiller(binanceClient, s)
+	priceFiller, err := pricefiller.NewPriceFiller(l, binanceClient, s)
 	if err != nil {
 		l.Errorw("Error while init price filler")
 		return err
