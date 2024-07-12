@@ -21,6 +21,7 @@ const (
 	backfillTradeLogsLimit         = 60
 	addressETH                     = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 	coinUSDT                       = "USDT"
+	invalidSymbolErrString         = "<APIError> code=-1121, msg=Invalid symbol."
 )
 
 var (
@@ -158,8 +159,10 @@ func (p *PriceFiller) fullFillTradeLog(tradeLog storage.TradeLog) (storage.Trade
 	makerPrice, makerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.MakerToken),
 		tradeLog.MakerTokenAmount, int64(tradeLog.Timestamp))
 	if err != nil {
-		p.l.Errorw("Failed to getPriceAndAmountUsd for maker", "err", err)
-		return tradeLog, err
+		if err.Error() != invalidSymbolErrString {
+			p.l.Errorw("Failed to getPriceAndAmountUsd for maker", "err", err)
+			return tradeLog, err
+		}
 	}
 
 	tradeLog.MakerTokenPrice = makerPrice
@@ -168,8 +171,10 @@ func (p *PriceFiller) fullFillTradeLog(tradeLog storage.TradeLog) (storage.Trade
 	takerPrice, takerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.TakerToken),
 		tradeLog.TakerTokenAmount, int64(tradeLog.Timestamp))
 	if err != nil {
-		p.l.Errorw("Failed to getPriceAndAmountUsd for taker", "err", err)
-		return tradeLog, err
+		if err.Error() != invalidSymbolErrString {
+			p.l.Errorw("Failed to getPriceAndAmountUsd for taker", "err", err)
+			return tradeLog, err
+		}
 	}
 
 	tradeLog.TakerTokenPrice = takerPrice
