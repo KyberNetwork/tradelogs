@@ -17,7 +17,7 @@ const (
 	NetworkETHChanID               = 1
 	NetworkETH                     = "ETH"
 	updateAllCoinInfoInterval      = time.Hour
-	backfillTradeLogsPriceInterval = time.Minute
+	backfillTradeLogsPriceInterval = 30 * time.Second
 	backfillTradeLogsLimit         = 60
 	addressETH                     = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 	coinUSDT                       = "USDT"
