@@ -17,7 +17,8 @@ const (
 	NetworkETHChanID               = 1
 	NetworkETH                     = "ETH"
 	updateAllCoinInfoInterval      = time.Hour
-	backfillTradeLogsPriceInterval = time.Hour
+	backfillTradeLogsPriceInterval = time.Minute
+	backfillTradeLogsLimit         = 60
 	addressETH                     = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 	coinUSDT                       = "USDT"
 )
@@ -136,7 +137,7 @@ func (p *PriceFiller) runBackFillTradelogPriceRoutine() {
 	for range ticker.C {
 		tradeLogs, err := p.s.Get(storage.TradeLogsQuery{
 			State: string(storage.TradeLogStateNew),
-			Limit: 100,
+			Limit: backfillTradeLogsLimit,
 		})
 		if err != nil {
 			p.l.Errorw("Failed to get tradeLogs", "err", err)
