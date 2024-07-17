@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/hex"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -30,7 +29,7 @@ func (l CallLog) ToEthereumLog() ethereumTypes.Log {
 }
 
 // We will not using tradinglib.CallFrame because in the log field it required transactionHash
-// But when we get traceCall from not the response don't have transactionHash
+// But when we get traceCall from the response, it doesn't have transactionHash
 type CallFrame struct {
 	From    string      `json:"from"`
 	Gas     string      `json:"gas"`
@@ -83,6 +82,6 @@ func convertLog(log *ethereumTypes.Log) CallLog {
 	return CallLog{
 		Address: log.Address,
 		Topics:  log.Topics,
-		Data:    hex.EncodeToString(log.Data),
+		Data:    hexutil.Encode(log.Data),
 	}
 }

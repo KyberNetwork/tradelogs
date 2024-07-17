@@ -70,7 +70,6 @@ func (o *TradeLog) Serialize() []interface{} {
 		o.Timestamp,
 		o.EventHash,
 		o.MakerTraits,
-		o.Expiry,
 		o.MakerTokenPrice,
 		o.TakerTokenPrice,
 		o.MakerUsdAmount,
