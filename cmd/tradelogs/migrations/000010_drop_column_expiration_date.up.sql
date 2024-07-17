@@ -1,0 +1,1 @@
+ALTER TABLE tradelogs DROP COLUMN IF EXISTS expiration_date;
