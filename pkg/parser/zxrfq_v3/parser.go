@@ -41,8 +41,7 @@ func MustNewParser(cache *tracecall.Cache, contractAddress common.Address) *Pars
 	if err != nil {
 		log.Fatalf("failed to get custom abi: %s", err)
 	}
-	zeroAddress := common.Address{}
-	if contractAddress == zeroAddress {
+	if isZeroAddress(contractAddress) {
 		log.Fatalf("contract address is zero address")
 	}
 	return &Parser{
@@ -52,6 +51,10 @@ func MustNewParser(cache *tracecall.Cache, contractAddress common.Address) *Pars
 		contractAddress: contractAddress,
 		selectorAction:  getSettlerAction(),
 	}
+}
+
+func isZeroAddress(address common.Address) bool {
+	return address == common.Address{}
 }
 
 // Zeroxv3 has no topics
@@ -91,7 +94,7 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 }
 
 func getOrderHash(data []byte) (string, error) {
-	if len(data) < 32 {
+	if len(data) < common.HashLength {
 		return "", fmt.Errorf("data length is less than 32")
 	}
 	return common.BytesToHash(data[:32]).String(), nil
