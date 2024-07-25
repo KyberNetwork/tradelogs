@@ -13,23 +13,28 @@ const (
 	actionParamName     = "actions"
 )
 
-const (
-	settler_otc_self_funded_function     = "SETTLER_OTC_SELF_FUNDED(address,((address,uint256),uint256,uint256),address,bytes,address,uint256)"
-	metatxn_settler_otc_permit2_function = "METATXN_SETTLER_OTC_PERMIT2(address,((address,uint256),uint256,uint256),address,bytes,((address,uint256),uint256,uint256))"
+type FunctionName string
+type FunctionABI string
 
-	settler_otc_self_funded_name     = "SETTLER_OTC_SELF_FUNDED"
-	metatxn_settler_otc_permit2_name = "metatxn_settler_otc_permit2"
+const (
+	settler_otc_self_funded_function     FunctionABI = "SETTLER_OTC_SELF_FUNDED(address,((address,uint256),uint256,uint256),address,bytes,address,uint256)"
+	metatxn_settler_otc_permit2_function FunctionABI = "METATXN_SETTLER_OTC_PERMIT2(address,((address,uint256),uint256,uint256),address,bytes,((address,uint256),uint256,uint256))"
+)
+
+const (
+	settler_otc_self_funded_name     FunctionName = "SETTLER_OTC_SELF_FUNDED"
+	metatxn_settler_otc_permit2_name FunctionName = "metatxn_settler_otc_permit2"
 )
 
 const (
 	MethodIdDecodeParamOfFillOrderSelfFundedHex = "0a164181"
 )
 
-var mSettlerActionName map[string]string
+var mSettlerActionName map[FunctionName]FunctionABI
 var methodIdDecodeParamOfFillOrderSelfFunded decoder.Bytes4
 
 func init() {
-	mSettlerActionName = map[string]string{
+	mSettlerActionName = map[FunctionName]FunctionABI{
 		settler_otc_self_funded_name:     settler_otc_self_funded_function,
 		metatxn_settler_otc_permit2_name: metatxn_settler_otc_permit2_function,
 	}
@@ -45,8 +50,8 @@ func init() {
 	methodIdDecodeParamOfFillOrderSelfFunded = methodId
 }
 
-func getSettlerAction() map[decoder.Bytes4]string {
-	mSettlerAction := make(map[decoder.Bytes4]string)
+func getSettlerAction() map[decoder.Bytes4]FunctionName {
+	mSettlerAction := make(map[decoder.Bytes4]FunctionName)
 
 	for name, sig := range mSettlerActionName {
 		hash := sha3.NewLegacyKeccak256()
