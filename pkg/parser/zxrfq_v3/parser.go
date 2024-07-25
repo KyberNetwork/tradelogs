@@ -103,10 +103,9 @@ func (p *Parser) getRfqTradeIndex(callFrame types.CallFrame, log ethereumTypes.L
 	// if the log of tx have no topics, it will be zero0xv3 rfq trade
 	for _, l := range callFrame.Logs {
 		if len(l.Topics) == 0 && l.Address == p.contractAddress {
+			actionIndex++
 			if l.Data == hexutil.Encode(log.Data) {
 				return actionIndex, true
-			} else {
-				actionIndex++
 			}
 		}
 	}
@@ -120,7 +119,7 @@ func (p *Parser) recursiveDetectRFQTrades(tradeLog storage.TradeLog, callFrame t
 
 	actionIndex, isRfqTrade := p.getRfqTradeIndex(callFrame, log)
 	if isRfqTrade {
-		return p.ParseFromInternalCall(tradeLog, callFrame, log, actionIndex)
+		return p.ParseFromInternalCall(tradeLog, callFrame, actionIndex)
 	}
 
 	for _, subCall := range callFrame.Calls {
@@ -132,7 +131,7 @@ func (p *Parser) recursiveDetectRFQTrades(tradeLog storage.TradeLog, callFrame t
 	return tradeLog, fmt.Errorf("%w, tx_hash: %s", ErrNotFoundLogWithEmptyTopic, tradeLog.TxHash)
 }
 
-func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame types.CallFrame, log ethereumTypes.Log, actionIndex int) (storage.TradeLog, error) {
+func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame types.CallFrame, actionIndex int) (storage.TradeLog, error) {
 	actions, err := p.getExecuteActionData(callFrame)
 	if err != nil {
 		return tradeLog, err
@@ -161,10 +160,10 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 			switch functionName {
 			// dev SC
 			case settler_otc_self_funded_name:
+				currentActionIndex++
 				if currentActionIndex != actionIndex {
 					continue
 				}
-				currentActionIndex++
 				input, err := zxrfq_v3_helper.GetInputParamsOfFillRfqOrderSelfFunded(p.customAbi, methodIdDecodeParamOfFillOrderSelfFunded, data)
 				if err != nil {
 					return tradeLog, fmt.Errorf("get input param of fill rfq order self funded failed: %w", err)
@@ -200,8 +199,11 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 				tradeLog.MakerTokenAmount = newMakerAmount.String()
 				return tradeLog, nil
 			case metatxn_settler_otc_permit2_name:
+				currentActionIndex++
+				if currentActionIndex != actionIndex {
+					continue
+				}
 				//TODO
-				break
 			}
 		}
 
