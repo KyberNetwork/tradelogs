@@ -19,22 +19,17 @@ import (
 )
 
 var (
-	balanceArgument abi.Arguments
-)
-
-func init() {
-	// uint256 balance
 	balanceArgument = abi.Arguments{
 		{Name: "balance", Type: abitypes.Uint256},
 	}
-}
+)
 
 type Parser struct {
 	abi             *abi.ABI
 	customAbi       *abi.ABI
 	traceCalls      *tracecall.Cache
 	contractAddress common.Address
-	selectorAction  map[decoder.Bytes4]string
+	selectorAction  map[decoder.Bytes4]FunctionName
 }
 
 func MustNewParser(cache *tracecall.Cache, contractAddress common.Address) *Parser {
@@ -42,7 +37,7 @@ func MustNewParser(cache *tracecall.Cache, contractAddress common.Address) *Pars
 	if err != nil {
 		log.Fatalf("failed to get abi: %s", err)
 	}
-	customAb, err := zxrfq_v3_helper.ZxrfqV3HelperMetaData.GetAbi()
+	customABI, err := zxrfq_v3_helper.ZxrfqV3HelperMetaData.GetAbi()
 	if err != nil {
 		log.Fatalf("failed to get custom abi: %s", err)
 	}
@@ -52,7 +47,7 @@ func MustNewParser(cache *tracecall.Cache, contractAddress common.Address) *Pars
 	}
 	return &Parser{
 		abi:             ab,
-		customAbi:       customAb,
+		customAbi:       customABI,
 		traceCalls:      cache,
 		contractAddress: contractAddress,
 		selectorAction:  getSettlerAction(),
@@ -90,7 +85,7 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 
 	callFrame, err := p.traceCalls.GetTraceCall(log.TxHash.Hex())
 	if err != nil {
-		return storage.TradeLog{}, err
+		return tradeLog, err
 	}
 	return p.recursiveDetectRFQTrades(tradeLog, callFrame, log)
 }
@@ -166,43 +161,45 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 			switch functionName {
 			// dev SC
 			case settler_otc_self_funded_name:
-				if currentActionIndex == actionIndex {
-					input, err := zxrfq_v3_helper.GetInputParamsOfFillRfqOrderSelfFunded(p.customAbi, methodIdDecodeParamOfFillOrderSelfFunded, data)
-					if err != nil {
-						return tradeLog, fmt.Errorf("get input param of fill rfq order self funded failed: %w", err)
-					}
-					tradeLog.Maker = input.Maker.String()
-					tradeLog.Taker = callFrame.From
-					tradeLog.MakerToken = input.Permit.Permitted.Token.String()
-					tradeLog.TakerToken = input.TakerToken.String()
-					tradeLog.Expiry = input.Permit.Deadline.Uint64()
-					var takerToken *big.Int
-					for _, subFrame := range callFrame.Calls {
-						x, _ := decoder.Decode(p.abi, subFrame.Input)
-						// find first method get balance of current contract for taker token
-						if x != nil && x.Name == balanceOf &&
-							strings.EqualFold(subFrame.To, tradeLog.TakerToken) &&
-							strings.EqualFold(subFrame.From, p.contractAddress.Hex()) {
-							//max current balance of zeroxv3 SC
-							takerToken, err = decodeOutputBalanceOf(subFrame.Output)
-							if err != nil {
-								return tradeLog, err
-							}
-							break
-						}
-					}
-					if takerToken == nil {
-						return tradeLog, fmt.Errorf("can not find current balance of contract")
-					}
-					if takerToken.Cmp(input.MaxTakerAmount) > 0 {
-						takerToken = new(big.Int).Set(input.MaxTakerAmount)
-					}
-					newMakerAmount := calculateTokenAmount(input.Permit.Permitted.Amount, takerToken, input.MaxTakerAmount)
-					tradeLog.TakerTokenAmount = takerToken.String()
-					tradeLog.MakerTokenAmount = newMakerAmount.String()
-					return tradeLog, nil
+				if currentActionIndex != actionIndex {
+					continue
 				}
-			case metatxn_settler_otc_permit2_function:
+				currentActionIndex++
+				input, err := zxrfq_v3_helper.GetInputParamsOfFillRfqOrderSelfFunded(p.customAbi, methodIdDecodeParamOfFillOrderSelfFunded, data)
+				if err != nil {
+					return tradeLog, fmt.Errorf("get input param of fill rfq order self funded failed: %w", err)
+				}
+				tradeLog.Maker = input.Maker.String()
+				tradeLog.Taker = callFrame.From
+				tradeLog.MakerToken = input.Permit.Permitted.Token.String()
+				tradeLog.TakerToken = input.TakerToken.String()
+				tradeLog.Expiry = input.Permit.Deadline.Uint64()
+				var takerToken *big.Int
+				for _, subFrame := range callFrame.Calls {
+					x, _ := decoder.Decode(p.abi, subFrame.Input)
+					// find first method get balance of current contract for taker token
+					if x != nil && x.Name == balanceOf &&
+						strings.EqualFold(subFrame.To, tradeLog.TakerToken) &&
+						strings.EqualFold(subFrame.From, p.contractAddress.Hex()) {
+						//max current balance of zeroxv3 SC
+						takerToken, err = decodeOutputBalanceOf(subFrame.Output)
+						if err != nil {
+							return tradeLog, err
+						}
+						break
+					}
+				}
+				if takerToken == nil {
+					return tradeLog, fmt.Errorf("can not find current balance of contract")
+				}
+				if takerToken.Cmp(input.MaxTakerAmount) > 0 {
+					takerToken = new(big.Int).Set(input.MaxTakerAmount)
+				}
+				newMakerAmount := calculateTokenAmount(input.Permit.Permitted.Amount, takerToken, input.MaxTakerAmount)
+				tradeLog.TakerTokenAmount = takerToken.String()
+				tradeLog.MakerTokenAmount = newMakerAmount.String()
+				return tradeLog, nil
+			case metatxn_settler_otc_permit2_name:
 				//TODO
 				break
 			}

@@ -64,7 +64,7 @@ func decode(method *abi.Method, data []byte) (*tradingTypes.ContractCall, error)
 	return contractCall, nil
 }
 
-func DecodeCustomAbi(ABI *abi.ABI, methodId Bytes4, rawData []byte) (*tradingTypes.ContractCall, error) {
+func DecodeCustomABI(ABI *abi.ABI, methodId Bytes4, rawData []byte) (*tradingTypes.ContractCall, error) {
 	if ABI == nil {
 		return nil, fmt.Errorf("missing abi")
 	}

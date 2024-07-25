@@ -18,14 +18,17 @@ type InputParamOfFillRfqOrderSelfFunded struct {
 	MaxTakerAmount *big.Int           `json:"maxTakerAmount"`
 }
 
-func GetInputParamsOfFillRfqOrderSelfFunded(customAbi *abi.ABI, actionName decoder.Bytes4, data []byte) (InputParamOfFillRfqOrderSelfFunded, error) {
-	contractCall, err := decoder.DecodeCustomAbi(customAbi, actionName, data)
+func GetInputParamsOfFillRfqOrderSelfFunded(customABI *abi.ABI, actionName decoder.Bytes4, data []byte) (InputParamOfFillRfqOrderSelfFunded, error) {
+	contractCall, err := decoder.DecodeCustomABI(customABI, actionName, data)
 	if err != nil {
 		return InputParamOfFillRfqOrderSelfFunded{}, err
 	}
 	var input InputParamOfFillRfqOrderSelfFunded
 	var ok bool
 	inputParam := contractCall.Params
+	if len(inputParam) != 6 {
+		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("invalid number of input params, expect 6 but got %d", len(inputParam))
+	}
 	input.Recipient, ok = inputParam[0].Value.(common.Address)
 	if !ok {
 		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("failed to convert reciptent to common.Address")
