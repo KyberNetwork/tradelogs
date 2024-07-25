@@ -1,0 +1,62 @@
+package zxrfq_v3
+
+import (
+	"encoding/hex"
+	"github.com/KyberNetwork/tradelogs/pkg/decoder"
+	"golang.org/x/crypto/sha3"
+	"log"
+)
+
+const (
+	executeFunctionName = "execute"
+	balanceOf           = "balanceOf"
+	actionParamName     = "actions"
+)
+
+const (
+	settler_otc_self_funded_function     = "SETTLER_OTC_SELF_FUNDED(address,((address,uint256),uint256,uint256),address,bytes,address,uint256)"
+	metatxn_settler_otc_permit2_function = "METATXN_SETTLER_OTC_PERMIT2(address,((address,uint256),uint256,uint256),address,bytes,((address,uint256),uint256,uint256))"
+
+	settler_otc_self_funded_name     = "SETTLER_OTC_SELF_FUNDED"
+	metatxn_settler_otc_permit2_name = "metatxn_settler_otc_permit2"
+)
+
+const (
+	MethodIdDecodeParamOfFillOrderSelfFundedHex = "0a164181"
+)
+
+var mSettlerActionName map[string]string
+var methodIdDecodeParamOfFillOrderSelfFunded decoder.Bytes4
+
+func init() {
+	mSettlerActionName = map[string]string{
+		settler_otc_self_funded_name:     settler_otc_self_funded_function,
+		metatxn_settler_otc_permit2_name: metatxn_settler_otc_permit2_function,
+	}
+
+	byteMethodId, err := hex.DecodeString(MethodIdDecodeParamOfFillOrderSelfFundedHex)
+	if err != nil {
+		log.Fatalf("failed to decode method id: %s", err)
+	}
+	methodId, err := decoder.GetBytes4(byteMethodId)
+	if err != nil {
+		log.Fatalf("failed to get method id: %s", err)
+	}
+	methodIdDecodeParamOfFillOrderSelfFunded = methodId
+}
+
+func getSettlerAction() map[decoder.Bytes4]string {
+	mSettlerAction := make(map[decoder.Bytes4]string)
+
+	for name, sig := range mSettlerActionName {
+		hash := sha3.NewLegacyKeccak256()
+		hash.Write([]byte(sig))
+		hashBytes := hash.Sum(nil)
+
+		// Extract the first 4 bytes (function selector)
+		selector := decoder.Bytes4{hashBytes[0], hashBytes[1], hashBytes[2], hashBytes[3]}
+
+		mSettlerAction[selector] = name
+	}
+	return mSettlerAction
+}

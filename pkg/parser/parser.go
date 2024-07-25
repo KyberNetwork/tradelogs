@@ -8,6 +8,7 @@ import (
 
 const (
 	ExZeroX         = "zerox"
+	EXZeroXV3       = "zerox_v3"
 	ExParaswap      = "paraswap"
 	ExTokenlon      = "tokenlon"
 	ExZeroXRFQ      = "zerox_rfq"
