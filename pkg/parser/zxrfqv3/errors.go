@@ -1,4 +1,4 @@
-package zxrfq_v3
+package zxrfqv3
 
 import "errors"
 

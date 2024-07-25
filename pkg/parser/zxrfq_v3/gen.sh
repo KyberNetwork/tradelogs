@@ -1,1 +1,0 @@
-abigen --abi=abi.json --pkg=zxrfq_v3 --out=zxrfq_v3.go

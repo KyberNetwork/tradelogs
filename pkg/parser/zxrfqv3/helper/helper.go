@@ -1,7 +1,7 @@
 // Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
 
-package zxrfq_v3_helper
+package helper
 
 import (
 	"errors"

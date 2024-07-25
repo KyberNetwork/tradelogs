@@ -1,4 +1,4 @@
-package zxrfq_v3_helper
+package helper
 
 import (
 	"encoding/json"
@@ -33,7 +33,6 @@ func GetInputParamsOfFillRfqOrderSelfFunded(customABI *abi.ABI, actionName decod
 	if !ok {
 		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("failed to convert reciptent to common.Address")
 	}
-	fmt.Println(inputParam[1].Name)
 
 	err = unpackValue(inputParam[1].Value, &input.Permit)
 	if err != nil {

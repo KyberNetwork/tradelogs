@@ -1,4 +1,4 @@
-package zxrfq_v3
+package zxrfqv3
 
 import (
 	"encoding/hex"
@@ -17,13 +17,13 @@ type FunctionName string
 type FunctionABI string
 
 const (
-	settler_otc_self_funded_function     FunctionABI = "SETTLER_OTC_SELF_FUNDED(address,((address,uint256),uint256,uint256),address,bytes,address,uint256)"
-	metatxn_settler_otc_permit2_function FunctionABI = "METATXN_SETTLER_OTC_PERMIT2(address,((address,uint256),uint256,uint256),address,bytes,((address,uint256),uint256,uint256))"
+	settlerOtcSelfFundedFunction     FunctionABI = "SETTLER_OTC_SELF_FUNDED(address,((address,uint256),uint256,uint256),address,bytes,address,uint256)"
+	metatxnSettlerOtcPermit2Function FunctionABI = "METATXN_SETTLER_OTC_PERMIT2(address,((address,uint256),uint256,uint256),address,bytes,((address,uint256),uint256,uint256))"
 )
 
 const (
-	settler_otc_self_funded_name     FunctionName = "SETTLER_OTC_SELF_FUNDED"
-	metatxn_settler_otc_permit2_name FunctionName = "metatxn_settler_otc_permit2"
+	settlerOtcSelfFundedName     FunctionName = "SETTLER_OTC_SELF_FUNDED"
+	metatxnSettlerOtcPermit2Name FunctionName = "METATXN_SETTLER_OTC_PERMIT2"
 )
 
 const (
@@ -35,8 +35,8 @@ var methodIdDecodeParamOfFillOrderSelfFunded decoder.Bytes4
 
 func init() {
 	mSettlerActionName = map[FunctionName]FunctionABI{
-		settler_otc_self_funded_name:     settler_otc_self_funded_function,
-		metatxn_settler_otc_permit2_name: metatxn_settler_otc_permit2_function,
+		settlerOtcSelfFundedName:     settlerOtcSelfFundedFunction,
+		metatxnSettlerOtcPermit2Name: metatxnSettlerOtcPermit2Function,
 	}
 
 	byteMethodId, err := hex.DecodeString(MethodIdDecodeParamOfFillOrderSelfFundedHex)

@@ -1,11 +1,11 @@
-package zxrfq_v3
+package zxrfqv3
 
 import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
-	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfq_v3/zxrfq_v3_helper"
+	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/helper"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
@@ -20,17 +20,41 @@ import (
 
 const rpcURL = ""
 
-func newParserTest(t *testing.T, contractAddress common.Address, needRpc bool) *Parser {
+type parserType int
+
+const (
+	dev parserType = iota
+	swap
+	gasless
+)
+
+func newParserTest(t *testing.T, contractAddress common.Address, needRpc bool, parserType parserType) *Parser {
+	var cache *tracecall.Cache
 	if needRpc {
 		rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
 		if err != nil {
 			t.Fatal(err)
 		}
-		cache := tracecall.NewCache(rpcClient)
-		return MustNewParser(cache, contractAddress)
+		cache = tracecall.NewCache(rpcClient)
 	}
+	switch parserType {
+	case dev:
+		return MustNewDevParser(cache, contractAddress)
+	case swap:
+		return MustNewSwapParser(cache, contractAddress)
+	case gasless:
+		return MustNewGaslessParser(cache, contractAddress)
+	default:
+		return MustNewDevParser(cache, contractAddress)
+	}
+}
 
-	return MustNewParser(nil, contractAddress)
+func TestInitNewParser(t *testing.T) {
+	// no fatal
+	address := common.HexToAddress("0x7966aF62034313D87Ede39380bf60f1A84c62BE7")
+	_ = MustNewDevParser(nil, address)
+	_ = MustNewGaslessParser(nil, address)
+	_ = MustNewSwapParser(nil, address)
 }
 
 func getTestCaseData(t *testing.T, path string, result interface{}) {
@@ -44,11 +68,11 @@ func TestGetActionDataFromCallFame(t *testing.T) {
 
 	var callFrame types.CallFrame
 	getTestCaseData(t, "./test/call_frame_rfq.json", &callFrame)
-	var expectedInput zxrfq_v3_helper.InputParamOfFillRfqOrderSelfFunded
+	var expectedInput helper.InputParamOfFillRfqOrderSelfFunded
 	getTestCaseData(t, "./test/expected_input_rfq.json", &expectedInput)
 
 	contractAddress := common.HexToAddress("0x7966aF62034313D87Ede39380bf60f1A84c62BE7")
-	parser := newParserTest(t, contractAddress, false)
+	parser := newParserTest(t, contractAddress, false, dev)
 	data, err := parser.getExecuteActionData(callFrame)
 	assert.NoError(t, err, "failed to get execute action data")
 	actionType, rawData, err := decodeCall(data[1])
@@ -59,7 +83,7 @@ func TestGetActionDataFromCallFame(t *testing.T) {
 	assert.NoError(t, err, "failed to decode method id")
 	methodId, err := decoder.GetBytes4(byteMethodId)
 	assert.NoError(t, err, "failed to get method id")
-	input, err := zxrfq_v3_helper.GetInputParamsOfFillRfqOrderSelfFunded(parser.customAbi, methodId, rawData)
+	input, err := helper.GetInputParamsOfFillRfqOrderSelfFunded(parser.customAbi, methodId, rawData)
 	assert.NoError(t, err, "failed to decode data")
 
 	assert.Equal(t, expectedInput.Recipient, input.Recipient, "recipient not match")
@@ -80,7 +104,7 @@ func TestGetTransactionAndParseZeroxV3Rfq(t *testing.T) {
 
 	txHash := common.HexToHash("0xb244877d0cf0badcf2ac82dbb3cbf338b420ab5d1c6e6630fce4a4874121e427")
 	contractAddress := common.HexToAddress("0x7966aF62034313D87Ede39380bf60f1A84c62BE7")
-	parser := newParserTest(t, contractAddress, true)
+	parser := newParserTest(t, contractAddress, true, dev)
 	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		t.Fatalf("failed to dial to rpc url: %s, err: %s", rpcURL, err)
@@ -99,6 +123,5 @@ func TestGetTransactionAndParseZeroxV3Rfq(t *testing.T) {
 			//fmt.Println(string(x))
 		}
 	}
-	assert.Equal(t, 1, 1)
 	assert.Greater(t, rfqCount, 0, "no rfq trade found")
 }

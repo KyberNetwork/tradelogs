@@ -1,11 +1,10 @@
-package zxrfq_v3
+package zxrfqv3
 
 import (
 	"fmt"
-	"github.com/KyberNetwork/tradelogs/pkg/abitypes"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
-	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfq_v3/zxrfq_v3_helper"
+	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/helper"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	"github.com/KyberNetwork/tradelogs/pkg/types"
@@ -15,13 +14,7 @@ import (
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"log"
 	"math/big"
-	"strings"
-)
-
-var (
-	balanceArgument = abi.Arguments{
-		{Name: "balance", Type: abitypes.Uint256},
-	}
+	"os"
 )
 
 type Parser struct {
@@ -32,12 +25,18 @@ type Parser struct {
 	selectorAction  map[decoder.Bytes4]FunctionName
 }
 
-func MustNewParser(cache *tracecall.Cache, contractAddress common.Address) *Parser {
-	ab, err := ZxrfqV3MetaData.GetAbi()
+func mustNewParser(cache *tracecall.Cache, contractAddress common.Address, filePath string) *Parser {
+	// read abi from file path and get
+	byteValue, err := os.Open(filePath)
+	if err != nil {
+		log.Fatalf("failed to open path file %v, error: %s", err, filePath)
+	}
+	ab, err := abi.JSON(byteValue)
 	if err != nil {
 		log.Fatalf("failed to get abi: %s", err)
 	}
-	customABI, err := zxrfq_v3_helper.ZxrfqV3HelperMetaData.GetAbi()
+
+	customABI, err := helper.ZxrfqV3HelperMetaData.GetAbi()
 	if err != nil {
 		log.Fatalf("failed to get custom abi: %s", err)
 	}
@@ -45,12 +44,24 @@ func MustNewParser(cache *tracecall.Cache, contractAddress common.Address) *Pars
 		log.Fatalf("contract address is zero address")
 	}
 	return &Parser{
-		abi:             ab,
+		abi:             &ab,
 		customAbi:       customABI,
 		traceCalls:      cache,
 		contractAddress: contractAddress,
 		selectorAction:  getSettlerAction(),
 	}
+}
+
+func MustNewDevParser(cache *tracecall.Cache, contractAddress common.Address) *Parser {
+	return mustNewParser(cache, contractAddress, "./abi/dev_abi.json")
+}
+
+func MustNewSwapParser(cache *tracecall.Cache, contractAddress common.Address) *Parser {
+	return mustNewParser(cache, contractAddress, "./abi/swap_abi.json")
+}
+
+func MustNewGaslessParser(cache *tracecall.Cache, contractAddress common.Address) *Parser {
+	return mustNewParser(cache, contractAddress, "./abi/gasless_abi.json")
 }
 
 func isZeroAddress(address common.Address) bool {
@@ -85,6 +96,11 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 		return storage.TradeLog{}, fmt.Errorf("get order hash error %w", err)
 	}
 	tradeLog.OrderHash = orderHash
+	tokenMakerAmount, err := getMakerAmount(log.Data)
+	if err != nil {
+		return storage.TradeLog{}, fmt.Errorf("get maker amount error %w", err)
+	}
+	tradeLog.MakerTokenAmount = tokenMakerAmount.String()
 
 	callFrame, err := p.traceCalls.GetTraceCall(log.TxHash.Hex())
 	if err != nil {
@@ -98,6 +114,14 @@ func getOrderHash(data []byte) (string, error) {
 		return "", fmt.Errorf("data length is less than 32")
 	}
 	return common.BytesToHash(data[:32]).String(), nil
+}
+
+func getMakerAmount(data []byte) (*big.Int, error) {
+	if len(data) < common.HashLength {
+		return nil, fmt.Errorf("data length is less than 32")
+	}
+
+	return new(big.Int).SetBytes(data[32:]), nil
 }
 
 func (p *Parser) getRfqTradeIndex(callFrame types.CallFrame, log ethereumTypes.Log) (int, bool) {
@@ -157,17 +181,17 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 			// with 0x7f6ceE965959295cC64d0E6c00d99d6532d8e86b production
 			// for now we only support parse rfq with this actionName: METATXN_RFQ_VIP, RFQ, RFQ_VIP
 
-			// with 0x7966aF62034313D87Ede39380bf60f1A84c62BE7 dev
+			// with 0x7966aF62034313D87Ede39380bf60f1A84c62BE7 abi
 			// for now we only support parse rfq with this actionName: SETTLER_OTC_SELF_FUNDED, METATXN_SETTLER_OTC_PERMIT2
 			// because when action in these enum SC will call function  fillOtcOrderSelfFunded, fillOtcOrder and call log _logRfqOrder
 			switch functionName {
-			// dev SC
-			case settler_otc_self_funded_name:
+			// abi SC
+			case settlerOtcSelfFundedName:
 				currentActionIndex++
 				if currentActionIndex != actionIndex {
 					continue
 				}
-				input, err := zxrfq_v3_helper.GetInputParamsOfFillRfqOrderSelfFunded(p.customAbi, methodIdDecodeParamOfFillOrderSelfFunded, data)
+				input, err := helper.GetInputParamsOfFillRfqOrderSelfFunded(p.customAbi, methodIdDecodeParamOfFillOrderSelfFunded, data)
 				if err != nil {
 					return tradeLog, fmt.Errorf("get input param of fill rfq order self funded failed: %w", err)
 				}
@@ -176,32 +200,14 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 				tradeLog.MakerToken = input.Permit.Permitted.Token.String()
 				tradeLog.TakerToken = input.TakerToken.String()
 				tradeLog.Expiry = input.Permit.Deadline.Uint64()
-				var takerToken *big.Int
-				for _, subFrame := range callFrame.Calls {
-					x, _ := decoder.Decode(p.abi, subFrame.Input)
-					// find first method get balance of current contract for taker token
-					if x != nil && x.Name == balanceOf &&
-						strings.EqualFold(subFrame.To, tradeLog.TakerToken) &&
-						strings.EqualFold(subFrame.From, p.contractAddress.Hex()) {
-						//max current balance of zeroxv3 SC
-						takerToken, err = decodeOutputBalanceOf(subFrame.Output)
-						if err != nil {
-							return tradeLog, err
-						}
-						break
-					}
+				makerTokenAmount, ok := new(big.Int).SetString(tradeLog.MakerTokenAmount, 10)
+				if !ok {
+					return tradeLog, fmt.Errorf("failed to convert maker token amount to big.Int")
 				}
-				if takerToken == nil {
-					return tradeLog, fmt.Errorf("can not find current balance of contract")
-				}
-				if takerToken.Cmp(input.MaxTakerAmount) > 0 {
-					takerToken = new(big.Int).Set(input.MaxTakerAmount)
-				}
-				newMakerAmount := calculateTokenAmount(input.Permit.Permitted.Amount, takerToken, input.MaxTakerAmount)
-				tradeLog.TakerTokenAmount = takerToken.String()
-				tradeLog.MakerTokenAmount = newMakerAmount.String()
+				takerTokenAmount := calculateTakerTokenAmount(makerTokenAmount, input.MaxTakerAmount, input.Permit.Permitted.Amount)
+				tradeLog.TakerTokenAmount = takerTokenAmount.String()
 				return tradeLog, nil
-			case metatxn_settler_otc_permit2_name:
+			case metatxnSettlerOtcPermit2Name:
 				currentActionIndex++
 				if currentActionIndex != actionIndex {
 					continue
@@ -248,27 +254,16 @@ func decodeCall(data []byte) (decoder.Bytes4, []byte, error) {
 	return action, args, nil
 }
 
-func decodeOutputBalanceOf(data string) (*big.Int, error) {
-	bytes, err := hexutil.Decode(data)
-	if err != nil {
-		return nil, err
+func calculateTakerTokenAmount(makerTokenAmount *big.Int, maxTakerTokenAmount *big.Int, permittedTokenAmount *big.Int) *big.Int {
+	if permittedTokenAmount.Cmp(big.NewInt(0)) == 0 {
+		return big.NewInt(0)
 	}
-	decoded, err := balanceArgument.UnpackValues(bytes)
-	if err != nil {
-		return nil, err
-	}
-	balance, ok := decoded[0].(*big.Int)
-	if !ok {
-		return nil, fmt.Errorf("failed to convert balance to big.Int")
-	}
-	return balance, nil
-}
+	makerTokenAmountCal := new(big.Int).Set(makerTokenAmount)
+	maxTakerTokenAmountCal := new(big.Int).Set(maxTakerTokenAmount)
+	permittedTokenAmountCal := new(big.Int).Set(permittedTokenAmount)
 
-func calculateTokenAmount(makerAmount *big.Int, takerAmount *big.Int, maxTakerAmount *big.Int) *big.Int {
-	takerAmountCal := new(big.Int).Set(takerAmount)
-	makerAmountCal := new(big.Int).Set(makerAmount)
-	maxTakerAmountCal := new(big.Int).Set(maxTakerAmount)
-
-	//makerAmount.unsafeMulDiv(takerAmount, maxTakerAmount);
-	return makerAmountCal.Mul(makerAmountCal, takerAmountCal.Div(takerAmountCal, maxTakerAmountCal))
+	//makerAmount = permittedTokenAmount.unsafeMulDiv(takerAmount, maxTakerAmount);
+	// -> takerAmount = (makerAmount * maxTakerAmount) / permittedTokenAmount
+	tmp := makerTokenAmountCal.Mul(makerTokenAmountCal, maxTakerTokenAmountCal)
+	return tmp.Div(tmp, permittedTokenAmountCal)
 }

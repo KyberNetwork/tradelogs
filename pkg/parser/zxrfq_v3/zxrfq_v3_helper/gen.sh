@@ -1,1 +1,0 @@
-abigen --abi=custom_abi.json --pkg=zxrfq_v3_helper --out=zxrfq_v3_helper.go

@@ -99,7 +99,7 @@ func MustNewParser(tracecall *tracecall.Cache) *Parser {
 		abi:                &ab,
 		eventHash:          event.ID.String(),
 		traceCalls:         tracecall,
-		singleOrderFunc:    sets.New("swapSingle", "swapSingleFromContract", "settleSingle", "settleSingleAndSignPermit", "settleSingleAndSignPermit2"),
+		singleOrderFunc:    sets.New("swapSingle", "swapSingleFromContract", "settleSingle", "settleSingleAndSign`Permit", "settleSingleAndSignPermit2"),
 		multiOrderFunc:     sets.New("swapMulti", "settleMulti", "settleMultiAndSignPermit", "settleMultiAndSignPermit2"),
 		aggregateOrderFunc: sets.New("swapAggregate", "settleAggregate", "settleAggregateAndSignPermit", "settleAggregateAndSignPermit2"),
 	}
