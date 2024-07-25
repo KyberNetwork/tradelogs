@@ -202,7 +202,6 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 					tradeLog.MakerTokenAmount = newMakerAmount.String()
 					return tradeLog, nil
 				}
-				break
 			case metatxn_settler_otc_permit2_function:
 				//TODO
 				break
