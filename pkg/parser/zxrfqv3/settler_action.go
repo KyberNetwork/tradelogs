@@ -17,37 +17,50 @@ type FunctionName string
 type FunctionABI string
 
 const (
-	settlerOtcSelfFundedFunction     FunctionABI = "SETTLER_OTC_SELF_FUNDED(address,((address,uint256),uint256,uint256),address,bytes,address,uint256)"
-	metatxnSettlerOtcPermit2Function FunctionABI = "METATXN_SETTLER_OTC_PERMIT2(address,((address,uint256),uint256,uint256),address,bytes,((address,uint256),uint256,uint256))"
+	settlerOtcSelfFundedFunction FunctionABI = "SETTLER_OTC_SELF_FUNDED(address,((address,uint256),uint256,uint256),address,bytes,address,uint256)"
+	metatxnRFQVipFunction        FunctionABI = "METATXN_RFQ_VIP(address,((address,uint256),uint256,uint256),address,bytes,((address,uint256),uint256,uint256),bytes)"
+	rfqVIPFunction               FunctionABI = "RFQ_VIP(address,((address,uint256),uint256,uint256),address,bytes,((address,uint256),uint256,uint256))"
 )
 
 const (
-	settlerOtcSelfFundedName     FunctionName = "SETTLER_OTC_SELF_FUNDED"
-	metatxnSettlerOtcPermit2Name FunctionName = "METATXN_SETTLER_OTC_PERMIT2"
-)
-
-const (
-	MethodIdDecodeParamOfFillOrderSelfFundedHex = "0a164181"
+	settlerOtcSelfFundedName FunctionName = "SETTLER_OTC_SELF_FUNDED"
+	metatxnRFQVipName        FunctionName = "METATXN_RFQ_VIP"
+	rfqVIPName               FunctionName = "RFQ_VIP"
 )
 
 var mSettlerActionName map[FunctionName]FunctionABI
-var methodIdDecodeParamOfFillOrderSelfFunded decoder.Bytes4
+
+const (
+	MethodIdDecodeParamOfFillOrderSelfFundedHex = "0a164181"
+	methodIdDecodeParamOfFillOrderVIPHex        = "bcd804f7"
+)
+
+var (
+	methodIdDecodeParamOfFillOrderSelfFunded decoder.Bytes4
+	methodIdDecodeParamOfFillOrderVIP        decoder.Bytes4
+)
 
 func init() {
 	mSettlerActionName = map[FunctionName]FunctionABI{
-		settlerOtcSelfFundedName:     settlerOtcSelfFundedFunction,
-		metatxnSettlerOtcPermit2Name: metatxnSettlerOtcPermit2Function,
+		settlerOtcSelfFundedName: settlerOtcSelfFundedFunction,
+		metatxnRFQVipName:        metatxnRFQVipFunction,
+		rfqVIPName:               rfqVIPFunction,
 	}
 
-	byteMethodId, err := hex.DecodeString(MethodIdDecodeParamOfFillOrderSelfFundedHex)
+	methodIdDecodeParamOfFillOrderSelfFunded = loadMethodId(MethodIdDecodeParamOfFillOrderSelfFundedHex)
+	methodIdDecodeParamOfFillOrderVIP = loadMethodId(methodIdDecodeParamOfFillOrderVIPHex)
+}
+
+func loadMethodId(methodHex string) decoder.Bytes4 {
+	byteMethodId, err := hex.DecodeString(methodHex)
 	if err != nil {
-		log.Fatalf("failed to decode method id: %s", err)
+		log.Fatalf("failed to decode method id %v, err: %s", methodHex, err)
 	}
 	methodId, err := decoder.GetBytes4(byteMethodId)
 	if err != nil {
-		log.Fatalf("failed to get method id: %s", err)
+		log.Fatalf("failed to get method id %v, err: %s", methodHex, err)
 	}
-	methodIdDecodeParamOfFillOrderSelfFunded = methodId
+	return methodId
 }
 
 func getSettlerAction() map[decoder.Bytes4]FunctionName {
