@@ -1,4 +1,4 @@
-package helper
+package zxrfqv3
 
 import (
 	"encoding/json"
@@ -16,6 +16,17 @@ type InputParamOfFillRfqOrderSelfFunded struct {
 	MakerSig       []byte             `json:"makerSig"`
 	TakerToken     common.Address     `json:"takerToken"`
 	MaxTakerAmount *big.Int           `json:"maxTakerAmount"`
+}
+
+type PermitTransferFrom struct {
+	Permitted TokenPermissions
+	Nonce     *big.Int
+	Deadline  *big.Int
+}
+
+type TokenPermissions struct {
+	Token  common.Address
+	Amount *big.Int
 }
 
 func GetInputParamsOfFillRfqOrderSelfFunded(customABI *abi.ABI, actionName decoder.Bytes4, data []byte) (InputParamOfFillRfqOrderSelfFunded, error) {

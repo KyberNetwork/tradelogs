@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
-	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/helper"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	"github.com/KyberNetwork/tradelogs/pkg/types"
@@ -25,27 +24,30 @@ type Parser struct {
 	selectorAction  map[decoder.Bytes4]FunctionName
 }
 
-func mustNewParser(cache *tracecall.Cache, contractAddress common.Address, filePath string) *Parser {
-	// read abi from file path and get
-	byteValue, err := os.Open(filePath)
+func loadABI(filePath string) *abi.ABI {
+	abiByteValue, err := os.Open(filePath)
 	if err != nil {
 		log.Fatalf("failed to open path file %v, error: %s", err, filePath)
 	}
-	ab, err := abi.JSON(byteValue)
+	ab, err := abi.JSON(abiByteValue)
 	if err != nil {
 		log.Fatalf("failed to get abi: %s", err)
 	}
+	return &ab
+}
 
-	customABI, err := helper.ZxrfqV3HelperMetaData.GetAbi()
-	if err != nil {
-		log.Fatalf("failed to get custom abi: %s", err)
-	}
+func mustNewParser(cache *tracecall.Cache, contractAddress common.Address, filePath string) *Parser {
+	// read abi from file path and get
+	ab := loadABI(filePath)
+
+	customAbi := loadABI("./abi/custom_abi.json")
+
 	if isZeroAddress(contractAddress) {
 		log.Fatalf("contract address is zero address")
 	}
 	return &Parser{
-		abi:             &ab,
-		customAbi:       customABI,
+		abi:             ab,
+		customAbi:       customAbi,
 		traceCalls:      cache,
 		contractAddress: contractAddress,
 		selectorAction:  getSettlerAction(),
@@ -191,7 +193,7 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 				if currentActionIndex != actionIndex {
 					continue
 				}
-				input, err := helper.GetInputParamsOfFillRfqOrderSelfFunded(p.customAbi, methodIdDecodeParamOfFillOrderSelfFunded, data)
+				input, err := GetInputParamsOfFillRfqOrderSelfFunded(p.customAbi, methodIdDecodeParamOfFillOrderSelfFunded, data)
 				if err != nil {
 					return tradeLog, fmt.Errorf("get input param of fill rfq order self funded failed: %w", err)
 				}

@@ -1,1 +1,0 @@
-abigen --abi=custom_abi.json --pkg=helper --out=helper.go
