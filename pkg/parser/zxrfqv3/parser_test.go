@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
-	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/helper"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
@@ -68,7 +67,7 @@ func TestGetActionDataFromCallFame(t *testing.T) {
 
 	var callFrame types.CallFrame
 	getTestCaseData(t, "./test/call_frame_rfq.json", &callFrame)
-	var expectedInput helper.InputParamOfFillRfqOrderSelfFunded
+	var expectedInput InputParamOfFillRfqOrderSelfFunded
 	getTestCaseData(t, "./test/expected_input_rfq.json", &expectedInput)
 
 	contractAddress := common.HexToAddress("0x7966aF62034313D87Ede39380bf60f1A84c62BE7")
@@ -83,7 +82,7 @@ func TestGetActionDataFromCallFame(t *testing.T) {
 	assert.NoError(t, err, "failed to decode method id")
 	methodId, err := decoder.GetBytes4(byteMethodId)
 	assert.NoError(t, err, "failed to get method id")
-	input, err := helper.GetInputParamsOfFillRfqOrderSelfFunded(parser.customAbi, methodId, rawData)
+	input, err := GetInputParamsOfFillRfqOrderSelfFunded(parser.customAbi, methodId, rawData)
 	assert.NoError(t, err, "failed to decode data")
 
 	assert.Equal(t, expectedInput.Recipient, input.Recipient, "recipient not match")
