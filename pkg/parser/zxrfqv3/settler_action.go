@@ -31,8 +31,8 @@ const (
 var mSettlerActionName map[FunctionName]FunctionABI
 
 const (
-	MethodIdDecodeParamOfFillOrderSelfFundedHex = "0a164181"
-	methodIdDecodeParamOfFillOrderVIPHex        = "bcd804f7"
+	MethodIdDecodeParamOfFillOrderSelfFundedHex = "fd089b1d"
+	methodIdDecodeParamOfFillOrderVIPHex        = "fb55075b"
 )
 
 var (

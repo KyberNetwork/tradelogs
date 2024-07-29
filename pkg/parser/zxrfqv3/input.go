@@ -38,7 +38,7 @@ type InputParamOfFillRfqOrderVIP struct {
 	MaxTakerAmount *big.Int           `json:"maxTakerAmount"`
 }
 
-func GetInputParamsOfFillRfqOrderSelfFunded(customABI *abi.ABI, actionName decoder.Bytes4, data []byte) (InputParamOfFillRfqOrderSelfFunded, error) {
+func DecodeInputParamsOfFillRfqOrderSelfFunded(customABI *abi.ABI, actionName decoder.Bytes4, data []byte) (InputParamOfFillRfqOrderSelfFunded, error) {
 	contractCall, err := decoder.DecodeCustomABI(customABI, actionName, data)
 	if err != nil {
 		return InputParamOfFillRfqOrderSelfFunded{}, err
@@ -82,7 +82,7 @@ func GetInputParamsOfFillRfqOrderSelfFunded(customABI *abi.ABI, actionName decod
 	return input, nil
 }
 
-func GetInputParamsOfFillRfqOrderVIP(customABI *abi.ABI, actionName decoder.Bytes4, data []byte) (InputParamOfFillRfqOrderVIP, error) {
+func DecodeInputParamsOfFillRfqOrderVIP(customABI *abi.ABI, actionName decoder.Bytes4, data []byte) (InputParamOfFillRfqOrderVIP, error) {
 	contractCall, err := decoder.DecodeCustomABI(customABI, actionName, data)
 	if err != nil {
 		return InputParamOfFillRfqOrderVIP{}, err

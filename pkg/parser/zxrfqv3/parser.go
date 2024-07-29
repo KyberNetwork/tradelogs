@@ -206,7 +206,7 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 }
 
 func getTradeLogFromSettlerOtcSelfFundedName(callFrame types.CallFrame, abi *abi.ABI, tradeLog storage.TradeLog, data []byte) (storage.TradeLog, error) {
-	input, err := GetInputParamsOfFillRfqOrderSelfFunded(abi, methodIdDecodeParamOfFillOrderSelfFunded, data)
+	input, err := DecodeInputParamsOfFillRfqOrderSelfFunded(abi, methodIdDecodeParamOfFillOrderSelfFunded, data)
 	if err != nil {
 		return tradeLog, fmt.Errorf("get input param of fill rfq order self funded failed: %w", err)
 	}
@@ -225,7 +225,7 @@ func getTradeLogFromSettlerOtcSelfFundedName(callFrame types.CallFrame, abi *abi
 }
 
 func getTradeLogFromMetatxnRFQVipName(callFrame types.CallFrame, abi *abi.ABI, tradeLog storage.TradeLog, data []byte) (storage.TradeLog, error) {
-	input, err := GetInputParamsOfFillRfqOrderVIP(abi, methodIdDecodeParamOfFillOrderVIP, data)
+	input, err := DecodeInputParamsOfFillRfqOrderVIP(abi, methodIdDecodeParamOfFillOrderVIP, data)
 	if err != nil {
 		return tradeLog, fmt.Errorf("get input param of fill rfq order vip failed: %w", err)
 	}
