@@ -7,6 +7,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	"github.com/KyberNetwork/tradelogs/pkg/types"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -84,6 +85,19 @@ func (p *Parser) UseTraceCall() bool {
 }
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+	tradeLog, err := p.buildOrderByLog(log, blockTime)
+	if err != nil {
+		return storage.TradeLog{}, err
+	}
+
+	callFrame, err := p.traceCalls.GetTraceCall(log.TxHash.Hex())
+	if err != nil {
+		return tradeLog, err
+	}
+	return p.recursiveDetectRFQTrades(tradeLog, callFrame, log)
+}
+
+func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 || log.Address != p.contractAddress {
 		return storage.TradeLog{}, ErrInvalidRfqTrade
 	}
@@ -104,11 +118,15 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 	}
 	tradeLog.MakerTokenAmount = tokenMakerAmount.String()
 
-	callFrame, err := p.traceCalls.GetTraceCall(log.TxHash.Hex())
+	return tradeLog, err
+}
+
+func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+	tradeLog, err := p.buildOrderByLog(log, blockTime)
 	if err != nil {
-		return tradeLog, err
+		return storage.TradeLog{}, err
 	}
-	return p.recursiveDetectRFQTrades(tradeLog, callFrame, log)
+	return p.recursiveDetectRFQTrades(tradeLog, types.ConvertCallFrame(callFrame), log)
 }
 
 func getOrderHash(data []byte) (string, error) {
