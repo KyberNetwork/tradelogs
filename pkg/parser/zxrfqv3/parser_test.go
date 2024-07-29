@@ -82,7 +82,7 @@ func TestGetActionDataFromCallFame(t *testing.T) {
 	assert.NoError(t, err, "failed to decode method id")
 	methodId, err := decoder.GetBytes4(byteMethodId)
 	assert.NoError(t, err, "failed to get method id")
-	input, err := GetInputParamsOfFillRfqOrderSelfFunded(parser.customAbi, methodId, rawData)
+	input, err := DecodeInputParamsOfFillRfqOrderSelfFunded(parser.customAbi, methodId, rawData)
 	assert.NoError(t, err, "failed to decode data")
 
 	assert.Equal(t, expectedInput.Recipient, input.Recipient, "recipient not match")

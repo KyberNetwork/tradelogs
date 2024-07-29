@@ -180,6 +180,10 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 		}
 
 		if functionName, ok := p.selectorAction[actionName]; ok {
+			currentActionIndex++
+			if currentActionIndex != actionIndex {
+				continue
+			}
 			// with 0x7f6ceE965959295cC64d0E6c00d99d6532d8e86b production
 			// for now we only support parse rfq with this actionName: METATXN_RFQ_VIP, RFQ, RFQ_VIP
 
@@ -187,41 +191,52 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 			// for now we only support parse rfq with this actionName: SETTLER_OTC_SELF_FUNDED, METATXN_SETTLER_OTC_PERMIT2
 			// because when action in these enum SC will call function  fillOtcOrderSelfFunded, fillOtcOrder and call log _logRfqOrder
 			switch functionName {
-			// abi SC
 			case settlerOtcSelfFundedName:
-				currentActionIndex++
-				if currentActionIndex != actionIndex {
-					continue
-				}
-				input, err := GetInputParamsOfFillRfqOrderSelfFunded(p.customAbi, methodIdDecodeParamOfFillOrderSelfFunded, data)
-				if err != nil {
-					return tradeLog, fmt.Errorf("get input param of fill rfq order self funded failed: %w", err)
-				}
-				tradeLog.Maker = input.Maker.String()
-				tradeLog.Taker = callFrame.From
-				tradeLog.MakerToken = input.Permit.Permitted.Token.String()
-				tradeLog.TakerToken = input.TakerToken.String()
-				tradeLog.Expiry = input.Permit.Deadline.Uint64()
-				makerTokenAmount, ok := new(big.Int).SetString(tradeLog.MakerTokenAmount, 10)
-				if !ok {
-					return tradeLog, fmt.Errorf("failed to convert maker token amount to big.Int")
-				}
-				takerTokenAmount := calculateTakerTokenAmount(makerTokenAmount, input.MaxTakerAmount, input.Permit.Permitted.Amount)
-				tradeLog.TakerTokenAmount = takerTokenAmount.String()
-				return tradeLog, nil
-			case metatxnSettlerOtcPermit2Name:
-				currentActionIndex++
-				if currentActionIndex != actionIndex {
-					continue
-				}
-				//TODO
+				return getTradeLogFromSettlerOtcSelfFundedName(callFrame, p.customAbi, tradeLog, data)
+			case metatxnRFQVipName, rfqVIPName:
+				return getTradeLogFromMetatxnRFQVipName(callFrame, p.customAbi, tradeLog, data)
 			}
+
 		}
 
 	}
 
 	// if we can not find any action, we will return error
 	return tradeLog, ErrDetectRfqButCanNotParse
+}
+
+func getTradeLogFromSettlerOtcSelfFundedName(callFrame types.CallFrame, abi *abi.ABI, tradeLog storage.TradeLog, data []byte) (storage.TradeLog, error) {
+	input, err := DecodeInputParamsOfFillRfqOrderSelfFunded(abi, methodIdDecodeParamOfFillOrderSelfFunded, data)
+	if err != nil {
+		return tradeLog, fmt.Errorf("get input param of fill rfq order self funded failed: %w", err)
+	}
+	tradeLog.Maker = input.Maker.String()
+	tradeLog.Taker = callFrame.From
+	tradeLog.MakerToken = input.Permit.Permitted.Token.String()
+	tradeLog.TakerToken = input.TakerToken.String()
+	tradeLog.Expiry = input.Permit.Deadline.Uint64()
+	makerTokenAmount, ok := new(big.Int).SetString(tradeLog.MakerTokenAmount, 10)
+	if !ok {
+		return tradeLog, fmt.Errorf("failed to convert maker token amount to big.Int")
+	}
+	takerTokenAmount := calculateTakerTokenAmount(makerTokenAmount, input.MaxTakerAmount, input.Permit.Permitted.Amount)
+	tradeLog.TakerTokenAmount = takerTokenAmount.String()
+	return tradeLog, nil
+}
+
+func getTradeLogFromMetatxnRFQVipName(callFrame types.CallFrame, abi *abi.ABI, tradeLog storage.TradeLog, data []byte) (storage.TradeLog, error) {
+	input, err := DecodeInputParamsOfFillRfqOrderVIP(abi, methodIdDecodeParamOfFillOrderVIP, data)
+	if err != nil {
+		return tradeLog, fmt.Errorf("get input param of fill rfq order vip failed: %w", err)
+	}
+	tradeLog.Maker = input.Maker.String()
+	tradeLog.Taker = callFrame.From
+	tradeLog.MakerToken = input.MakerPermit.Permitted.Token.String()
+	tradeLog.TakerToken = input.TakerPermit.Permitted.Token.String()
+	tradeLog.Expiry = input.MakerPermit.Deadline.Uint64()
+	takerTokenAmount := input.TakerPermit.Permitted.Amount
+	tradeLog.TakerTokenAmount = takerTokenAmount.String()
+	return tradeLog, nil
 }
 
 func (p *Parser) getExecuteActionData(callFrame types.CallFrame) ([][]byte, error) {
