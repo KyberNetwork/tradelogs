@@ -3,19 +3,24 @@ package zxrfqv3
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/KyberNetwork/tradelogs/pkg/decoder"
+	"github.com/KyberNetwork/tradelogs/pkg/abitypes"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 )
 
+type rfqArguments struct {
+	fillRfqOrderSelfFundedArguments abi.Arguments
+	fillRfqOrderVIPArguments        abi.Arguments
+}
+
 type InputParamOfFillRfqOrderSelfFunded struct {
-	Recipient      common.Address     `json:"recipient"`
-	Permit         PermitTransferFrom `json:"permit"`
-	Maker          common.Address     `json:"maker"`
-	MakerSig       []byte             `json:"makerSig"`
-	TakerToken     common.Address     `json:"takerToken"`
-	MaxTakerAmount *big.Int           `json:"maxTakerAmount"`
+	Recipient          common.Address     `json:"recipient"`
+	PermitTransferFrom PermitTransferFrom `json:"permit"`
+	Maker              common.Address     `json:"maker"`
+	MakerSig           []byte             `json:"makerSig"`
+	TakerToken         common.Address     `json:"takerToken"`
+	MaxTakerAmount     *big.Int           `json:"maxTakerAmount"`
 }
 
 type PermitTransferFrom struct {
@@ -31,105 +36,76 @@ type TokenPermissions struct {
 
 type InputParamOfFillRfqOrderVIP struct {
 	Recipient      common.Address     `json:"recipient"`
-	MakerPermit    PermitTransferFrom `json:"permit"`
+	MakerPermit    PermitTransferFrom `json:"makerPermit"`
 	Maker          common.Address     `json:"maker"`
 	MakerSig       []byte             `json:"makerSig"`
 	TakerPermit    PermitTransferFrom `json:"takerPermit"`
 	MaxTakerAmount *big.Int           `json:"maxTakerAmount"`
 }
 
-func DecodeInputParamsOfFillRfqOrderSelfFunded(customABI *abi.ABI, actionName decoder.Bytes4, data []byte) (InputParamOfFillRfqOrderSelfFunded, error) {
-	contractCall, err := decoder.DecodeCustomABI(customABI, actionName, data)
+func newRfqArguments() (rfqArguments, error) {
+	permitTransferFromType, err := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+		{Name: "permitted", Type: "tuple", Components: []abi.ArgumentMarshaling{
+			{Name: "token", Type: "address"},
+			{Name: "amount", Type: "uint256"}}},
+		{Name: "nonce", Type: "uint256"},
+		{Name: "deadline", Type: "uint256"},
+	})
+
+	if err != nil {
+		return rfqArguments{}, err
+	}
+
+	fillRfqOrderSelfFundedArguments := abi.Arguments{
+		{Name: "recipient", Type: abitypes.Address},
+		{Name: "permit", Type: permitTransferFromType},
+		{Name: "maker", Type: abitypes.Address},
+		{Name: "makerSig", Type: abitypes.Bytes},
+		{Name: "takerToken", Type: abitypes.Address},
+		{Name: "maxTakerAmount", Type: abitypes.Uint256},
+	}
+
+	fillRfqOrderVIPArguments := abi.Arguments{
+		{Name: "recipient", Type: abitypes.Address},
+		{Name: "makerPermit", Type: permitTransferFromType},
+		{Name: "maker", Type: abitypes.Address},
+		{Name: "makerSig", Type: abitypes.Bytes},
+		{Name: "takerPermit", Type: permitTransferFromType},
+		{Name: "maxTakerAmount", Type: abitypes.Uint256},
+	}
+
+	return rfqArguments{
+		fillRfqOrderSelfFundedArguments: fillRfqOrderSelfFundedArguments,
+		fillRfqOrderVIPArguments:        fillRfqOrderVIPArguments,
+	}, nil
+}
+
+func (arg rfqArguments) UnpackInputParamsOfFillRfqOrderSelfFunded(bytes []byte) (InputParamOfFillRfqOrderSelfFunded, error) {
+	mNameAndValue := make(map[string]interface{})
+	err := arg.fillRfqOrderSelfFundedArguments.UnpackIntoMap(mNameAndValue, bytes)
+	if err != nil {
+		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("failed to unpack into map: %v", err)
+	}
+	data, err := json.Marshal(mNameAndValue)
 	if err != nil {
 		return InputParamOfFillRfqOrderSelfFunded{}, err
 	}
 	var input InputParamOfFillRfqOrderSelfFunded
-	var ok bool
-	inputParam := contractCall.Params
-	if len(inputParam) != 6 {
-		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("invalid number of input params, expect 6 but got %d", len(inputParam))
-	}
-	input.Recipient, ok = inputParam[0].Value.(common.Address)
-	if !ok {
-		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("failed to convert reciptent to common.Address")
-	}
-
-	err = unpackValue(inputParam[1].Value, &input.Permit)
-	if err != nil {
-		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("failed to convert permit to PermitTransferFrom, %w", err)
-	}
-
-	input.Maker, ok = inputParam[2].Value.(common.Address)
-	if !ok {
-		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("failed to convert maker to common.Address")
-	}
-
-	input.MakerSig, ok = inputParam[3].Value.([]byte)
-	if !ok {
-		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("failed to convert makerSig to []byte")
-	}
-
-	input.TakerToken, ok = inputParam[4].Value.(common.Address)
-	if !ok {
-		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("failed to convert takerToken to common.Address")
-	}
-
-	input.MaxTakerAmount, ok = inputParam[5].Value.(*big.Int)
-	if !ok {
-		return InputParamOfFillRfqOrderSelfFunded{}, fmt.Errorf("failed to convert maxTakerAmount to *big.Int")
-	}
-
-	return input, nil
+	err = json.Unmarshal(data, &input)
+	return input, err
 }
 
-func DecodeInputParamsOfFillRfqOrderVIP(customABI *abi.ABI, actionName decoder.Bytes4, data []byte) (InputParamOfFillRfqOrderVIP, error) {
-	contractCall, err := decoder.DecodeCustomABI(customABI, actionName, data)
+func (arg rfqArguments) UnpackInputParamsOfFillRfqOrderVIP(bytes []byte) (InputParamOfFillRfqOrderVIP, error) {
+	mNameAndValue := make(map[string]interface{})
+	err := arg.fillRfqOrderVIPArguments.UnpackIntoMap(mNameAndValue, bytes)
+	if err != nil {
+		return InputParamOfFillRfqOrderVIP{}, fmt.Errorf("failed to unpack into map: %v", err)
+	}
+	data, err := json.Marshal(mNameAndValue)
 	if err != nil {
 		return InputParamOfFillRfqOrderVIP{}, err
 	}
 	var input InputParamOfFillRfqOrderVIP
-	var ok bool
-	inputParam := contractCall.Params
-	if len(inputParam) != 6 {
-		return InputParamOfFillRfqOrderVIP{}, fmt.Errorf("invalid number of input params, expect 6 but got %d", len(inputParam))
-	}
-	input.Recipient, ok = inputParam[0].Value.(common.Address)
-	if !ok {
-		return InputParamOfFillRfqOrderVIP{}, fmt.Errorf("failed to convert reciptent to common.Address")
-	}
-
-	err = unpackValue(inputParam[1].Value, &input.MakerPermit)
-	if err != nil {
-		return InputParamOfFillRfqOrderVIP{}, fmt.Errorf("failed to convert makerPermit to PermitTransferFrom, %w", err)
-	}
-
-	input.Maker, ok = inputParam[2].Value.(common.Address)
-	if !ok {
-		return InputParamOfFillRfqOrderVIP{}, fmt.Errorf("failed to convert maker to common.Address")
-	}
-
-	input.MakerSig, ok = inputParam[3].Value.([]byte)
-	if !ok {
-		return InputParamOfFillRfqOrderVIP{}, fmt.Errorf("failed to convert makerSig to []byte")
-	}
-
-	err = unpackValue(inputParam[4].Value, &input.TakerPermit)
-	if err != nil {
-		return InputParamOfFillRfqOrderVIP{}, fmt.Errorf("failed to convert takerPermit to PermitTransferFrom, %w", err)
-	}
-
-	input.MaxTakerAmount, ok = inputParam[5].Value.(*big.Int)
-	if !ok {
-		return InputParamOfFillRfqOrderVIP{}, fmt.Errorf("failed to convert maxTakerAmount to *big.Int")
-	}
-
-	return input, nil
-}
-
-func unpackValue(src, dest interface{}) error {
-	data, err := json.Marshal(src)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, dest)
+	err = json.Unmarshal(data, &input)
+	return input, err
 }

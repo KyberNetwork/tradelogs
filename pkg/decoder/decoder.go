@@ -36,11 +36,7 @@ func Decode(ABI *abi.ABI, input string) (*tradingTypes.ContractCall, error) {
 	if err != nil {
 		return nil, err
 	}
-	return decode(method, bytes)
-}
-
-func decode(method *abi.Method, data []byte) (*tradingTypes.ContractCall, error) {
-	inputs, err := method.Inputs.Unpack(data)
+	inputs, err := method.Inputs.Unpack(bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -62,15 +58,4 @@ func decode(method *abi.Method, data []byte) (*tradingTypes.ContractCall, error)
 	}
 
 	return contractCall, nil
-}
-
-func DecodeCustomABI(ABI *abi.ABI, methodId Bytes4, rawData []byte) (*tradingTypes.ContractCall, error) {
-	if ABI == nil {
-		return nil, fmt.Errorf("missing abi")
-	}
-	method, err := ABI.MethodById(methodId.Bytes())
-	if err != nil {
-		return nil, err
-	}
-	return decode(method, rawData)
 }

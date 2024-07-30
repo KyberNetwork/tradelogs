@@ -2,7 +2,6 @@ package rpcnode
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/KyberNetwork/tradelogs/pkg/types"
@@ -28,20 +27,12 @@ func NewClient(httpClient *http.Client, rpcUrl string) (*Client, error) {
 }
 
 func (c *Client) FetchTraceCall(ctx context.Context, txHash string) (types.CallFrame, error) {
-	var result json.RawMessage
+	var result types.CallFrame
 	err := c.ethClient.Client().CallContext(ctx, &result, "debug_traceTransaction", txHash, map[string]interface{}{
 		"tracer": "callTracer",
 		"tracerConfig": map[string]interface{}{
 			"withLog": true,
 		},
 	})
-	if err != nil {
-		return types.CallFrame{}, err
-	}
-	var callFrame types.CallFrame
-	err = json.Unmarshal(result, &callFrame)
-	if err != nil {
-		return types.CallFrame{}, err
-	}
-	return callFrame, nil
+	return result, err
 }

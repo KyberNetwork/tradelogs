@@ -2,9 +2,7 @@ package zxrfqv3
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
-	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
@@ -12,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"os"
 	"testing"
@@ -19,15 +18,7 @@ import (
 
 const rpcURL = ""
 
-type parserType int
-
-const (
-	dev parserType = iota
-	swap
-	gasless
-)
-
-func newParserTest(t *testing.T, contractAddress common.Address, needRpc bool, parserType parserType) *Parser {
+func newParserTest(t *testing.T, contractABI ContractABI, needRpc bool) *Parser {
 	var cache *tracecall.Cache
 	if needRpc {
 		rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
@@ -36,24 +27,7 @@ func newParserTest(t *testing.T, contractAddress common.Address, needRpc bool, p
 		}
 		cache = tracecall.NewCache(rpcClient)
 	}
-	switch parserType {
-	case dev:
-		return MustNewDevParser(cache, contractAddress)
-	case swap:
-		return MustNewSwapParser(cache, contractAddress)
-	case gasless:
-		return MustNewGaslessParser(cache, contractAddress)
-	default:
-		return MustNewDevParser(cache, contractAddress)
-	}
-}
-
-func TestInitNewParser(t *testing.T) {
-	// no fatal
-	address := common.HexToAddress("0x7966aF62034313D87Ede39380bf60f1A84c62BE7")
-	_ = MustNewDevParser(nil, address)
-	_ = MustNewGaslessParser(nil, address)
-	_ = MustNewSwapParser(nil, address)
+	return MustNewParser(cache, contractABI)
 }
 
 func getTestCaseData(t *testing.T, path string, result interface{}) {
@@ -71,25 +45,25 @@ func TestGetActionDataFromCallFame(t *testing.T) {
 	getTestCaseData(t, "./test/expected_input_rfq.json", &expectedInput)
 
 	contractAddress := common.HexToAddress("0x7966aF62034313D87Ede39380bf60f1A84c62BE7")
-	parser := newParserTest(t, contractAddress, false, dev)
-	data, err := parser.getExecuteActionData(callFrame)
+	parser := newParserTest(t, ContractABI{
+		Address:      contractAddress,
+		ContractType: DevContract,
+	}, false)
+	data, err := parser.getExecuteActionData(contractAddress, callFrame)
 	assert.NoError(t, err, "failed to get execute action data")
 	actionType, rawData, err := decodeCall(data[1])
 	assert.NoError(t, err, "failed to decode call")
 	_, ok := selectorAction[actionType]
 	assert.True(t, ok, "action type not found")
-	byteMethodId, err := hex.DecodeString(MethodIdDecodeParamOfFillOrderSelfFundedHex)
-	assert.NoError(t, err, "failed to decode method id")
-	methodId, err := decoder.GetBytes4(byteMethodId)
 	assert.NoError(t, err, "failed to get method id")
-	input, err := DecodeInputParamsOfFillRfqOrderSelfFunded(parser.customAbi, methodId, rawData)
+	input, err := parser.rfqArguments.UnpackInputParamsOfFillRfqOrderSelfFunded(rawData)
 	assert.NoError(t, err, "failed to decode data")
 
 	assert.Equal(t, expectedInput.Recipient, input.Recipient, "recipient not match")
-	assert.Equal(t, expectedInput.Permit.Permitted.Token, input.Permit.Permitted.Token, "permitted token not match")
-	assert.Equal(t, expectedInput.Permit.Permitted.Amount, input.Permit.Permitted.Amount, "permitted amount not match")
-	assert.Equal(t, expectedInput.Permit.Deadline, input.Permit.Deadline, "deadline not match")
-	assert.Equal(t, expectedInput.Permit.Nonce, input.Permit.Nonce, "nonce not match")
+	assert.Equal(t, expectedInput.PermitTransferFrom.Permitted.Token, input.PermitTransferFrom.Permitted.Token, "permitted token not match")
+	assert.Equal(t, expectedInput.PermitTransferFrom.Permitted.Amount, input.PermitTransferFrom.Permitted.Amount, "permitted amount not match")
+	assert.Equal(t, expectedInput.PermitTransferFrom.Deadline, input.PermitTransferFrom.Deadline, "deadline not match")
+	assert.Equal(t, expectedInput.PermitTransferFrom.Nonce, input.PermitTransferFrom.Nonce, "nonce not match")
 	assert.Equal(t, expectedInput.Maker, input.Maker, "maker not match")
 	assert.Equal(t, expectedInput.MakerSig, input.MakerSig, "maker sig not match")
 	assert.Equal(t, expectedInput.TakerToken, input.TakerToken, "taker token not match")
@@ -103,7 +77,10 @@ func TestGetTransactionAndParseZeroxV3Rfq(t *testing.T) {
 
 	txHash := common.HexToHash("0xb244877d0cf0badcf2ac82dbb3cbf338b420ab5d1c6e6630fce4a4874121e427")
 	contractAddress := common.HexToAddress("0x7966aF62034313D87Ede39380bf60f1A84c62BE7")
-	parser := newParserTest(t, contractAddress, true, dev)
+	parser := newParserTest(t, ContractABI{
+		Address:      contractAddress,
+		ContractType: DevContract,
+	}, true)
 	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		t.Fatalf("failed to dial to rpc url: %s, err: %s", rpcURL, err)
@@ -113,7 +90,7 @@ func TestGetTransactionAndParseZeroxV3Rfq(t *testing.T) {
 	assert.NoError(t, err, "failed to get tx receipt")
 	rfqCount := 0
 	for _, log := range txReceipt.Logs {
-		if log.Address == parser.contractAddress && len(log.Topics) == 0 {
+		if parser.contractABIs.containAddress(log.Address) && len(log.Topics) == 0 {
 			rfqCount++
 			tradeLog, err := parser.Parse(*log, 1)
 			assert.NoError(t, err, "failed to parse trade log")
@@ -123,4 +100,13 @@ func TestGetTransactionAndParseZeroxV3Rfq(t *testing.T) {
 		}
 	}
 	assert.Greater(t, rfqCount, 0, "no rfq trade found")
+}
+
+func TestMustNewParserWithDeployer(t *testing.T) {
+	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
+	contractAddress := common.HexToAddress("0x00000000000004533Fe15556B1E086BB1A72cEae")
+	ethClient, err := ethclient.Dial(rpcURL)
+	require.NoError(t, err, "failed to dial to rpc url: %s, err: %s", rpcURL, err)
+	parser := MustNewParserWithDeployer(nil, ethClient, contractAddress)
+	assert.NotNil(t, parser, "failed to create parser")
 }

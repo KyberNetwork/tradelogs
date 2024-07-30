@@ -1,70 +1,117 @@
 package zxrfqv3
 
 import (
+	"context"
 	"fmt"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
+	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/deployer"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	"github.com/KyberNetwork/tradelogs/pkg/types"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"go.uber.org/zap"
 	"log"
 	"math/big"
-	"os"
+	"time"
 )
 
 type Parser struct {
-	abi             *abi.ABI
-	customAbi       *abi.ABI
+	contractABIs    *ContractABIs
 	traceCalls      *tracecall.Cache
-	contractAddress common.Address
+	deployerAddress common.Address
 	selectorAction  map[decoder.Bytes4]FunctionName
+	rfqArguments    rfqArguments
+	l               *zap.SugaredLogger
 }
 
-func loadABI(filePath string) *abi.ABI {
-	abiByteValue, err := os.Open(filePath)
+func MustNewParserWithDeployer(cache *tracecall.Cache, ethClient *ethclient.Client, deployerAddress common.Address, contractAbiSupported ...ContractABI) *Parser {
+	if isZeroAddress(deployerAddress) {
+		log.Fatalf("deployer Address is zero Address")
+	}
+
+	p := MustNewParser(cache, contractAbiSupported...)
+	p.deployerAddress = deployerAddress
+
+	deployer, err := deployer.NewDeployer(deployerAddress, ethClient)
 	if err != nil {
-		log.Fatalf("failed to open path file %v, error: %s", err, filePath)
+		log.Fatalf("failed to create deployer %v", err)
 	}
-	ab, err := abi.JSON(abiByteValue)
+
+	p.getAndUpdateSupportedContractAddress(deployer)
+	go p.monitorContractAddresses(deployer)
+	return p
+}
+
+func MustNewParser(cache *tracecall.Cache, contractAbiSupported ...ContractABI) *Parser {
+	contractABIs := &ContractABIs{
+		mAddressABIs: make(map[common.Address]*abi.ABI),
+	}
+
+	for _, contract := range contractAbiSupported {
+		newABI, err := NewABI(contract)
+		if err != nil {
+			log.Fatalf("get contract new ABI error %v", err)
+		}
+		contractABIs.addContractABI(contract.Address, newABI)
+	}
+
+	arguments, err := newRfqArguments()
 	if err != nil {
-		log.Fatalf("failed to get abi: %s", err)
+		log.Fatalf("failed to create rfq arguments %v", err)
 	}
-	return &ab
+
+	p := &Parser{
+		traceCalls:     cache,
+		selectorAction: getSettlerAction(),
+		contractABIs:   contractABIs,
+		rfqArguments:   arguments,
+		l:              zap.S(),
+	}
+	return p
 }
 
-func mustNewParser(cache *tracecall.Cache, contractAddress common.Address, filePath string) *Parser {
-	// read abi from file path and get
-	ab := loadABI(filePath)
+func (p *Parser) monitorContractAddresses(deployer *deployer.Deployer) {
+	cronTime := time.NewTicker(1 * time.Minute)
 
-	customAbi := loadABI("./abi/custom_abi.json")
-
-	if isZeroAddress(contractAddress) {
-		log.Fatalf("contract address is zero address")
-	}
-	return &Parser{
-		abi:             ab,
-		customAbi:       customAbi,
-		traceCalls:      cache,
-		contractAddress: contractAddress,
-		selectorAction:  getSettlerAction(),
+	for range cronTime.C {
+		p.getAndUpdateSupportedContractAddress(deployer)
 	}
 }
 
-func MustNewDevParser(cache *tracecall.Cache, contractAddress common.Address) *Parser {
-	return mustNewParser(cache, contractAddress, "./abi/dev_abi.json")
+func (p *Parser) getAndUpdateSupportedContractAddress(deployer *deployer.Deployer) {
+	contractTypeSupported := []ContractType{SwapContract, GaslessContract}
+	for _, contractType := range contractTypeSupported {
+		err := p.getAndUpdateContractAddress(deployer, contractType)
+		if err != nil {
+			p.l.Errorw("error to get contract address", "error", err)
+		}
+	}
 }
 
-func MustNewSwapParser(cache *tracecall.Cache, contractAddress common.Address) *Parser {
-	return mustNewParser(cache, contractAddress, "./abi/swap_abi.json")
-}
+func (p *Parser) getAndUpdateContractAddress(deployer *deployer.Deployer, contractType ContractType) error {
+	callOpts := &bind.CallOpts{Context: context.Background()}
+	contractAddress, err := deployer.OwnerOf(callOpts, big.NewInt(int64(contractType)))
+	if err != nil {
+		return fmt.Errorf("contract type %v, failed to get contract address %v", contractType, err)
+	}
 
-func MustNewGaslessParser(cache *tracecall.Cache, contractAddress common.Address) *Parser {
-	return mustNewParser(cache, contractAddress, "./abi/gasless_abi.json")
+	abi, err := NewABI(ContractABI{Address: contractAddress, ContractType: contractType})
+	if err != nil {
+		return err
+	}
+	if !p.contractABIs.containAddress(contractAddress) && !isZeroAddress(contractAddress) {
+		p.l.Infow("add contract abi", "contractAddress", contractAddress)
+		fmt.Println("add contract abi", "contractAddress", contractAddress, contractType)
+		p.contractABIs.addContractABI(contractAddress, abi)
+	}
+	return nil
 }
 
 func isZeroAddress(address common.Address) bool {
@@ -98,7 +145,7 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 }
 
 func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	if len(log.Topics) > 0 || log.Address != p.contractAddress {
+	if len(log.Topics) > 0 || !p.contractABIs.containAddress(log.Address) {
 		return storage.TradeLog{}, ErrInvalidRfqTrade
 	}
 	var tradeLog storage.TradeLog
@@ -106,7 +153,7 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (stora
 	tradeLog.LogIndex = uint64(log.Index)
 	tradeLog.TxHash = log.TxHash.Hex()
 	tradeLog.Timestamp = blockTime * 1000
-	tradeLog.ContractAddress = p.contractAddress.Hex()
+	tradeLog.ContractAddress = log.Address.Hex()
 	orderHash, err := getOrderHash(log.Data)
 	if err != nil {
 		return storage.TradeLog{}, fmt.Errorf("get order hash error %w", err)
@@ -118,7 +165,7 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (stora
 	}
 	tradeLog.MakerTokenAmount = tokenMakerAmount.String()
 
-	return tradeLog, err
+	return tradeLog, nil
 }
 
 func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
@@ -149,7 +196,7 @@ func (p *Parser) getRfqTradeIndex(callFrame types.CallFrame, log ethereumTypes.L
 	actionIndex := 0
 	// if the log of tx have no topics, it will be zero0xv3 rfq trade
 	for _, l := range callFrame.Logs {
-		if len(l.Topics) == 0 && l.Address == p.contractAddress {
+		if len(l.Topics) == 0 && p.contractABIs.containAddress(l.Address) {
 			actionIndex++
 			if l.Data == hexutil.Encode(log.Data) {
 				return actionIndex, true
@@ -179,7 +226,7 @@ func (p *Parser) recursiveDetectRFQTrades(tradeLog storage.TradeLog, callFrame t
 }
 
 func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame types.CallFrame, actionIndex int) (storage.TradeLog, error) {
-	actions, err := p.getExecuteActionData(callFrame)
+	actions, err := p.getExecuteActionData(common.HexToAddress(tradeLog.ContractAddress), callFrame)
 	if err != nil {
 		return tradeLog, err
 	}
@@ -196,7 +243,6 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 		if err != nil {
 			return tradeLog, err
 		}
-
 		if functionName, ok := p.selectorAction[actionName]; ok {
 			currentActionIndex++
 			if currentActionIndex != actionIndex {
@@ -209,10 +255,10 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 			// for now we only support parse rfq with this actionName: SETTLER_OTC_SELF_FUNDED, METATXN_SETTLER_OTC_PERMIT2
 			// because when action in these enum SC will call function  fillOtcOrderSelfFunded, fillOtcOrder and call log _logRfqOrder
 			switch functionName {
-			case settlerOtcSelfFundedName:
-				return getTradeLogFromSettlerOtcSelfFundedName(callFrame, p.customAbi, tradeLog, data)
+			case settlerOtcSelfFundedName, rfqName:
+				return p.getTradeLogFromFillRfqOrderSelfFunded(callFrame, tradeLog, data)
 			case metatxnRFQVipName, rfqVIPName:
-				return getTradeLogFromMetatxnRFQVipName(callFrame, p.customAbi, tradeLog, data)
+				return p.getTradeLogFromFillRfqOrderVIP(callFrame, tradeLog, data)
 			}
 
 		}
@@ -223,27 +269,27 @@ func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame type
 	return tradeLog, ErrDetectRfqButCanNotParse
 }
 
-func getTradeLogFromSettlerOtcSelfFundedName(callFrame types.CallFrame, abi *abi.ABI, tradeLog storage.TradeLog, data []byte) (storage.TradeLog, error) {
-	input, err := DecodeInputParamsOfFillRfqOrderSelfFunded(abi, methodIdDecodeParamOfFillOrderSelfFunded, data)
+func (p *Parser) getTradeLogFromFillRfqOrderSelfFunded(callFrame types.CallFrame, tradeLog storage.TradeLog, data []byte) (storage.TradeLog, error) {
+	input, err := p.rfqArguments.UnpackInputParamsOfFillRfqOrderSelfFunded(data)
 	if err != nil {
 		return tradeLog, fmt.Errorf("get input param of fill rfq order self funded failed: %w", err)
 	}
 	tradeLog.Maker = input.Maker.String()
 	tradeLog.Taker = callFrame.From
-	tradeLog.MakerToken = input.Permit.Permitted.Token.String()
+	tradeLog.MakerToken = input.PermitTransferFrom.Permitted.Token.String()
 	tradeLog.TakerToken = input.TakerToken.String()
-	tradeLog.Expiry = input.Permit.Deadline.Uint64()
+	tradeLog.Expiry = input.PermitTransferFrom.Deadline.Uint64()
 	makerTokenAmount, ok := new(big.Int).SetString(tradeLog.MakerTokenAmount, 10)
 	if !ok {
 		return tradeLog, fmt.Errorf("failed to convert maker token amount to big.Int")
 	}
-	takerTokenAmount := calculateTakerTokenAmount(makerTokenAmount, input.MaxTakerAmount, input.Permit.Permitted.Amount)
+	takerTokenAmount := calculateTakerTokenAmount(makerTokenAmount, input.MaxTakerAmount, input.PermitTransferFrom.Permitted.Amount)
 	tradeLog.TakerTokenAmount = takerTokenAmount.String()
 	return tradeLog, nil
 }
 
-func getTradeLogFromMetatxnRFQVipName(callFrame types.CallFrame, abi *abi.ABI, tradeLog storage.TradeLog, data []byte) (storage.TradeLog, error) {
-	input, err := DecodeInputParamsOfFillRfqOrderVIP(abi, methodIdDecodeParamOfFillOrderVIP, data)
+func (p *Parser) getTradeLogFromFillRfqOrderVIP(callFrame types.CallFrame, tradeLog storage.TradeLog, data []byte) (storage.TradeLog, error) {
+	input, err := p.rfqArguments.UnpackInputParamsOfFillRfqOrderVIP(data)
 	if err != nil {
 		return tradeLog, fmt.Errorf("get input param of fill rfq order vip failed: %w", err)
 	}
@@ -257,8 +303,12 @@ func getTradeLogFromMetatxnRFQVipName(callFrame types.CallFrame, abi *abi.ABI, t
 	return tradeLog, nil
 }
 
-func (p *Parser) getExecuteActionData(callFrame types.CallFrame) ([][]byte, error) {
-	contractCall, err := decoder.Decode(p.abi, callFrame.Input)
+func (p *Parser) getExecuteActionData(contractAddress common.Address, callFrame types.CallFrame) ([][]byte, error) {
+	abi, ok := p.contractABIs.getABI(contractAddress)
+	if !ok {
+		return nil, fmt.Errorf("no abi supported for contract %v", contractAddress)
+	}
+	contractCall, err := decoder.Decode(abi, callFrame.Input)
 	if err != nil {
 		return nil, err
 	}
