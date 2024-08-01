@@ -180,7 +180,7 @@ func getOrderHash(data []byte) (string, error) {
 	if len(data) < common.HashLength {
 		return "", fmt.Errorf("data length is less than 32")
 	}
-	return common.BytesToHash(data[:32]).String(), nil
+	return common.BytesToHash(data[:common.HashLength]).String(), nil
 }
 
 func getMakerAmount(data []byte) (*big.Int, error) {
@@ -188,7 +188,7 @@ func getMakerAmount(data []byte) (*big.Int, error) {
 		return nil, fmt.Errorf("data length is less than 32")
 	}
 
-	return new(big.Int).SetBytes(data[32:]), nil
+	return new(big.Int).SetBytes(data[common.HashLength:]), nil
 }
 
 func (p *Parser) getRfqTradeIndex(callFrame types.CallFrame, log ethereumTypes.Log) (int, bool) {
