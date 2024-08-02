@@ -1,0 +1,6 @@
+dev_abi:
+    contract_address: 0x7966aF62034313D87Ede39380bf60f1A84c62BE7
+swap_abi:
+    contract_address: 0x07E594aA718bB872B526e93EEd830a8d2a6A1071
+gasless_abi:
+    contract_address: 0x25b81CE58AB0C4877D25A96Ad644491CEAb81048

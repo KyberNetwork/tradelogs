@@ -1,0 +1,15 @@
+{
+  "recipient": "0x7966af62034313d87ede39380bf60f1a84c62be7",
+  "permit": {
+    "permitted": {
+      "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "amount": 33854705
+    },
+    "nonce": 74334408843877596529845733395094535971764383894365503423846095376305998955105,
+    "deadline": 1721318407
+  },
+  "maker": "0xff8ba4d1fc3762f6154cc942ccf30049a2a0cec6",
+  "makerSig": "qMvnQ140VfKz0jQaEbaxMYTe0lpNRaUhSfUt1d09525NNm7J+f2onTUFVKhZbWTjdv+lOQZRWqk3Nj1Oib4JHhs=",
+  "takerToken": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+  "maxTakerAmount": 10000000000000000
+}
