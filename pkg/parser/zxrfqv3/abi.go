@@ -24,7 +24,7 @@ type ContractABI struct {
 }
 
 type ContractABIs struct {
-	m            sync.Mutex
+	m            sync.RWMutex
 	mAddressABIs map[common.Address]*abi.ABI
 }
 
