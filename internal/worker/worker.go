@@ -18,25 +18,19 @@ type Worker struct {
 	listener     *evmlistenerclient.Client
 	l            *zap.SugaredLogger
 	s            *storage.Storage
-	p            map[string]parser.Parser
+	p            []parser.Parser
 	priceFiller  *pricefiller.PriceFiller
 	tradeLogChan chan storage.TradeLog
 }
 
 func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.Client,
 	priceFiller *pricefiller.PriceFiller, tradeLogChan chan storage.TradeLog,
-	parsers ...parser.Parser) (*Worker, error) {
-	p := make(map[string]parser.Parser)
-	for _, ps := range parsers {
-		for _, topic := range ps.Topics() {
-			p[topic] = ps
-		}
-	}
+	parsers []parser.Parser) (*Worker, error) {
 	return &Worker{
 		listener:     listener,
 		l:            l,
 		s:            s,
-		p:            p,
+		p:            parsers,
 		priceFiller:  priceFiller,
 		tradeLogChan: tradeLogChan,
 	}, nil
@@ -87,14 +81,19 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 				}
 			}
 			for _, log := range block.Logs {
-				if len(log.Topics) == 0 {
-					continue
+				ethLog := convert.ToETHLog(log)
+				var ps parser.Parser
+				for _, p := range w.p {
+					if !p.LogFromExchange(ethLog) {
+						continue
+					}
+					ps = p
+					break
 				}
-				ps := w.p[log.Topics[0]]
 				if ps == nil {
 					continue
 				}
-				order, err := ps.Parse(convert.ToETHLog(log), block.Timestamp)
+				order, err := ps.Parse(ethLog, block.Timestamp)
 				if err != nil {
 					w.l.Errorw("error when parse log", "log", log, "order", order, "err", err)
 					if err := w.s.InsertErrorLog(storage.EVMLog{
@@ -143,11 +142,7 @@ func (w *Worker) retryParseLog() error {
 		if len(topics) == 0 {
 			continue
 		}
-		ps := w.p[topics[0]]
-		if ps == nil {
-			continue
-		}
-		order, err := ps.Parse(convert.ToETHLog(types.Log{
+		ethLog := convert.ToETHLog(types.Log{
 			Address:     l.Address,
 			Topics:      topics,
 			Data:        l.Data,
@@ -156,7 +151,19 @@ func (w *Worker) retryParseLog() error {
 			TxIndex:     l.TxIndex,
 			BlockHash:   l.BlockHash,
 			Index:       l.Index,
-		}), l.Time)
+		})
+		var ps parser.Parser
+		for _, p := range w.p {
+			if !p.LogFromExchange(ethLog) {
+				continue
+			}
+			ps = p
+			break
+		}
+		if ps == nil {
+			continue
+		}
+		order, err := ps.Parse(ethLog, l.Time)
 		if err != nil {
 			w.l.Errorw("error when retry log", "log", l, "err", err)
 			continue

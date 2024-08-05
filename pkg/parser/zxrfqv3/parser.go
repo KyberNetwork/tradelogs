@@ -3,6 +3,10 @@ package zxrfqv3
 import (
 	"context"
 	"fmt"
+	"log"
+	"math/big"
+	"time"
+
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/deployer"
@@ -17,9 +21,6 @@ import (
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"go.uber.org/zap"
-	"log"
-	"math/big"
-	"time"
 )
 
 type Parser struct {
@@ -108,7 +109,6 @@ func (p *Parser) getAndUpdateContractAddress(deployer *deployer.Deployer, contra
 	}
 	if !p.contractABIs.containAddress(contractAddress) && !isZeroAddress(contractAddress) {
 		p.l.Infow("add contract abi", "contractAddress", contractAddress)
-		fmt.Println("add contract abi", "contractAddress", contractAddress, contractType)
 		p.contractABIs.addContractABI(contractAddress, abi)
 	}
 	return nil
@@ -351,4 +351,9 @@ func calculateTakerTokenAmount(makerTokenAmount *big.Int, maxTakerTokenAmount *b
 	// -> takerAmount = (makerAmount * maxTakerAmount) / permittedTokenAmount
 	tmp := makerTokenAmountCal.Mul(makerTokenAmountCal, maxTakerTokenAmountCal)
 	return tmp.Div(tmp, permittedTokenAmountCal)
+}
+
+func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
+	return p.contractABIs.containAddress(log.Address) &&
+		len(log.Topics) == 0
 }

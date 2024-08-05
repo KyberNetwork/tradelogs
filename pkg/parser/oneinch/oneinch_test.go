@@ -3,13 +3,13 @@ package oneinch
 import (
 	"context"
 	"encoding/json"
-	"github.com/KyberNetwork/tradelogs/pkg/storage"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"math/big"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
@@ -24,11 +24,11 @@ const rpcURL = ""
 
 func TestFetchEvent(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
-	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcClient)
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 	p := MustNewParser(traceCalls)
 	require.Equal(t, p.abi.Events[FilledEvent].ID, common.HexToHash("0xc3b639f02b125bfa160e50739b8c44eb2d1b6908e2b6d5925c6d770f2ca78127"))
 	client, err := ethclient.Dial(rpcURL)
@@ -64,11 +64,11 @@ func TestParseEvent(t *testing.T) {
 	event := types.Log{}
 	err := json.Unmarshal([]byte(eventRaw), &event)
 	require.NoError(t, err)
-	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcClient)
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 	p := MustNewParser(traceCalls)
 	log, err := p.Parse(event, uint64(time.Now().Unix()))
 	require.NoError(t, err)
@@ -78,11 +78,11 @@ func TestParseEvent(t *testing.T) {
 
 func TestParseOneinchTradeLog(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
-	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcClient)
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 	p := MustNewParser(traceCalls)
 	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
@@ -129,11 +129,11 @@ func TestParseWithCallFrame(t *testing.T) {
 		MakerTraits:      "",
 		Expiry:           1719508091,
 	}
-	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcClient)
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 	p := MustNewParser(traceCalls)
 	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)

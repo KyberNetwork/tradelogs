@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/KyberNetwork/tradelogs/pkg/types"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
-	"math/big"
 
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
@@ -330,4 +332,10 @@ func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ether
 		return order, err
 	}
 	return order, nil
+}
+
+func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
+	return strings.EqualFold(log.Address.String(), parser.AddrUniswapX) &&
+		len(log.Topics) > 0 &&
+		strings.EqualFold(log.Topics[0].String(), p.eventHash)
 }

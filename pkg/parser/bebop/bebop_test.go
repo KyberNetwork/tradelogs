@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"math/big"
-	"net/http"
 	"testing"
 	"time"
 
@@ -21,11 +20,11 @@ const rpcURL = ""
 
 func TestFetchEvent(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
-	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcClient)
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 	p := MustNewParser(traceCalls)
 	require.Equal(t, p.abi.Events[TradeEvent].ID, common.HexToHash("0xadd7095becdaa725f0f33243630938c861b0bba83dfd217d4055701aa768ec2e"))
 	client, err := ethclient.Dial(rpcURL)
@@ -53,11 +52,11 @@ func TestParseEvent(t *testing.T) {
 	events := []types.Log{}
 	err := json.Unmarshal([]byte(eventRaw), &events)
 	require.NoError(t, err)
-	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcClient)
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 	p := MustNewParser(traceCalls)
 	for _, event := range events {
 		log, err := p.Parse(event, uint64(time.Now().Unix()))

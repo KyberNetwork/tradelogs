@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"net/http"
 	"testing"
 
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
@@ -21,11 +20,11 @@ const rpcURL = ""
 
 func TestFetchEvent(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
-	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcClient)
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 	p := MustNewParser(traceCalls)
 	require.Equal(t, p.abi.Events[FilledEvent].ID, common.HexToHash("0x78ad7ec0e9f89e74012afa58738b6b661c024cb0fd185ee2f616c0a28924bd66"))
 	client, err := ethclient.Dial("https://ethereum.kyberengineering.io")
@@ -53,11 +52,11 @@ func TestParseEvent(t *testing.T) {
 	event := types.Log{}
 	err := json.Unmarshal([]byte(eventRaw), &event)
 	require.NoError(t, err)
-	rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcClient)
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 	p := MustNewParser(traceCalls)
 	log, err := p.Parse(event, 1713889895)
 	require.NoError(t, err)

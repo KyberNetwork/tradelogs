@@ -3,6 +3,9 @@ package zxrfqv3
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"testing"
+
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
@@ -11,9 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/http"
-	"os"
-	"testing"
 )
 
 const rpcURL = ""
@@ -21,11 +21,11 @@ const rpcURL = ""
 func newParserTest(t *testing.T, contractABI ContractABI, needRpc bool) *Parser {
 	var cache *tracecall.Cache
 	if needRpc {
-		rpcClient, err := rpcnode.NewClient(http.DefaultClient, rpcURL)
+		ethClient, err := ethclient.Dial(rpcURL)
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
-		cache = tracecall.NewCache(rpcClient)
+		cache = tracecall.NewCache(rpcnode.NewClient(ethClient))
 	}
 	return MustNewParser(cache, contractABI)
 }
