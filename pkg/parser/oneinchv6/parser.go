@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"math/big"
 	"strings"
+
+	"github.com/KyberNetwork/tradelogs/pkg/types"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 
 	"github.com/KyberNetwork/tradelogs/pkg/abitypes"
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
@@ -260,4 +261,10 @@ func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ether
 	order.Timestamp = blockTime * 1000
 	count := 0
 	return p.recursiveDetectOneInchRFQTrades(order, types.ConvertCallFrame(callFrame), &count)
+}
+
+func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
+	return strings.EqualFold(log.Address.String(), parser.Addr1InchV6) &&
+		len(log.Topics) > 0 &&
+		strings.EqualFold(log.Topics[0].String(), p.eventHash)
 }

@@ -2,28 +2,19 @@ package rpcnode
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 type Client struct {
-	httpClient *http.Client
-	rpcUrl     string
-	ethClient  *ethclient.Client
+	ethClient *ethclient.Client
 }
 
-func NewClient(httpClient *http.Client, rpcUrl string) (*Client, error) {
-	ethClient, err := ethclient.Dial(rpcUrl)
-	if err != nil {
-		return nil, err
-	}
+func NewClient(ethClient *ethclient.Client) *Client {
 	return &Client{
-		httpClient: httpClient,
-		rpcUrl:     rpcUrl,
-		ethClient:  ethClient,
-	}, nil
+		ethClient: ethClient,
+	}
 }
 
 func (c *Client) FetchTraceCall(ctx context.Context, txHash string) (types.CallFrame, error) {

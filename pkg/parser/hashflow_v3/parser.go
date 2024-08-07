@@ -3,6 +3,8 @@ package hashflowv3
 import (
 	"encoding/json"
 	"errors"
+	"strings"
+
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -135,4 +137,10 @@ func (p *Parser) getRFQOrderParams(callFrame *tradingTypes.CallFrame) (*OrderRFQ
 		return &rfqOrder, nil
 	}
 	return nil, nil
+}
+
+func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
+	return strings.EqualFold(log.Address.String(), parser.AddrHashflowV3) &&
+		len(log.Topics) > 0 &&
+		strings.EqualFold(log.Topics[0].String(), p.eventHash)
 }

@@ -12,12 +12,14 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/dune"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/bebop"
-	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinch"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinchv6"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/uniswapx"
+	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3"
 	"github.com/KyberNetwork/tradelogs/pkg/pricefiller"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	libapp "github.com/KyberNetwork/tradelogs/internal/app"
 	"github.com/KyberNetwork/tradelogs/internal/bigquery"
@@ -26,15 +28,11 @@ import (
 	tradelogs "github.com/KyberNetwork/tradelogs/internal/server/tradelogs"
 	"github.com/KyberNetwork/tradelogs/internal/worker"
 	"github.com/KyberNetwork/tradelogs/pkg/evmlistenerclient"
-	"github.com/KyberNetwork/tradelogs/pkg/parser/hashflow"
 	hashflowv3 "github.com/KyberNetwork/tradelogs/pkg/parser/hashflow_v3"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/kyberswap"
 	kyberswaprfq "github.com/KyberNetwork/tradelogs/pkg/parser/kyberswap_rfq"
-	"github.com/KyberNetwork/tradelogs/pkg/parser/native"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/paraswap"
-	"github.com/KyberNetwork/tradelogs/pkg/parser/tokenlon"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxotc"
-	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfq"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/go-redis/redis/v8"
 	"github.com/jmoiron/sqlx"
@@ -93,25 +91,21 @@ func run(c *cli.Context) error {
 			ResponseHeaderTimeout: time.Second * 30,
 		},
 	}
-	rpcClient, err := rpcnode.NewClient(httpClient, c.String(libapp.RPCUrlFlagName))
+	ethClient, err := ethclient.Dial(c.String(libapp.RPCUrlFlagName))
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcClient)
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 
 	parsers := []parser.Parser{kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
-		zxrfq.MustNewParser(),
-		tokenlon.MustNewParser(),
 		paraswap.MustNewParser(),
-		hashflow.MustNewParser(),
-		native.MustNewParser(),
 		kyberswaprfq.MustNewParser(),
 		hashflowv3.MustNewParser(),
-		oneinch.MustNewParser(traceCalls),
 		oneinchv6.MustNewParser(traceCalls),
 		uniswapx.MustNewParser(traceCalls),
 		bebop.MustNewParser(traceCalls),
+		zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClient, common.HexToAddress(parser.Deployer0xV3)),
 	}
 
 	binanceClient := binance.NewClient(c.String(pricefiller.BinanceAPIKeyFlag.Name), c.String(pricefiller.BinanceSecretKeyFlag.Name))
@@ -122,7 +116,7 @@ func run(c *cli.Context) error {
 	}
 
 	tradeLogChan := make(chan storage.TradeLog, 1000)
-	w, err := worker.New(l, s, listener, priceFiller, tradeLogChan, parsers...)
+	w, err := worker.New(l, s, listener, priceFiller, tradeLogChan, parsers)
 	if err != nil {
 		l.Errorw("Error while init worker")
 		return err

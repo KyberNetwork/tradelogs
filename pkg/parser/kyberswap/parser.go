@@ -2,6 +2,8 @@ package kyberswap
 
 import (
 	"errors"
+	"strings"
+
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -84,4 +86,10 @@ func (p *Parser) UseTraceCall() bool {
 
 func (p *Parser) ParseWithCallFrame(_ *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	return p.Parse(log, blockTime)
+}
+
+func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
+	return strings.EqualFold(log.Address.String(), parser.AddrKyberswap) &&
+		len(log.Topics) > 0 &&
+		strings.EqualFold(log.Topics[0].String(), p.eventHash)
 }
