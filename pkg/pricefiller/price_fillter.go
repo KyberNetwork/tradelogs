@@ -17,15 +17,17 @@ const (
 	NetworkETHChanID               = 1
 	NetworkETH                     = "ETH"
 	updateAllCoinInfoInterval      = time.Hour
-	backfillTradeLogsPriceInterval = 30 * time.Second
+	backfillTradeLogsPriceInterval = 10 * time.Minute
 	backfillTradeLogsLimit         = 60
-	addressETH                     = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+	addressETH1                    = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+	addressETH2                    = "0x0000000000000000000000000000000000000000"
 	coinUSDT                       = "USDT"
 	invalidSymbolErrString         = "<APIError> code=-1121, msg=Invalid symbol."
 )
 
 var (
-	ErrNoPrice = errors.New(("no price from binance"))
+	ErrNoPrice               = errors.New(("no price from binance"))
+	ErrWeirdTokenCatalogResp = errors.New("weird token catalog response")
 )
 
 type CoinInfo struct {
@@ -52,10 +54,16 @@ func NewPriceFiller(l *zap.SugaredLogger, binanceClient *binance.Client,
 		ksClient:      NewKsClient(),
 		binanceClient: binanceClient,
 		mappedCoinInfo: map[string]CoinInfo{
-			addressETH: {
+			addressETH1: {
 				Coin:            "ETH",
 				Network:         NetworkETH,
-				ContractAddress: addressETH,
+				ContractAddress: addressETH1,
+				Decimals:        18,
+			},
+			addressETH2: {
+				Coin:            "ETH",
+				Network:         NetworkETH,
+				ContractAddress: addressETH2,
 				Decimals:        18,
 			},
 		},
@@ -192,6 +200,9 @@ func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (fl
 		if coin.Decimals == 0 {
 			d, err := p.getDecimals(address)
 			if err != nil {
+				if errors.Is(err, ErrWeirdTokenCatalogResp) {
+					return 0, 0, nil
+				}
 				p.l.Errorw("Failed to getDecimals", "err", err, "address", address)
 				return 0, 0, err
 			}
@@ -238,8 +249,8 @@ func (p *PriceFiller) getDecimals(address string) (int64, error) {
 	}
 
 	if len(resp.Data.Tokens) != 1 {
-		p.l.Errorw("Weird token catalog response", "resp", resp)
-		return 0, errors.New("weird token catalog response")
+		p.l.Warnw("Weird token catalog response", "resp", resp)
+		return 0, ErrWeirdTokenCatalogResp
 	}
 
 	return resp.Data.Tokens[0].Decimals, nil
