@@ -11,6 +11,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/pricefiller"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
 )
 
@@ -82,14 +83,7 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 			}
 			for _, log := range block.Logs {
 				ethLog := convert.ToETHLog(log)
-				var ps parser.Parser
-				for _, p := range w.p {
-					if !p.LogFromExchange(ethLog) {
-						continue
-					}
-					ps = p
-					break
-				}
+				ps := w.findMatchingParser(ethLog)
 				if ps == nil {
 					continue
 				}
@@ -152,14 +146,7 @@ func (w *Worker) retryParseLog() error {
 			BlockHash:   l.BlockHash,
 			Index:       l.Index,
 		})
-		var ps parser.Parser
-		for _, p := range w.p {
-			if !p.LogFromExchange(ethLog) {
-				continue
-			}
-			ps = p
-			break
-		}
+		ps := w.findMatchingParser(ethLog)
 		if ps == nil {
 			continue
 		}
@@ -184,4 +171,16 @@ func (w *Worker) retryParseLog() error {
 		w.tradeLogChan <- log
 	}
 	return nil
+}
+
+func (w *Worker) findMatchingParser(log ethTypes.Log) parser.Parser {
+	var ps parser.Parser
+	for _, p := range w.p {
+		if !p.LogFromExchange(log) {
+			continue
+		}
+		ps = p
+		break
+	}
+	return ps
 }
