@@ -15,6 +15,7 @@ import (
 
 const (
 	NetworkETHChanID               = 1
+	NetworkETHChanIDString         = "1"
 	NetworkETH                     = "ETH"
 	updateAllCoinInfoInterval      = time.Hour
 	backfillTradeLogsPriceInterval = 10 * time.Minute
@@ -248,10 +249,24 @@ func (p *PriceFiller) getDecimals(address string) (int64, error) {
 		return 0, err
 	}
 
-	if len(resp.Data.Tokens) != 1 {
+	if len(resp.Data.Tokens) == 1 {
+		return resp.Data.Tokens[0].Decimals, nil
+	}
+	if len(resp.Data.Tokens) > 1 {
 		p.l.Warnw("Weird token catalog response", "resp", resp)
 		return 0, ErrWeirdTokenCatalogResp
 	}
 
-	return resp.Data.Tokens[0].Decimals, nil
+	// try to import token if token is not found.
+	newResp, err := p.ksClient.ImportToken(NetworkETHChanIDString, address)
+	if err != nil {
+		p.l.Errorw("Failed to ImportToken", "err", err)
+		return 0, err
+	}
+	if len(newResp.Data.Tokens) == 1 {
+		return newResp.Data.Tokens[0].Data.Decimals, nil
+	}
+
+	p.l.Warnw("Weird ImportToken response", "resp", newResp)
+	return 0, ErrWeirdTokenCatalogResp
 }
