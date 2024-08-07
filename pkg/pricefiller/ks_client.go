@@ -103,3 +103,44 @@ func (c *KsClient) GetTokenCatalog(address string) (TokenCatalogResp, error) {
 
 	return resp, nil
 }
+
+type ImportedToken struct {
+	ChainID string `json:"chainId"`
+	Address string `json:"address"`
+}
+
+type ImportTokenParam struct {
+	Tokens []ImportedToken `json:"tokens"`
+}
+
+type ImportTokenResp struct {
+	Code    int64  `json:"code"`
+	Message string `json:"message"`
+	Data    struct {
+		Tokens []struct {
+			Data TokenCatalog `json:"data"`
+		} `json:"tokens"`
+	} `json:"data"`
+}
+
+func (c *KsClient) ImportToken(chainID, address string) (ImportTokenResp, error) {
+	param := ImportTokenParam{
+		Tokens: []ImportedToken{
+			{
+				ChainID: chainID,
+				Address: address,
+			},
+		},
+	}
+	var resp ImportTokenResp
+	err := c.DoRequest(context.Background(), http.MethodPost, c.baseURL+"/tokens/import", param, &resp)
+	if err != nil {
+		return ImportTokenResp{}, err
+	}
+
+	if resp.Code != 0 {
+		return ImportTokenResp{}, fmt.Errorf("invalid response code: %d", resp.Code)
+	}
+
+	return resp, nil
+}
