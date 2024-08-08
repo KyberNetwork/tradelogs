@@ -140,7 +140,6 @@ func (p *Parser) getRFQOrderParams(callFrame *tradingTypes.CallFrame) (*OrderRFQ
 }
 
 func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
-	return strings.EqualFold(log.Address.String(), parser.AddrHashflowV3) &&
-		len(log.Topics) > 0 &&
+	return len(log.Topics) > 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.eventHash)
 }
