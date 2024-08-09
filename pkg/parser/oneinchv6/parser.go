@@ -27,9 +27,7 @@ const (
 )
 
 var (
-	ErrInvalidOneInchFilledTopic = errors.New("invalid oneinch order filled topic")
-	ErrNotFoundLog               = errors.New("not found log")
-	RFQOrderOutputArgument       abi.Arguments
+	RFQOrderOutputArgument abi.Arguments
 )
 
 func init() {
@@ -93,7 +91,7 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLo
 
 func (p *Parser) buildOrderByLog(log ethereumTypes.Log) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storage.TradeLog{}, ErrInvalidOneInchFilledTopic
+		return storage.TradeLog{}, parser.ErrInvalidTopic
 	}
 	e, err := p.ps.ParseOrderFilled(log)
 	if err != nil {
@@ -175,7 +173,7 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 	}
 
 	traceData, _ := json.Marshal(traceCall)
-	return tradeLog, fmt.Errorf("%w %s", ErrNotFoundLog, string(traceData))
+	return tradeLog, fmt.Errorf("%w %s", parser.ErrNotFoundTrade, string(traceData))
 }
 
 func (p *Parser) isOneInchRFQTrades(txHash, orderHash string, traceCall types.CallFrame, count *int) bool {

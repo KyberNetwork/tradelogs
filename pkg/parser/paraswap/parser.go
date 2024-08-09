@@ -21,8 +21,6 @@ const (
 	paramName        = "order"
 )
 
-var ErrInvalidRFQTopic = errors.New("invalid RfqFilled topic")
-
 type Parser struct {
 	abi       *abi.ABI
 	ps        *OrderFilledFilterer
@@ -57,7 +55,7 @@ func (p *Parser) Topics() []string {
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storage.TradeLog{}, ErrInvalidRFQTopic
+		return storage.TradeLog{}, parser.ErrInvalidTopic
 	}
 	o, err := p.ps.ParseOrderFilled(log)
 	if err != nil {
