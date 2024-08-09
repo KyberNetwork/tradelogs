@@ -21,8 +21,6 @@ const (
 	paramName           = "order"
 )
 
-var ErrInvalidOTCTopic = errors.New("invalid OTCFilled topic")
-
 type Parser struct {
 	abi       *abi.ABI
 	ps        *ZeroXOTCFilterer
@@ -57,7 +55,7 @@ func (p *Parser) Topics() []string {
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storage.TradeLog{}, ErrInvalidOTCTopic
+		return storage.TradeLog{}, parser.ErrInvalidTopic
 	}
 	o, err := p.ps.ParseOtcOrderFilled(log)
 	if err != nil {

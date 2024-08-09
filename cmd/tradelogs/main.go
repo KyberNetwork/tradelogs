@@ -14,6 +14,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/parser/bebop"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinchv6"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/uniswapx"
+	uniswapxv1 "github.com/KyberNetwork/tradelogs/pkg/parser/uniswapx_v1"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3"
 	"github.com/KyberNetwork/tradelogs/pkg/pricefiller"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
@@ -103,6 +104,7 @@ func run(c *cli.Context) error {
 		kyberswaprfq.MustNewParser(),
 		hashflowv3.MustNewParser(),
 		oneinchv6.MustNewParser(traceCalls),
+		uniswapxv1.MustNewParser(traceCalls),
 		uniswapx.MustNewParser(traceCalls),
 		bebop.MustNewParser(traceCalls),
 		zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClient, common.HexToAddress(parser.Deployer0xV3)),

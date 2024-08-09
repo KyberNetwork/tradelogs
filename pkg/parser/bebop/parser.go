@@ -25,11 +25,6 @@ const (
 	OrderParam = "order"
 )
 
-var (
-	ErrTradeTopic  = errors.New("invalid trade topic")
-	ErrNotFoundLog = errors.New("not found log")
-)
-
 type SingleOrder struct {
 	Expiry         *big.Int `json:"expiry"`
 	TakerAddress   string   `json:"taker_address"`
@@ -146,7 +141,7 @@ func (p *Parser) searchTradeLog(order storage.TradeLog, traceCall types.CallFram
 		}
 	}
 	traceData, _ := json.Marshal(traceCall)
-	return order, fmt.Errorf("%w %s", ErrNotFoundLog, string(traceData))
+	return order, fmt.Errorf("%w %s", parser.ErrNotFoundTrade, string(traceData))
 }
 
 func (p *Parser) checkBebopTrade(traceCall types.CallFrame, orderHash string) bool {
@@ -253,7 +248,7 @@ func (p *Parser) UseTraceCall() bool {
 
 func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storage.TradeLog{}, ErrTradeTopic
+		return storage.TradeLog{}, parser.ErrInvalidTopic
 	}
 	o, err := p.ps.ParseBebopOrder(log)
 	if err != nil {

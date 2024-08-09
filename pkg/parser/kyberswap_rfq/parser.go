@@ -23,8 +23,6 @@ const (
 	paramName   = "order"
 )
 
-var ErrInvalidKSFilledTopic = errors.New("invalid KS order filled topic")
-
 type Parser struct {
 	abi       *abi.ABI
 	ps        *KyberswaprfqFilterer
@@ -59,7 +57,7 @@ func (p *Parser) Topics() []string {
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storage.TradeLog{}, ErrInvalidKSFilledTopic
+		return storage.TradeLog{}, parser.ErrInvalidTopic
 	}
 	e, err := p.ps.ParseOrderFilledRFQ(log)
 	if err != nil {

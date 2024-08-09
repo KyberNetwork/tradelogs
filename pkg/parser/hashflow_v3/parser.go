@@ -21,8 +21,6 @@ const (
 	paramName  = "quote"
 )
 
-var ErrTradeTopic = errors.New("invalid Trade topic")
-
 type Parser struct {
 	abi       *abi.ABI
 	ps        *Hashflowv3Filterer
@@ -57,7 +55,7 @@ func (p *Parser) Topics() []string {
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storage.TradeLog{}, ErrTradeTopic
+		return storage.TradeLog{}, parser.ErrInvalidTopic
 	}
 	o, err := p.ps.ParseTrade(log)
 	if err != nil {
