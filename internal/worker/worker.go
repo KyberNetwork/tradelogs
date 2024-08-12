@@ -15,6 +15,11 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	RetryInterval  = 4 * time.Second
+	RemoveInterval = time.Hour
+)
+
 type Worker struct {
 	listener     *evmlistenerclient.Client
 	l            *zap.SugaredLogger
@@ -38,14 +43,19 @@ func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.C
 }
 
 func (w *Worker) Run(ctx context.Context) error {
-	retryTimer := time.NewTicker(evmlistenerclient.RetryTime)
+	retryTimer := time.NewTicker(RetryInterval)
 	defer retryTimer.Stop()
+	removeTimer := time.NewTicker(RemoveInterval)
+	defer removeTimer.Stop()
 	for {
 		select {
 		case <-retryTimer.C:
 			if err := w.retryParseLog(); err != nil {
 				w.l.Errorw("error when retry parse log", "err", err)
-				return err
+			}
+		case <-removeTimer.C:
+			if err := w.removeOldErrorLog(); err != nil {
+				w.l.Errorw("error when remove old error log", "err", err)
 			}
 		default:
 		}
@@ -183,4 +193,9 @@ func (w *Worker) findMatchingParser(log ethTypes.Log) parser.Parser {
 		break
 	}
 	return ps
+}
+
+func (w *Worker) removeOldErrorLog() error {
+	w.l.Info("start to remove old error log")
+	return w.s.RemoveLogUtil(time.Now().Add(-time.Hour * 24).Unix())
 }
