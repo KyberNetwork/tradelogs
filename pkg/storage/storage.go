@@ -253,3 +253,16 @@ func (s *Storage) GetErrorLogsSince(t int64) ([]EVMLog, error) {
 	}
 	return result, nil
 }
+
+func (s *Storage) RemoveLogUtil(t int64) error {
+	q, p, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Delete(errorLogsTable).
+		Where(squirrel.Lt{"time": t}).
+		ToSql()
+	if err != nil {
+		return err
+
+	}
+	_, err = s.db.Exec(q, p...)
+	return err
+}

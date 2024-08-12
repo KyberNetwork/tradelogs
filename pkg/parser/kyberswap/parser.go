@@ -1,7 +1,6 @@
 package kyberswap
 
 import (
-	"errors"
 	"strings"
 
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
@@ -17,8 +16,6 @@ import (
 const (
 	SwappedEvent = "Swapped"
 )
-
-var ErrInvalidKSSwappedTopic = errors.New("invalid KS Swapped topic")
 
 type Parser struct {
 	abi       *abi.ABI
@@ -54,7 +51,7 @@ func (p *Parser) Topics() []string {
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storage.TradeLog{}, ErrInvalidKSSwappedTopic
+		return storage.TradeLog{}, parser.ErrInvalidTopic
 	}
 	e, err := p.ps.ParseSwapped(log)
 	if err != nil {

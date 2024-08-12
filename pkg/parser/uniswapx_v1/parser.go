@@ -1,4 +1,4 @@
-package uniswapx
+package uniswapxv1
 
 import (
 	"encoding/json"
@@ -32,45 +32,35 @@ type ResolvedOrder struct {
 		AdditionalValidationContract common.Address "json:\"additionalValidationContract\""
 		AdditionalValidationData     []uint8        "json:\"additionalValidationData\""
 	} "json:\"info\""
-	Cosigner   common.Address "json:\"cosigner\""
-	InputToken struct {
-		InputToken       common.Address "json:\"inputToken\""
-		InputStartAmount *big.Int       "json:\"inputStartAmount\""
-		InputEndAmount   *big.Int       "json:\"inputEndAmount\""
-	} "json:\"inputToken\""
-	Outputs []struct {
+	DecayStartTime         *big.Int       "json:\"decayStartTime\""
+	DecayEndTime           *big.Int       "json:\"decayEndTime\""
+	ExclusiveFiller        common.Address "json:\"exclusiveFiller\""
+	ExclusivityOverrideBps *big.Int       "json:\"exclusivityOverrideBps\""
+	InputToken             common.Address "json:\"inputToken\""
+	InputStartAmount       *big.Int       "json:\"inputStartAmount\""
+	InputEndAmount         *big.Int       "json:\"inputEndAmount\""
+	Outputs                []struct {
 		Token       common.Address "json:\"token\""
 		StartAmount *big.Int       "json:\"startAmount\""
 		EndAmount   *big.Int       "json:\"endAmount\""
 		Recipient   common.Address "json:\"recipient\""
 	} "json:\"outputs\""
-	CosignerData struct {
-		DecayStartTime         *big.Int       "json:\"decayStartTime\""
-		DecayEndTime           *big.Int       "json:\"decayEndTime\""
-		ExclusiveFiller        common.Address "json:\"exclusiveFiller\""
-		ExclusivityOverrideBps *big.Int       "json:\"exclusivityOverrideBps\""
-		InputOverride          *big.Int       "json:\"inputOverride\""
-		OutputOverrides        []struct {
-			Override *big.Int "json:\"override\""
-		} "json:\"outputOverrides\""
-	}
-	Cosignature []uint8 "json:\"cosignature\""
 }
 
 type Parser struct {
 	abi            *abi.ABI
-	ps             *UniswapxFilterer
+	ps             *Uniswapxv1Filterer
 	eventHash      string
 	traceCalls     *tracecall.Cache
 	orderArguments abi.Arguments
 }
 
 func MustNewParser(cache *tracecall.Cache) *Parser {
-	ps, err := NewUniswapxFilterer(common.Address{}, nil)
+	ps, err := NewUniswapxv1Filterer(common.Address{}, nil)
 	if err != nil {
 		panic(err)
 	}
-	ab, err := UniswapxMetaData.GetAbi()
+	ab, err := Uniswapxv1MetaData.GetAbi()
 	if err != nil {
 		panic(err)
 	}
@@ -88,28 +78,19 @@ func MustNewParser(cache *tracecall.Cache) *Parser {
 			{Name: "additionalValidationContract", Type: "address"},
 			{Name: "additionalValidationData", Type: "bytes"}},
 		},
-		{Name: "cosigner", Type: "address"},
-		{Name: "inputToken", Type: "tuple", Components: []abi.ArgumentMarshaling{
-			{Name: "inputToken", Type: "address"},
-			{Name: "inputStartAmount", Type: "uint256"},
-			{Name: "inputEndAmount", Type: "uint256"}},
-		},
+		{Name: "decayStartTime", Type: "uint256"},
+		{Name: "decayEndTime", Type: "uint256"},
+		{Name: "exclusiveFiller", Type: "address"},
+		{Name: "exclusivityOverrideBps", Type: "uint256"},
+		{Name: "inputToken", Type: "address"},
+		{Name: "inputStartAmount", Type: "uint256"},
+		{Name: "inputEndAmount", Type: "uint256"},
 		{Name: "outputs", Type: "tuple[]", Components: []abi.ArgumentMarshaling{
 			{Name: "token", Type: "address"},
 			{Name: "startAmount", Type: "uint256"},
 			{Name: "endAmount", Type: "uint256"},
 			{Name: "recipient", Type: "address"},
 		}},
-		{Name: "cosignerData", Type: "tuple", Components: []abi.ArgumentMarshaling{
-			{Name: "decayStartTime", Type: "uint256"},
-			{Name: "decayEndTime", Type: "uint256"},
-			{Name: "exclusiveFiller", Type: "address"},
-			{Name: "exclusivityOverrideBps", Type: "uint256"},
-			{Name: "inputOverride", Type: "uint256"},
-			{Name: "outputOverrides", Type: "tuple[]", Components: []abi.ArgumentMarshaling{
-				{Name: "override", Type: "uint256"}}}},
-		},
-		{Name: "cosignature", Type: "bytes"},
 	})
 	if err != nil {
 		panic("cant create order abi type")
@@ -207,7 +188,6 @@ func (p *Parser) recursiveDetectRFQTrades(order storage.TradeLog, call types.Cal
 			}
 			inputOrder = inputOrders[0]
 		}
-
 		parsedOrder, err := p.orderArguments.Unpack(inputOrder.Order)
 		if err != nil {
 			continue
@@ -241,42 +221,30 @@ func (p *Parser) updateOrder(internal storage.TradeLog, parsed []interface{}) (s
 	if len(resolvedOrder) == 0 || len(resolvedOrder[0].Outputs) == 0 {
 		return storage.TradeLog{}, err
 	}
-
 	order := resolvedOrder[0]
-	if order.CosignerData.InputOverride.Cmp(big.NewInt(0)) != 0 {
-		order.InputToken.InputStartAmount = order.CosignerData.InputOverride
-	}
-	for i := range order.Outputs {
-		if order.CosignerData.OutputOverrides[i].Override.Cmp(big.NewInt(0)) != 0 {
-			order.Outputs[i].StartAmount = order.CosignerData.OutputOverrides[i].Override
-		}
-	}
-
-	internal.TakerToken = order.InputToken.InputToken.String()
-	internal.MakerToken = order.Outputs[0].Token.String()
-
-	internal.TakerTokenAmount = decay(order.InputToken.InputStartAmount,
-		order.InputToken.InputEndAmount,
-		order.CosignerData.DecayStartTime,
-		order.CosignerData.DecayEndTime,
+	internal.TakerToken = order.InputToken.String()
+	internal.TakerTokenAmount = decay(order.InputStartAmount,
+		order.InputEndAmount,
+		order.DecayStartTime,
+		order.DecayEndTime,
 		big.NewInt(int64(internal.Timestamp/1000))).String()
+	internal.MakerToken = order.Outputs[0].Token.String()
 
 	makerAmount := big.NewInt(0)
 	for _, o := range order.Outputs {
 		makerAmount = makerAmount.Add(makerAmount, decay(o.StartAmount, o.EndAmount,
-			order.CosignerData.DecayStartTime, order.CosignerData.DecayEndTime,
+			order.DecayStartTime, order.DecayEndTime,
 			big.NewInt(int64(internal.Timestamp/1000))))
 	}
 	internal.MakerTokenAmount = makerAmount.String()
+
 	return internal, nil
 }
 
 func decay(startAmount, endAmount, decayStartTime, decayEndTime, blockTime *big.Int) (decayedAmount *big.Int) {
 	decayedAmount = new(big.Int)
 
-	if startAmount.Cmp(endAmount) == 0 {
-		return startAmount
-	} else if decayEndTime.Cmp(blockTime) <= 0 {
+	if decayEndTime.Cmp(blockTime) <= 0 {
 		decayedAmount.Set(endAmount)
 	} else if decayStartTime.Cmp(blockTime) >= 0 {
 		decayedAmount.Set(startAmount)
@@ -289,36 +257,18 @@ func decay(startAmount, endAmount, decayStartTime, decayEndTime, blockTime *big.
 			decayedAmount = new(big.Int).Sub(startAmount, mulDiv(diff, elapsed, duration))
 		} else {
 			diff := new(big.Int).Sub(endAmount, startAmount)
-			decayedAmount = new(big.Int).Add(startAmount, mulDivUp(diff, elapsed, duration))
+			decayedAmount = new(big.Int).Add(startAmount, mulDiv(diff, elapsed, duration))
 		}
 	}
 	return
 }
 
-// func handleOverride(amount, exclusivityOverrideBps, BPS *big.Int) *big.Int {
-// 	return mulDiv(amount, new(big.Int).Add(exclusivityOverrideBps, BPS), BPS)
-// }
-
 func mulDiv(a, b, c *big.Int) *big.Int {
 	return new(big.Int).Div(new(big.Int).Mul(a, b), c)
 }
 
-func mulDivUp(x, y, denominator *big.Int) *big.Int {
-	product := new(big.Int).Mul(x, y)
-	remainder := new(big.Int).Mod(product, denominator)
-	result := new(big.Int).Div(product, denominator)
-	if remainder.Cmp(big.NewInt(0)) > 0 {
-		result.Add(result, big.NewInt(1))
-	}
-	return result
-}
-
-// func checkExclusivity(exclusive, sender common.Address, exclusivityEndTime, ts uint64) bool {
-// 	return exclusive == common.Address{} || ts > exclusivityEndTime || exclusive == sender
-// }
-
 func (p *Parser) Exchange() string {
-	return parser.ExUniswapX
+	return parser.ExUniswapXV1
 }
 
 func (p *Parser) UseTraceCall() bool {
@@ -341,7 +291,7 @@ func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ether
 }
 
 func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
-	return strings.EqualFold(log.Address.String(), parser.AddrUniswapX) &&
+	return strings.EqualFold(log.Address.String(), parser.AddrUniswapXV1) &&
 		len(log.Topics) > 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.eventHash)
 }
