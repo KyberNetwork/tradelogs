@@ -25,6 +25,10 @@ const (
 	OrderParam = "order"
 )
 
+var (
+	ErrParamNotFound = errors.New("param not found")
+)
+
 type SingleOrder struct {
 	Expiry         *big.Int `json:"expiry"`
 	TakerAddress   string   `json:"taker_address"`
@@ -40,31 +44,49 @@ type SingleOrder struct {
 }
 
 type MultiOrder struct {
-	Expiry         *big.Int        `json:"expiry"`
-	TakerAddress   string          `json:"taker_address"`
-	MakerAddress   string          `json:"maker_address"`
-	MakerNonce     *big.Int        `json:"maker_nonce"`
-	TakerTokens    json.RawMessage `json:"taker_tokens"`
-	MakerTokens    json.RawMessage `json:"maker_tokens"`
-	TakerAmounts   json.RawMessage `json:"taker_amounts"`
-	MakerAmounts   json.RawMessage `json:"maker_amounts"`
-	Receiver       string          `json:"receiver"`
-	PackedCommands *big.Int        `json:"packed_commands"`
-	Flags          *big.Int        `json:"flags"`
+	Expiry       *big.Int   `json:"expiry"`
+	TakerAddress string     `json:"taker_address"`
+	MakerAddress string     `json:"maker_address"`
+	MakerNonce   *big.Int   `json:"maker_nonce"`
+	TakerTokens  []string   `json:"taker_tokens"`
+	MakerTokens  []string   `json:"maker_tokens"`
+	TakerAmounts []*big.Int `json:"taker_amounts"`
+	MakerAmounts []*big.Int `json:"maker_amounts"`
+	Receiver     string     `json:"receiver"`
+	Commands     []byte     `json:"commands"`
+	Flags        *big.Int   `json:"flags"`
 }
 
 type AggregateOrder struct {
-	Expiry         *big.Int        `json:"expiry"`
-	TakerAddress   string          `json:"taker_address"`
-	MakerAddresses json.RawMessage `json:"maker_addresses"`
-	MakerNonces    json.RawMessage `json:"maker_nonces"`
-	TakerTokens    json.RawMessage `json:"taker_tokens"`
-	MakerTokens    json.RawMessage `json:"maker_tokens"`
-	TakerAmounts   json.RawMessage `json:"taker_amounts"`
-	MakerAmounts   json.RawMessage `json:"maker_amounts"`
-	Receiver       string          `json:"receiver"`
-	PackedCommands *big.Int        `json:"packed_commands"`
-	Flags          *big.Int        `json:"flags"`
+	Expiry         *big.Int     `json:"expiry"`
+	TakerAddress   string       `json:"taker_address"`
+	MakerAddresses []string     `json:"maker_addresses"`
+	MakerNonces    []*big.Int   `json:"maker_nonces"`
+	TakerTokens    [][]string   `json:"taker_tokens"`
+	MakerTokens    [][]string   `json:"maker_tokens"`
+	TakerAmounts   [][]*big.Int `json:"taker_amounts"`
+	MakerAmounts   [][]*big.Int `json:"maker_amounts"`
+	Receiver       string       `json:"receiver"`
+	Commands       []byte       `json:"commands"`
+	Flags          *big.Int     `json:"flags"`
+}
+
+type OldSingleQuote struct {
+	UseOldAmount bool     `json:"useOldAmount"`
+	MakerAmount  *big.Int `json:"makerAmount"`
+	MakerNonce   *big.Int `json:"makerNonce"`
+}
+
+type OldMultiQuote struct {
+	UseOldAmount bool       `json:"useOldAmount"`
+	MakerAmounts []*big.Int `json:"makerAmounts"`
+	MakerNonce   *big.Int   `json:"makerNonce"`
+}
+
+type OldAggregateQuote struct {
+	UseOldAmount bool         `json:"useOldAmount"`
+	MakerAmounts [][]*big.Int `json:"makerAmounts"`
+	MakerNonces  []*big.Int   `json:"makerNonces"`
 }
 
 type Parser struct {
@@ -173,54 +195,30 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 	if err != nil {
 		return order, err
 	}
-
+	var filledTakerAmount *big.Int
+	for _, param := range contractCall.Params {
+		if param.Name != "filledTakerAmount" {
+			continue
+		}
+		v, ok := param.Value.(*big.Int)
+		if ok {
+			filledTakerAmount = v
+		}
+	}
+	if filledTakerAmount == nil {
+		return order, ErrParamNotFound
+	}
 	for _, param := range contractCall.Params {
 		if param.Name != OrderParam {
 			continue
 		}
 		switch {
 		case p.singleOrderFunc.Has(contractCall.Name):
-			var rfqOrder SingleOrder
-			if err := unpackOrder(param.Value, &rfqOrder); err != nil {
-				return order, err
-			}
-			order.MakerToken = rfqOrder.MakerToken
-			order.TakerToken = rfqOrder.TakerToken
-			order.Maker = rfqOrder.MakerAddress
-			order.Taker = rfqOrder.TakerAddress
-			order.MakerTokenAmount = rfqOrder.MakerAmount.String()
-			order.TakerTokenAmount = rfqOrder.TakerAmount.String()
-			if rfqOrder.Expiry != nil {
-				order.Expiry = rfqOrder.Expiry.Uint64()
-			}
+			return p.parseSingleSwap(order, contractCall, param, filledTakerAmount)
 		case p.multiOrderFunc.Has(contractCall.Name):
-			var rfqOrder MultiOrder
-			if err := unpackOrder(param.Value, &rfqOrder); err != nil {
-				return order, err
-			}
-			order.MakerToken = string(rfqOrder.MakerTokens)
-			order.TakerToken = string(rfqOrder.TakerTokens)
-			order.Maker = rfqOrder.MakerAddress
-			order.Taker = rfqOrder.TakerAddress
-			order.MakerTokenAmount = string(rfqOrder.MakerAmounts)
-			order.TakerTokenAmount = string(rfqOrder.TakerAmounts)
-			if rfqOrder.Expiry != nil {
-				order.Expiry = rfqOrder.Expiry.Uint64()
-			}
+			return p.parseMultiSwap(order, contractCall, param, filledTakerAmount)
 		case p.aggregateOrderFunc.Has(contractCall.Name):
-			var rfqOrder AggregateOrder
-			if err := unpackOrder(param.Value, &rfqOrder); err != nil {
-				return order, err
-			}
-			order.MakerToken = string(rfqOrder.MakerTokens)
-			order.TakerToken = string(rfqOrder.TakerTokens)
-			order.Maker = string(rfqOrder.MakerAddresses)
-			order.Taker = rfqOrder.TakerAddress
-			order.MakerTokenAmount = string(rfqOrder.MakerAmounts)
-			order.TakerTokenAmount = string(rfqOrder.TakerAmounts)
-			if rfqOrder.Expiry != nil {
-				order.Expiry = rfqOrder.Expiry.Uint64()
-			}
+			return p.parseAggregateSwap(order, contractCall, param, filledTakerAmount)
 		}
 	}
 
@@ -282,4 +280,154 @@ func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 	return strings.EqualFold(log.Address.String(), parser.AddrBebop) &&
 		len(log.Topics) > 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.eventHash)
+}
+
+func (p *Parser) parseSingleSwap(order storage.TradeLog,
+	contractCall *tradingTypes.ContractCall,
+	param tradingTypes.ContractCallParam,
+	fillTakerAmount *big.Int) (storage.TradeLog, error) {
+	var rfqOrder SingleOrder
+	if err := unpackOrder(param.Value, &rfqOrder); err != nil {
+		return order, err
+	}
+
+	for _, param := range contractCall.Params {
+		if param.Name != "takerQuoteInfo" {
+			continue
+		}
+		var oldOrder OldSingleQuote
+		if err := unpackOrder(param.Value, &oldOrder); err == nil {
+			rfqOrder.MakerAmount = oldOrder.MakerAmount
+		}
+	}
+
+	if fillTakerAmount.Cmp(big.NewInt(0)) > 0 && fillTakerAmount.Cmp(rfqOrder.TakerAmount) < 0 {
+		tmp := big.NewInt(0).Mul(rfqOrder.MakerAmount, fillTakerAmount)
+		rfqOrder.MakerAmount = tmp.Div(tmp, rfqOrder.TakerAmount)
+		rfqOrder.TakerAmount = fillTakerAmount
+	}
+
+	order.MakerToken = rfqOrder.MakerToken
+	order.TakerToken = rfqOrder.TakerToken
+	order.Maker = rfqOrder.MakerAddress
+	order.Taker = rfqOrder.TakerAddress
+	order.MakerTokenAmount = rfqOrder.MakerAmount.String()
+	order.TakerTokenAmount = rfqOrder.TakerAmount.String()
+	if rfqOrder.Expiry != nil {
+		order.Expiry = rfqOrder.Expiry.Uint64()
+	}
+
+	return order, nil
+}
+
+func (p *Parser) parseMultiSwap(order storage.TradeLog,
+	contractCall *tradingTypes.ContractCall,
+	param tradingTypes.ContractCallParam,
+	fillTakerAmount *big.Int) (storage.TradeLog, error) {
+	var rfqOrder MultiOrder
+	if err := unpackOrder(param.Value, &rfqOrder); err != nil {
+		return order, err
+	}
+
+	for _, param := range contractCall.Params {
+		if param.Name != "takerQuoteInfo" {
+			continue
+		}
+		var oldOrder OldMultiQuote
+		if err := unpackOrder(param.Value, &oldOrder); err == nil {
+			rfqOrder.MakerAmounts = oldOrder.MakerAmounts
+		}
+	}
+
+	if len(rfqOrder.TakerTokens) == 1 { // many to one don't support partial, just handle one - many
+		if fillTakerAmount.Cmp(big.NewInt(0)) > 0 && fillTakerAmount.Cmp(rfqOrder.TakerAmounts[0]) < 0 {
+			for j := range rfqOrder.MakerAmounts {
+				tmp := big.NewInt(0).Mul(rfqOrder.MakerAmounts[j], fillTakerAmount)
+				rfqOrder.MakerAmounts[j] = tmp.Div(tmp, rfqOrder.TakerAmounts[0])
+				rfqOrder.TakerAmounts[0] = fillTakerAmount
+			}
+		}
+	}
+
+	makerTokens, _ := json.Marshal(rfqOrder.MakerTokens)
+	order.MakerToken = string(makerTokens)
+	takerTokens, _ := json.Marshal(rfqOrder.TakerTokens)
+	order.TakerToken = string(takerTokens)
+	order.Maker = rfqOrder.MakerAddress
+	order.Taker = rfqOrder.TakerAddress
+	makerAmounts, _ := json.Marshal(rfqOrder.MakerAmounts)
+	order.MakerTokenAmount = string(makerAmounts)
+	takerAmounts, _ := json.Marshal(rfqOrder.TakerAmounts)
+	order.TakerTokenAmount = string(takerAmounts)
+	if rfqOrder.Expiry != nil {
+		order.Expiry = rfqOrder.Expiry.Uint64()
+	}
+
+	return order, nil
+}
+
+func (p *Parser) parseAggregateSwap(order storage.TradeLog,
+	contractCall *tradingTypes.ContractCall,
+	param tradingTypes.ContractCallParam,
+	filledTakerAmount *big.Int) (storage.TradeLog, error) {
+
+	var rfqOrder AggregateOrder
+	if err := unpackOrder(param.Value, &rfqOrder); err != nil {
+		return order, err
+	}
+
+	for _, param := range contractCall.Params {
+		if param.Name != "takerQuoteInfo" {
+			continue
+		}
+		var oldOrder OldAggregateQuote
+		if err := unpackOrder(param.Value, &oldOrder); err == nil {
+			rfqOrder.MakerAmounts = oldOrder.MakerAmounts
+		}
+
+	}
+	quoteTakerAmount := getAggregateOrderInfo(rfqOrder)
+	if filledTakerAmount.Cmp(big.NewInt(0)) > 0 && filledTakerAmount.Cmp(quoteTakerAmount) < 0 {
+		for i := range rfqOrder.MakerAmounts {
+			for j := range rfqOrder.MakerAmounts[i] {
+				tmp := big.NewInt(0).Mul(rfqOrder.MakerAmounts[i][j], filledTakerAmount)
+				rfqOrder.MakerAmounts[i][j] = tmp.Div(tmp, quoteTakerAmount)
+
+				tmp = big.NewInt(0).Mul(rfqOrder.TakerAmounts[i][j], filledTakerAmount)
+				rfqOrder.TakerAmounts[i][j] = tmp.Div(tmp, quoteTakerAmount)
+			}
+		}
+	}
+
+	makerTokens, _ := json.Marshal(rfqOrder.MakerTokens)
+	order.MakerToken = string(makerTokens)
+	takerTokens, _ := json.Marshal(rfqOrder.TakerTokens)
+	order.TakerToken = string(takerTokens)
+	makerAddress, _ := json.Marshal(rfqOrder.MakerAddresses)
+	order.Maker = string(makerAddress)
+	order.Taker = rfqOrder.TakerAddress
+	makerAmounts, _ := json.Marshal(rfqOrder.MakerAmounts)
+	order.MakerTokenAmount = string(makerAmounts)
+	takerAmounts, _ := json.Marshal(rfqOrder.TakerAmounts)
+	order.TakerTokenAmount = string(takerAmounts)
+	if rfqOrder.Expiry != nil {
+		order.Expiry = rfqOrder.Expiry.Uint64()
+	}
+
+	return order, nil
+}
+
+func getAggregateOrderInfo(order AggregateOrder) *big.Int {
+	commandsInd := 0
+	quoteTakerAmount := big.NewInt(0)
+	for i := range order.TakerTokens {
+		commandsInd += len(order.MakerTokens[i])
+		for j := range order.TakerTokens[i] {
+			curCommand := order.Commands[commandsInd+j]
+			if curCommand != 0x08 {
+				quoteTakerAmount = quoteTakerAmount.Add(quoteTakerAmount, order.TakerAmounts[i][j])
+			}
+		}
+	}
+	return quoteTakerAmount
 }
