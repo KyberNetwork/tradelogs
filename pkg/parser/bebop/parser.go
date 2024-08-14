@@ -204,6 +204,7 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 		if ok {
 			filledTakerAmount = v
 		}
+		break
 	}
 	if filledTakerAmount == nil {
 		return order, ErrParamNotFound
@@ -299,6 +300,7 @@ func (p *Parser) parseSingleSwap(order storage.TradeLog,
 		if err := unpackOrder(param.Value, &oldOrder); err == nil {
 			rfqOrder.MakerAmount = oldOrder.MakerAmount
 		}
+		break
 	}
 
 	if fillTakerAmount.Cmp(big.NewInt(0)) > 0 && fillTakerAmount.Cmp(rfqOrder.TakerAmount) < 0 {
@@ -337,6 +339,7 @@ func (p *Parser) parseMultiSwap(order storage.TradeLog,
 		if err := unpackOrder(param.Value, &oldOrder); err == nil {
 			rfqOrder.MakerAmounts = oldOrder.MakerAmounts
 		}
+		break
 	}
 
 	if len(rfqOrder.TakerTokens) == 1 { // many to one don't support partial, just handle one - many
@@ -384,7 +387,7 @@ func (p *Parser) parseAggregateSwap(order storage.TradeLog,
 		if err := unpackOrder(param.Value, &oldOrder); err == nil {
 			rfqOrder.MakerAmounts = oldOrder.MakerAmounts
 		}
-
+		break
 	}
 	quoteTakerAmount := getAggregateOrderInfo(rfqOrder)
 	if filledTakerAmount.Cmp(big.NewInt(0)) > 0 && filledTakerAmount.Cmp(quoteTakerAmount) < 0 {
