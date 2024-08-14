@@ -221,6 +221,7 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 		case p.aggregateOrderFunc.Has(contractCall.Name):
 			return p.parseAggregateSwap(order, contractCall, param, filledTakerAmount)
 		}
+		break
 	}
 
 	return order, nil
@@ -285,10 +286,10 @@ func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 
 func (p *Parser) parseSingleSwap(order storage.TradeLog,
 	contractCall *tradingTypes.ContractCall,
-	param tradingTypes.ContractCallParam,
+	orderParam tradingTypes.ContractCallParam,
 	fillTakerAmount *big.Int) (storage.TradeLog, error) {
 	var rfqOrder SingleOrder
-	if err := unpackOrder(param.Value, &rfqOrder); err != nil {
+	if err := unpackOrder(orderParam.Value, &rfqOrder); err != nil {
 		return order, err
 	}
 
@@ -297,7 +298,7 @@ func (p *Parser) parseSingleSwap(order storage.TradeLog,
 			continue
 		}
 		var oldOrder OldSingleQuote
-		if err := unpackOrder(param.Value, &oldOrder); err == nil {
+		if err := unpackOrder(param.Value, &oldOrder); err == nil && oldOrder.UseOldAmount {
 			rfqOrder.MakerAmount = oldOrder.MakerAmount
 		}
 		break
@@ -324,10 +325,10 @@ func (p *Parser) parseSingleSwap(order storage.TradeLog,
 
 func (p *Parser) parseMultiSwap(order storage.TradeLog,
 	contractCall *tradingTypes.ContractCall,
-	param tradingTypes.ContractCallParam,
+	orderParam tradingTypes.ContractCallParam,
 	fillTakerAmount *big.Int) (storage.TradeLog, error) {
 	var rfqOrder MultiOrder
-	if err := unpackOrder(param.Value, &rfqOrder); err != nil {
+	if err := unpackOrder(orderParam.Value, &rfqOrder); err != nil {
 		return order, err
 	}
 
@@ -336,7 +337,7 @@ func (p *Parser) parseMultiSwap(order storage.TradeLog,
 			continue
 		}
 		var oldOrder OldMultiQuote
-		if err := unpackOrder(param.Value, &oldOrder); err == nil {
+		if err := unpackOrder(param.Value, &oldOrder); err == nil && oldOrder.UseOldAmount {
 			rfqOrder.MakerAmounts = oldOrder.MakerAmounts
 		}
 		break
@@ -371,11 +372,11 @@ func (p *Parser) parseMultiSwap(order storage.TradeLog,
 
 func (p *Parser) parseAggregateSwap(order storage.TradeLog,
 	contractCall *tradingTypes.ContractCall,
-	param tradingTypes.ContractCallParam,
+	orderParam tradingTypes.ContractCallParam,
 	filledTakerAmount *big.Int) (storage.TradeLog, error) {
 
 	var rfqOrder AggregateOrder
-	if err := unpackOrder(param.Value, &rfqOrder); err != nil {
+	if err := unpackOrder(orderParam.Value, &rfqOrder); err != nil {
 		return order, err
 	}
 
@@ -384,7 +385,7 @@ func (p *Parser) parseAggregateSwap(order storage.TradeLog,
 			continue
 		}
 		var oldOrder OldAggregateQuote
-		if err := unpackOrder(param.Value, &oldOrder); err == nil {
+		if err := unpackOrder(param.Value, &oldOrder); err == nil && oldOrder.UseOldAmount {
 			rfqOrder.MakerAmounts = oldOrder.MakerAmounts
 		}
 		break
