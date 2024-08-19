@@ -95,7 +95,7 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log) (storage.TradeLog, error
 	}
 	e, err := p.ps.ParseOrderFilled(log)
 	if err != nil {
-		return storage.TradeLog{}, err
+		return storage.TradeLog{}, fmt.Errorf("error when parse log %w", err)
 	}
 	order := storage.TradeLog{
 		OrderHash:       common.Hash(e.OrderHash).String(),
@@ -116,7 +116,7 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 	}
 	filledMakingAmount, filledTakingAmount, orderHash, err := p.decodeOutput(output)
 	if err != nil {
-		return order, err
+		return order, fmt.Errorf("error when decode output %w", err)
 	}
 
 	order.OrderHash = orderHash
@@ -126,12 +126,12 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 
 	contractCall, err := decoder.Decode(p.abi, internalCall.Input)
 	if err != nil {
-		return order, err
+		return order, fmt.Errorf("error when decode input %w", err)
 	}
 
 	order, err = ToTradeLog(order, contractCall)
 	if err != nil {
-		return order, err
+		return order, fmt.Errorf("error when parse contract call to order %w", err)
 	}
 
 	return order, nil
@@ -145,13 +145,14 @@ func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog) (storage.TradeLog
 
 	traceCall, err = p.traceCalls.GetTraceCall(order.TxHash)
 	if err != nil {
-		return order, err
+		return order, fmt.Errorf("error when get tracecall %w", err)
 	}
 
 	count := 0
 	order, err = p.recursiveDetectOneInchRFQTrades(order, traceCall, &count)
 	if err != nil {
-		return order, err
+		traceData, _ := json.Marshal(traceCall)
+		return order, fmt.Errorf("error when parse tracecall %s %w", string(traceData), err)
 	}
 
 	return order, nil
@@ -172,8 +173,7 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 		}
 	}
 
-	traceData, _ := json.Marshal(traceCall)
-	return tradeLog, fmt.Errorf("%w %s", parser.ErrNotFoundTrade, string(traceData))
+	return tradeLog, parser.ErrNotFoundTrade
 }
 
 func (p *Parser) isOneInchRFQTrades(txHash, orderHash string, traceCall types.CallFrame, count *int) bool {
