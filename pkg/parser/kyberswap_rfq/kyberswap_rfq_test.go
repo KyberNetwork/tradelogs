@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	tradelogs_type "github.com/KyberNetwork/tradelogs/pkg/types"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -55,7 +56,7 @@ func TestParseWithCallFrame(t *testing.T) {
 			continue
 		}
 
-		parse, err := p.ParseWithCallFrame(&callFrame, *eventLog, 0)
+		parse, err := p.ParseWithCallFrame(tradelogs_type.ConvertCallFrame(&callFrame), *eventLog, 0)
 		require.NoError(t, err)
 		t.Log(parse)
 		require.Equal(t, expectedTradelog, parse)

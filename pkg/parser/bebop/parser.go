@@ -267,15 +267,12 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (stora
 	return order, nil
 }
 
-func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	if callFrame == nil {
-		return storage.TradeLog{}, errors.New("missing call frame")
-	}
+func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	order, err := p.buildOrderByLog(log, blockTime)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	return p.searchTradeLog(order, types.ConvertCallFrame(callFrame))
+	return p.searchTradeLog(order, callFrame)
 }
 
 func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {

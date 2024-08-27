@@ -64,5 +64,6 @@ func TestParseEvent(t *testing.T) {
 	require.Equal(t, log.Taker, "0x250A94C03b9b57C93CC5549760D59d6eAcfB136d")
 	require.Equal(t, log.MakerTokenAmount, "42282994361466557")
 	require.Equal(t, log.TakerTokenAmount, "146889265")
+	require.Equal(t, log.Expiry, uint64(1713890185))
 	t.Log(log)
 }

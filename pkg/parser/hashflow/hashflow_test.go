@@ -3,6 +3,7 @@ package hashflow
 import (
 	"context"
 	"encoding/json"
+	tradelogs_type "github.com/KyberNetwork/tradelogs/pkg/types"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"math/big"
 	"strings"
@@ -84,7 +85,7 @@ func TestParseWithCallFrame(t *testing.T) {
 			continue
 		}
 
-		parse, err := p.ParseWithCallFrame(&callFrame, *eventLog, uint64(time.Now().Unix()))
+		parse, err := p.ParseWithCallFrame(tradelogs_type.ConvertCallFrame(&callFrame), *eventLog, uint64(time.Now().Unix()))
 		require.NoError(t, err)
 		t.Log(parse)
 	}
