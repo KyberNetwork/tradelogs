@@ -2,9 +2,9 @@ package parser
 
 import (
 	"errors"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 )
 

@@ -3,10 +3,10 @@ package oneinchv6
 import (
 	"bytes"
 	"errors"
-	"github.com/ethereum/go-ethereum/common/math"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 )
 
 type MakerTraitsOption struct {

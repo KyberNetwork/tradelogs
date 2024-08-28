@@ -1,9 +1,10 @@
 package oneinchv6
 
 import (
-	"github.com/ethereum/go-ethereum/common/math"
 	"math/big"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common/math"
 )
 
 func TestDecodeTraits(t *testing.T) {

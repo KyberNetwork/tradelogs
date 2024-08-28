@@ -1,13 +1,13 @@
 package kyberswap
 
 import (
-	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"strings"
 
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 )
