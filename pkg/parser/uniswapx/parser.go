@@ -2,18 +2,15 @@ package uniswapx
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 	"strings"
-
-	"github.com/KyberNetwork/tradelogs/pkg/types"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -268,6 +265,9 @@ func (p *Parser) updateOrder(internal storage.TradeLog, parsed []interface{}) (s
 			big.NewInt(int64(internal.Timestamp/1000))))
 	}
 	internal.MakerTokenAmount = makerAmount.String()
+	if order.Info.Deadline != nil {
+		internal.Expiry = order.Info.Deadline.Uint64()
+	}
 	return internal, nil
 }
 
@@ -325,15 +325,12 @@ func (p *Parser) UseTraceCall() bool {
 	return true
 }
 
-func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	if callFrame == nil {
-		return storage.TradeLog{}, errors.New("missing call frame")
-	}
+func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	order, err := p.buildOrderByLog(log, blockTime)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	order, err = p.recursiveDetectRFQTrades(order, types.ConvertCallFrame(callFrame))
+	order, err = p.recursiveDetectRFQTrades(order, callFrame)
 	if err != nil {
 		return order, err
 	}

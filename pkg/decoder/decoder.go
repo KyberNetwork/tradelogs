@@ -31,7 +31,9 @@ func Decode(ABI *abi.ABI, input string) (*tradingTypes.ContractCall, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	if len(input) < 10 {
+		return nil, fmt.Errorf("input data is too short")
+	}
 	bytes, err := hex.DecodeString(input[10:])
 	if err != nil {
 		return nil, err

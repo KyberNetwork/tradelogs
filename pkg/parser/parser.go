@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -48,6 +48,6 @@ type Parser interface {
 	Topics() []string
 	Exchange() string
 	UseTraceCall() bool
-	ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error)
+	ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error)
 	LogFromExchange(log ethereumTypes.Log) bool
 }

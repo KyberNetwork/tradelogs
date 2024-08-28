@@ -3,7 +3,6 @@ package zxotc
 import (
 	"context"
 	"encoding/json"
-	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"math/big"
 	"strings"
 	"testing"
@@ -15,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
 
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 )
 
@@ -92,7 +93,7 @@ func TestGetExpiry(t *testing.T) {
 	p := MustNewParser()
 	err := json.Unmarshal([]byte(rawData), &callFrame)
 	require.NoError(t, err)
-	rfqOrderParam, err := p.getRFQOrderParams(&callFrame)
+	rfqOrderParam, err := p.getRFQOrderParams(tradelogstype.ConvertCallFrame(&callFrame))
 	require.NoError(t, err)
 	require.NotNil(t, rfqOrderParam)
 	require.Equal(t, uint64(1719460132), rfqOrderParam.GetExpiry())
@@ -139,7 +140,7 @@ func TestParseWithCallFrame(t *testing.T) {
 			continue
 		}
 
-		parse, err := p.ParseWithCallFrame(&callFrame, *eventLog, 0)
+		parse, err := p.ParseWithCallFrame(tradelogstype.ConvertCallFrame(&callFrame), *eventLog, 0)
 		require.NoError(t, err)
 		t.Log(parse)
 		require.Equal(t, expectedTradeLog, parse)

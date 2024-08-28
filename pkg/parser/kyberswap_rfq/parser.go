@@ -7,11 +7,9 @@ import (
 	"strings"
 
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -89,10 +87,7 @@ func (p *Parser) UseTraceCall() bool {
 	return false
 }
 
-func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	if callFrame == nil {
-		return storage.TradeLog{}, errors.New("missing call frame")
-	}
+func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	tradeLog, err := p.Parse(log, blockTime)
 	if err != nil {
 		return storage.TradeLog{}, err
@@ -105,20 +100,15 @@ func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ether
 	return tradeLog, nil
 }
 
-func (p *Parser) getRFQOrderParams(callFrame *tradingTypes.CallFrame) (*OrderRFQ, error) {
-	var (
-		err error
-	)
-	contractCall := callFrame.ContractCall
-	if contractCall == nil {
-		contractCall, err = decoder.Decode(p.abi, hexutil.Encode(callFrame.Input))
-		if err != nil {
-			return nil, err
-		}
-		if contractCall == nil {
-			return nil, errors.New("missing contract_call")
-		}
+func (p *Parser) getRFQOrderParams(callFrame types.CallFrame) (*OrderRFQ, error) {
+	contractCall, err := decoder.Decode(p.abi, callFrame.Input)
+	if err != nil {
+		return nil, err
 	}
+	if contractCall == nil {
+		return nil, errors.New("missing contract_call")
+	}
+
 	for _, param := range contractCall.Params {
 		if param.Name != paramName {
 			continue

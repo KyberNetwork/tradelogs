@@ -13,7 +13,6 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	"github.com/KyberNetwork/tradelogs/pkg/types"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -168,12 +167,12 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (stora
 	return tradeLog, nil
 }
 
-func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
+func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	tradeLog, err := p.buildOrderByLog(log, blockTime)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	return p.recursiveDetectRFQTrades(tradeLog, types.ConvertCallFrame(callFrame), log)
+	return p.recursiveDetectRFQTrades(tradeLog, callFrame, log)
 }
 
 func getOrderHash(data []byte) (string, error) {

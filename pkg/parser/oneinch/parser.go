@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/KyberNetwork/tradelogs/pkg/types"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"math/big"
 	"strings"
 
@@ -14,6 +12,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
+	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -233,15 +232,12 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (stora
 	return order, nil
 }
 
-func (p *Parser) ParseWithCallFrame(callFrame *tradingTypes.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	if callFrame == nil {
-		return storage.TradeLog{}, errors.New("missing call frame")
-	}
+func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
 	tradeLog, err := p.buildOrderByLog(log, blockTime)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
-	tradeLog, err = p.recursiveDetectOneInchRFQTrades(tradeLog, types.ConvertCallFrame(callFrame))
+	tradeLog, err = p.recursiveDetectOneInchRFQTrades(tradeLog, callFrame)
 	if err != nil {
 		return tradeLog, err
 	}

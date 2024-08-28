@@ -3,13 +3,16 @@ package kyberswaprfq
 import (
 	"context"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
+
+	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 )
 
 const rpcURL = ""
@@ -55,7 +58,7 @@ func TestParseWithCallFrame(t *testing.T) {
 			continue
 		}
 
-		parse, err := p.ParseWithCallFrame(&callFrame, *eventLog, 0)
+		parse, err := p.ParseWithCallFrame(tradelogstype.ConvertCallFrame(&callFrame), *eventLog, 0)
 		require.NoError(t, err)
 		t.Log(parse)
 		require.Equal(t, expectedTradelog, parse)

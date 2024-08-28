@@ -3,7 +3,6 @@ package hashflow
 import (
 	"context"
 	"encoding/json"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"math/big"
 	"strings"
 	"testing"
@@ -14,6 +13,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
+
+	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 )
 
 const rpcURL = ""
@@ -84,7 +86,7 @@ func TestParseWithCallFrame(t *testing.T) {
 			continue
 		}
 
-		parse, err := p.ParseWithCallFrame(&callFrame, *eventLog, uint64(time.Now().Unix()))
+		parse, err := p.ParseWithCallFrame(tradelogstype.ConvertCallFrame(&callFrame), *eventLog, uint64(time.Now().Unix()))
 		require.NoError(t, err)
 		t.Log(parse)
 	}
