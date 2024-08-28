@@ -3,8 +3,6 @@ package zxotc
 import (
 	"context"
 	"encoding/json"
-	"github.com/KyberNetwork/tradelogs/pkg/storage"
-	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
 	"math/big"
 	"strings"
 	"testing"
@@ -16,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
 
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 )
 

@@ -3,22 +3,22 @@ package oneinch
 import (
 	"context"
 	"encoding/json"
-	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
 	"math/big"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/KyberNetwork/tradelogs/pkg/storage"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
-
-	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
-	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
+
+	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
+	"github.com/KyberNetwork/tradelogs/pkg/storage"
+	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
+	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 )
 
 const rpcURL = ""

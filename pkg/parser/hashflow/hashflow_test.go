@@ -3,8 +3,6 @@ package hashflow
 import (
 	"context"
 	"encoding/json"
-	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"math/big"
 	"strings"
 	"testing"
@@ -15,6 +13,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
+
+	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 )
 
 const rpcURL = ""

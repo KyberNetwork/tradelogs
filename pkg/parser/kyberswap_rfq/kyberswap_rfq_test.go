@@ -3,14 +3,16 @@ package kyberswaprfq
 import (
 	"context"
 	"encoding/json"
+	"strings"
+	"testing"
+
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
-	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
-	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
+
+	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
+	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 )
 
 const rpcURL = ""
