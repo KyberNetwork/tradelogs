@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
-	tradelogs_type "github.com/KyberNetwork/tradelogs/pkg/types"
+	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
 	"math/big"
 	"strings"
 	"testing"
@@ -93,7 +93,7 @@ func TestGetExpiry(t *testing.T) {
 	p := MustNewParser()
 	err := json.Unmarshal([]byte(rawData), &callFrame)
 	require.NoError(t, err)
-	rfqOrderParam, err := p.getRFQOrderParams(tradelogs_type.ConvertCallFrame(&callFrame))
+	rfqOrderParam, err := p.getRFQOrderParams(tradelogstype.ConvertCallFrame(&callFrame))
 	require.NoError(t, err)
 	require.NotNil(t, rfqOrderParam)
 	require.Equal(t, uint64(1719460132), rfqOrderParam.GetExpiry())
@@ -140,7 +140,7 @@ func TestParseWithCallFrame(t *testing.T) {
 			continue
 		}
 
-		parse, err := p.ParseWithCallFrame(tradelogs_type.ConvertCallFrame(&callFrame), *eventLog, 0)
+		parse, err := p.ParseWithCallFrame(tradelogstype.ConvertCallFrame(&callFrame), *eventLog, 0)
 		require.NoError(t, err)
 		t.Log(parse)
 		require.Equal(t, expectedTradeLog, parse)

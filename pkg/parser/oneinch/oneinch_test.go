@@ -3,7 +3,7 @@ package oneinch
 import (
 	"context"
 	"encoding/json"
-	tradelogs_type "github.com/KyberNetwork/tradelogs/pkg/types"
+	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
 	"math/big"
 	"strings"
 	"testing"
@@ -156,7 +156,7 @@ func TestParseWithCallFrame(t *testing.T) {
 			continue
 		}
 
-		parse, err := p.ParseWithCallFrame(tradelogs_type.ConvertCallFrame(&callFrame), *eventLog, 0)
+		parse, err := p.ParseWithCallFrame(tradelogstype.ConvertCallFrame(&callFrame), *eventLog, 0)
 		require.NoError(t, err)
 		require.Equal(t, expectedTradeLog, parse)
 	}

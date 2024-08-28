@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	tradelogs_types "github.com/KyberNetwork/tradelogs/pkg/types"
+	tradelogstypes "github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -85,7 +85,7 @@ func TestParseWithCallFrame(t *testing.T) {
 			continue
 		}
 
-		parse, err := p.ParseWithCallFrame(tradelogs_types.ConvertCallFrame(&callFrame), *eventLog, uint64(time.Now().Unix()))
+		parse, err := p.ParseWithCallFrame(tradelogstypes.ConvertCallFrame(&callFrame), *eventLog, uint64(time.Now().Unix()))
 		require.NoError(t, err)
 		t.Log(parse)
 	}
