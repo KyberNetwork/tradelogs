@@ -132,6 +132,7 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 		return order, fmt.Errorf("error when parse contract call to order %w", err)
 	}
 
+	order.Taker = internalCall.From
 	return order, nil
 }
 

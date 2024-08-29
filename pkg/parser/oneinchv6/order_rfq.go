@@ -34,7 +34,6 @@ func ToTradeLog(tradeLog storage.TradeLog, contractCall *tradingTypes.ContractCa
 		tradeLog.MakerToken = common.BigToAddress(rfqOrder.MakerAsset).String()
 		tradeLog.TakerToken = common.BigToAddress(rfqOrder.TakerAsset).String()
 		tradeLog.Maker = common.BigToAddress(rfqOrder.Maker).String()
-		tradeLog.Taker = common.BigToAddress(rfqOrder.Receiver).String()
 		tradeLog.MakerTraits = rfqOrder.MakerTraits.String()
 		makerTraitsOption, err := DecodeMarkerTraits(math.PaddedBigBytes(rfqOrder.MakerTraits, 32))
 		if err != nil {
