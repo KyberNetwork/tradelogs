@@ -21,7 +21,10 @@ import (
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 )
 
-const rpcURL = ""
+const (
+	rpcURL         = ""
+	fallbackRPCURL = ""
+)
 
 func TestFetchEvent(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
@@ -29,7 +32,11 @@ func TestFetchEvent(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
+	if err != nil {
+		panic(err)
+	}
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
 	p := MustNewParser(traceCalls)
 	require.Equal(t, p.abi.Events[FilledEvent].ID, common.HexToHash("0xc3b639f02b125bfa160e50739b8c44eb2d1b6908e2b6d5925c6d770f2ca78127"))
 	client, err := ethclient.Dial(rpcURL)
@@ -69,7 +76,11 @@ func TestParseEvent(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
+	if err != nil {
+		panic(err)
+	}
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
 	p := MustNewParser(traceCalls)
 	log, err := p.Parse(event, uint64(time.Now().Unix()))
 	require.NoError(t, err)
@@ -83,7 +94,11 @@ func TestParseOneinchTradeLog(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
+	if err != nil {
+		panic(err)
+	}
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
 	p := MustNewParser(traceCalls)
 	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
@@ -134,7 +149,11 @@ func TestParseWithCallFrame(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
+	if err != nil {
+		panic(err)
+	}
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
 	p := MustNewParser(traceCalls)
 	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)

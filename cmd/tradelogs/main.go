@@ -96,7 +96,12 @@ func run(c *cli.Context) error {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+
+	fallbackEthClient, err := ethclient.Dial(c.String(libapp.FallbackRPCUrlFlagName))
+	if err != nil {
+		panic(err)
+	}
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackEthClient))
 
 	parsers := []parser.Parser{kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),

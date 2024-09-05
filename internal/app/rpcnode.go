@@ -3,7 +3,8 @@ package app
 import "github.com/urfave/cli"
 
 const (
-	RPCUrlFlagName = "rpc-url"
+	RPCUrlFlagName         = "rpc-url"
+	FallbackRPCUrlFlagName = "fallback-rpc-url"
 )
 
 var (
@@ -13,10 +14,17 @@ var (
 		Usage:  "RPC node url",
 		Value:  "https://ethereum.kyberengineering.io/trading-tokyo",
 	}
+	FallbackRPCUrlFlag = &cli.StringFlag{
+		Name:   FallbackRPCUrlFlagName,
+		EnvVar: "FALLBACK_RPC_URL",
+		Usage:  "Fallback RPC node url",
+		Value:  "https://ethereum.kyberengineering.io/trading-tokyo",
+	}
 )
 
 func RPCNodeFlags() []cli.Flag {
 	return []cli.Flag{
 		RPCUrlFlag,
+		FallbackRPCUrlFlag,
 	}
 }
