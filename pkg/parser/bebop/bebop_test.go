@@ -29,9 +29,9 @@ func TestFetchEvent(t *testing.T) {
 	}
 	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
 	if err != nil {
-		panic(err)
+		fallbackClient = nil
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackClient))
 	p := MustNewParser(traceCalls)
 	require.Equal(t, p.abi.Events[TradeEvent].ID, common.HexToHash("0xadd7095becdaa725f0f33243630938c861b0bba83dfd217d4055701aa768ec2e"))
 	client, err := ethclient.Dial(rpcURL)
@@ -65,9 +65,9 @@ func TestParseAggregateOrderEvent(t *testing.T) {
 	}
 	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
 	if err != nil {
-		panic(err)
+		fallbackClient = nil
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackClient))
 	p := MustNewParser(traceCalls)
 	log, err := p.Parse(events, uint64(time.Now().Unix()))
 	require.NoError(t, err)
@@ -92,9 +92,9 @@ func TestParseMultiOrderEvent(t *testing.T) {
 	}
 	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
 	if err != nil {
-		panic(err)
+		fallbackClient = nil
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackClient))
 	p := MustNewParser(traceCalls)
 	log, err := p.Parse(events, uint64(time.Now().Unix()))
 	require.NoError(t, err)
@@ -119,9 +119,9 @@ func TestParseSingleOrderEvent(t *testing.T) {
 	}
 	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
 	if err != nil {
-		panic(err)
+		fallbackClient = nil
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackClient))
 	p := MustNewParser(traceCalls)
 	log, err := p.Parse(events, uint64(time.Now().Unix()))
 	require.NoError(t, err)

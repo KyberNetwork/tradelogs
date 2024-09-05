@@ -8,12 +8,14 @@ import (
 )
 
 type Client struct {
-	ethClient *ethclient.Client
+	ethClient         *ethclient.Client
+	fallbackETHClient *ethclient.Client
 }
 
-func NewClient(ethClient *ethclient.Client) *Client {
+func NewClient(ethClient, fallbackClient *ethclient.Client) *Client {
 	return &Client{
-		ethClient: ethClient,
+		ethClient:         ethClient,
+		fallbackETHClient: fallbackClient,
 	}
 }
 
@@ -25,5 +27,13 @@ func (c *Client) FetchTraceCall(ctx context.Context, txHash string) (types.CallF
 			"withLog": true,
 		},
 	})
+	if err != nil && c.fallbackETHClient != nil {
+		err = c.fallbackETHClient.Client().CallContext(ctx, &result, "debug_traceTransaction", txHash, map[string]interface{}{
+			"tracer": "callTracer",
+			"tracerConfig": map[string]interface{}{
+				"withLog": true,
+			},
+		})
+	}
 	return result, err
 }

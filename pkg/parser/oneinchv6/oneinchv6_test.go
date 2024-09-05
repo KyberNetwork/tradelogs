@@ -29,9 +29,9 @@ func TestFetchEvent(t *testing.T) {
 	}
 	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
 	if err != nil {
-		panic(err)
+		fallbackClient = nil
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackClient))
 	p := MustNewParser(traceCalls)
 	require.Equal(t, p.abi.Events[FilledEvent].ID, common.HexToHash("0xfec331350fce78ba658e082a71da20ac9f8d798a99b3c79681c8440cbfe77e07"))
 	client, err := ethclient.Dial(rpcURL)
@@ -65,9 +65,9 @@ func TestParseEvent(t *testing.T) {
 	}
 	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
 	if err != nil {
-		panic(err)
+		fallbackClient = nil
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackClient))
 	p := MustNewParser(traceCalls)
 	for _, event := range events {
 		log, err := p.Parse(event, uint64(time.Now().Unix()))

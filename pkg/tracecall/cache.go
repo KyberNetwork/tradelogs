@@ -10,14 +10,12 @@ import (
 
 type Cache struct {
 	rpcClient       rpcnode.Client
-	fallbackClient  rpcnode.Client
 	latestTraceCall lru.BasicLRU[string, types.CallFrame]
 }
 
-func NewCache(client, fallbackClient *rpcnode.Client) *Cache {
+func NewCache(client *rpcnode.Client) *Cache {
 	return &Cache{
 		rpcClient:       *client,
-		fallbackClient:  *fallbackClient,
 		latestTraceCall: lru.NewBasicLRU[string, types.CallFrame](100),
 	}
 }
@@ -27,14 +25,9 @@ func (c *Cache) GetTraceCall(tx string) (types.CallFrame, error) {
 	if ok {
 		return data, nil
 	}
-
-	var err error
-	data, err = c.rpcClient.FetchTraceCall(context.Background(), tx)
+	data, err := c.rpcClient.FetchTraceCall(context.Background(), tx)
 	if err != nil {
-		data, err = c.fallbackClient.FetchTraceCall(context.Background(), tx)
-		if err != nil {
-			return types.CallFrame{}, err
-		}
+		return types.CallFrame{}, err
 	}
 	if data.From == "" {
 		return types.CallFrame{}, fmt.Errorf("trace call not found")

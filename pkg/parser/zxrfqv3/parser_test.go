@@ -30,9 +30,9 @@ func newParserTest(t *testing.T, contractABI ContractABI, needRpc bool) *Parser 
 		}
 		fallbackClient, err := ethclient.Dial(fallbackRPCURL)
 		if err != nil {
-			panic(err)
+			fallbackClient = nil
 		}
-		cache = tracecall.NewCache(rpcnode.NewClient(ethClient), rpcnode.NewClient(fallbackClient))
+		cache = tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackClient))
 	}
 	return MustNewParser(cache, contractABI)
 }
