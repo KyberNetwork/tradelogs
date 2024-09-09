@@ -107,7 +107,7 @@ func run(c *cli.Context) error {
 		ethClients[i] = client
 	}
 
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClients...))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(l, ethClients...))
 
 	parsers := []parser.Parser{kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),

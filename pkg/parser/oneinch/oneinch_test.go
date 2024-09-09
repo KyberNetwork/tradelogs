@@ -19,6 +19,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	tradelogstype "github.com/KyberNetwork/tradelogs/pkg/types"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
+	"go.uber.org/zap"
 )
 
 const rpcURL = ""
@@ -29,7 +30,7 @@ func TestFetchEvent(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(zap.S(), ethClient))
 	p := MustNewParser(traceCalls)
 	require.Equal(t, p.abi.Events[FilledEvent].ID, common.HexToHash("0xc3b639f02b125bfa160e50739b8c44eb2d1b6908e2b6d5925c6d770f2ca78127"))
 	client, err := ethclient.Dial(rpcURL)
@@ -69,7 +70,7 @@ func TestParseEvent(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(zap.S(), ethClient))
 	p := MustNewParser(traceCalls)
 	log, err := p.Parse(event, uint64(time.Now().Unix()))
 	require.NoError(t, err)
@@ -83,7 +84,7 @@ func TestParseOneinchTradeLog(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(zap.S(), ethClient))
 	p := MustNewParser(traceCalls)
 	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
@@ -134,7 +135,7 @@ func TestParseWithCallFrame(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(zap.S(), ethClient))
 	p := MustNewParser(traceCalls)
 	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)

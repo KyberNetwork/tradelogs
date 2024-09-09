@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 const rpcURL = ""
@@ -24,7 +25,7 @@ func TestFetchEvent(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(zap.S(), ethClient))
 	p := MustNewParser(traceCalls)
 	require.Equal(t, p.abi.Events[FilledEvent].ID, common.HexToHash("0xfec331350fce78ba658e082a71da20ac9f8d798a99b3c79681c8440cbfe77e07"))
 	client, err := ethclient.Dial(rpcURL)
@@ -56,7 +57,7 @@ func TestParseEvent(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(zap.S(), ethClient))
 	p := MustNewParser(traceCalls)
 	for _, event := range events {
 		log, err := p.Parse(event, uint64(time.Now().Unix()))
