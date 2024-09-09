@@ -16,10 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	rpcURL         = ""
-	fallbackRPCURL = ""
-)
+const rpcURL = ""
 
 func TestFetchEvent(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
@@ -27,11 +24,7 @@ func TestFetchEvent(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
-	if err != nil {
-		fallbackClient = nil
-	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 	p := MustNewParser(traceCalls)
 	require.Equal(t, p.abi.Events[FilledEvent].ID, common.HexToHash("0x78ad7ec0e9f89e74012afa58738b6b661c024cb0fd185ee2f616c0a28924bd66"))
 	logs, err := ethClient.FilterLogs(context.Background(), ethereum.FilterQuery{
@@ -61,11 +54,7 @@ func TestParseEvent(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	fallbackClient, err := ethclient.Dial(fallbackRPCURL)
-	if err != nil {
-		fallbackClient = nil
-	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackClient))
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient))
 	p := MustNewParser(traceCalls)
 	log, err := p.Parse(event, 1713889895)
 	require.NoError(t, err)

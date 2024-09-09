@@ -8,32 +8,31 @@ import (
 )
 
 type Client struct {
-	ethClient         *ethclient.Client
-	fallbackETHClient *ethclient.Client
+	ethClient []*ethclient.Client
 }
 
-func NewClient(ethClient, fallbackClient *ethclient.Client) *Client {
+func NewClient(ethClient ...*ethclient.Client) *Client {
 	return &Client{
-		ethClient:         ethClient,
-		fallbackETHClient: fallbackClient,
+		ethClient: ethClient,
 	}
 }
 
 func (c *Client) FetchTraceCall(ctx context.Context, txHash string) (types.CallFrame, error) {
-	var result types.CallFrame
-	err := c.ethClient.Client().CallContext(ctx, &result, "debug_traceTransaction", txHash, map[string]interface{}{
-		"tracer": "callTracer",
-		"tracerConfig": map[string]interface{}{
-			"withLog": true,
-		},
-	})
-	if err != nil && c.fallbackETHClient != nil {
-		err = c.fallbackETHClient.Client().CallContext(ctx, &result, "debug_traceTransaction", txHash, map[string]interface{}{
+	var (
+		result types.CallFrame
+		err    error
+	)
+	for _, ethClient := range c.ethClient {
+		err = ethClient.Client().CallContext(ctx, &result, "debug_traceTransaction", txHash, map[string]interface{}{
 			"tracer": "callTracer",
 			"tracerConfig": map[string]interface{}{
 				"withLog": true,
 			},
 		})
+		if err != nil {
+			continue
+		}
+		return result, nil
 	}
 	return result, err
 }

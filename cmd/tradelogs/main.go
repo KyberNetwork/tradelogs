@@ -92,16 +92,22 @@ func run(c *cli.Context) error {
 			ResponseHeaderTimeout: time.Second * 30,
 		},
 	}
-	ethClient, err := ethclient.Dial(c.String(libapp.RPCUrlFlagName))
-	if err != nil {
-		panic(err)
+
+	rpcURL := c.StringSlice(libapp.RPCUrlFlagName)
+	if len(rpcURL) == 0 {
+		return fmt.Errorf("rpc url is empty")
 	}
 
-	fallbackEthClient, err := ethclient.Dial(c.String(libapp.FallbackRPCUrlFlagName))
-	if err != nil {
-		fallbackEthClient = nil
+	ethClients := make([]*ethclient.Client, len(rpcURL))
+	for i, url := range rpcURL {
+		client, err := ethclient.Dial(url)
+		if err != nil {
+			panic(err)
+		}
+		ethClients[i] = client
 	}
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackEthClient))
+
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(ethClients...))
 
 	parsers := []parser.Parser{kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
@@ -112,7 +118,7 @@ func run(c *cli.Context) error {
 		uniswapxv1.MustNewParser(traceCalls),
 		uniswapx.MustNewParser(traceCalls),
 		bebop.MustNewParser(traceCalls),
-		zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClient, common.HexToAddress(parser.Deployer0xV3)),
+		zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClients[0], common.HexToAddress(parser.Deployer0xV3)),
 	}
 
 	binanceClient := binance.NewClient(c.String(pricefiller.BinanceAPIKeyFlag.Name), c.String(pricefiller.BinanceSecretKeyFlag.Name))

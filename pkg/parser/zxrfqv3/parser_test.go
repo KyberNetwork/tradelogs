@@ -16,10 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	rpcURL         = ""
-	fallbackRPCURL = ""
-)
+const rpcURL = ""
 
 func newParserTest(t *testing.T, contractABI ContractABI, needRpc bool) *Parser {
 	var cache *tracecall.Cache
@@ -28,11 +25,7 @@ func newParserTest(t *testing.T, contractABI ContractABI, needRpc bool) *Parser 
 		if err != nil {
 			panic(err)
 		}
-		fallbackClient, err := ethclient.Dial(fallbackRPCURL)
-		if err != nil {
-			fallbackClient = nil
-		}
-		cache = tracecall.NewCache(rpcnode.NewClient(ethClient, fallbackClient))
+		cache = tracecall.NewCache(rpcnode.NewClient(ethClient))
 	}
 	return MustNewParser(cache, contractABI)
 }
