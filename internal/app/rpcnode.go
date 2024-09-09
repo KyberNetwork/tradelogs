@@ -7,11 +7,11 @@ const (
 )
 
 var (
-	RPCUrlFlag = &cli.StringFlag{
+	RPCUrlFlag = &cli.StringSliceFlag{
 		Name:   RPCUrlFlagName,
 		EnvVar: "RPC_URL",
 		Usage:  "RPC node url",
-		Value:  "https://ethereum.kyberengineering.io/trading-tokyo",
+		Value:  &cli.StringSlice{"https://ethereum.kyberengineering.io/trading-tokyo"},
 	}
 )
 

@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 const rpcURL = ""
@@ -25,7 +26,7 @@ func newParserTest(t *testing.T, contractABI ContractABI, needRpc bool) *Parser 
 		if err != nil {
 			panic(err)
 		}
-		cache = tracecall.NewCache(rpcnode.NewClient(ethClient))
+		cache = tracecall.NewCache(rpcnode.NewClient(zap.S(), ethClient))
 	}
 	return MustNewParser(cache, contractABI)
 }
