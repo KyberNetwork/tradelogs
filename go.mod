@@ -9,7 +9,7 @@ require (
 	github.com/IBM/sarama v1.43.3
 	github.com/KyberNetwork/cclog v1.1.0
 	github.com/KyberNetwork/go-binance/v2 v2.0.3
-	github.com/KyberNetwork/tradinglib v0.4.36
+	github.com/KyberNetwork/tradinglib v0.5.10
 	github.com/TheZeroSlave/zapsentry v1.20.2
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/getsentry/sentry-go v0.26.0

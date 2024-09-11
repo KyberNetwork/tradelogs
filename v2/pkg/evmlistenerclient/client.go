@@ -3,18 +3,18 @@ package evmlistenerclient
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/KyberNetwork/evmlistener/pkg/block"
 	"github.com/KyberNetwork/evmlistener/pkg/evmclient"
 	"github.com/KyberNetwork/evmlistener/pkg/listener"
 	"github.com/KyberNetwork/evmlistener/pkg/pubsub"
-	"github.com/KyberNetwork/evmlistener/pkg/redis"
 	"go.uber.org/zap"
-	"net/http"
-	"time"
 )
 
-func SubscribeEvent(l *zap.SugaredLogger, wsRPC, httpRPC string, maxTrackingBlock int, blockExpiration time.Duration,
-	redisCfg redis.Config, publisher pubsub.Publisher) error {
+func SubscribeEvent(l *zap.SugaredLogger, wsRPC, httpRPC string, maxTrackingBlock int,
+	publisher pubsub.Publisher, processedBlock uint64) error {
 	httpClient := &http.Client{
 		Timeout:   time.Second * 15,
 		Transport: &http.Transport{},
@@ -30,11 +30,23 @@ func SubscribeEvent(l *zap.SugaredLogger, wsRPC, httpRPC string, maxTrackingBloc
 		return fmt.Errorf("dial ws node error: %w", err)
 	}
 
-	redisClient, err := redis.New(redisCfg)
+	blockKeeper := block.NewBaseBlockKeeper(maxTrackingBlock)
+
+	l.Infof("start subscribe from block %v", processedBlock)
+
+	// pre-load 4 recent blocks
+	const initBlockRange = 4
+	blocks, err := listener.GetBlocks(context.Background(), restClient, processedBlock-initBlockRange,
+		processedBlock, false, nil, nil)
 	if err != nil {
-		return fmt.Errorf("failed to connect to redis: %w", err)
+		return fmt.Errorf("get recent block error: %w", err)
 	}
-	blockKeeper := block.NewRedisBlockKeeper(l, redisClient, maxTrackingBlock, blockExpiration)
+	for _, v := range blocks {
+		err = blockKeeper.Add(v)
+		if err != nil {
+			return fmt.Errorf("add block error: %w", err)
+		}
+	}
 
 	handler := listener.NewHandler(l, "block-topic", restClient, blockKeeper, publisher)
 	evl := listener.New(l, wsClient, restClient, handler, nil, 0) //TODO: add event filter

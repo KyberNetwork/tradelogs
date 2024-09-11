@@ -2,10 +2,10 @@ package zxotc
 
 import (
 	"fmt"
-	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/types"
 	"reflect"
 	"strings"
 
+	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"

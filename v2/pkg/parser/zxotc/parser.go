@@ -3,12 +3,12 @@ package zxotc
 import (
 	"encoding/json"
 	"errors"
-	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/types"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zxotc"
 	"strings"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"

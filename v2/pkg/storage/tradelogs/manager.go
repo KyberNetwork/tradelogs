@@ -1,8 +1,9 @@
-package storage
+package tradelogs
 
 import (
 	"fmt"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/types"
+
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"go.uber.org/zap"
 )
 

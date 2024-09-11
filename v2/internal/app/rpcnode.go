@@ -11,7 +11,7 @@ var (
 		Name:   RPCUrlFlagName,
 		EnvVar: "RPC_URL",
 		Usage:  "RPC node url",
-		Value:  &cli.StringSlice{"https://ethereum.kyberengineering.io/trading-tokyo"},
+		Value:  &cli.StringSlice{},
 	}
 )
 

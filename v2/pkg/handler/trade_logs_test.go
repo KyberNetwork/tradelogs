@@ -2,20 +2,21 @@ package handler
 
 import (
 	"context"
+	"os"
+	"testing"
+
 	"github.com/KyberNetwork/tradelogs/v2/mocks"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	zxotc2 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/storage"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	types2 "github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	types3 "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
-	"os"
-	"testing"
 )
 
 var rpcURL = os.Getenv("TEST_RPC_URL")
@@ -32,14 +33,17 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	mockStorage := &mocks.MockStorage{}
 	mockStorage.On("Type").Return("zerox").
 		On("Insert", mock.Anything).Return(nil)
-	s := storage.NewManager(zap.S(), []types.Storage{mockStorage})
+	s := tradelogs.NewManager(zap.S(), []types.Storage{mockStorage})
 
 	p := zxotc2.MustNewParser()
 
 	mockKafka := &mocks.MockPublisher{}
 	mockKafka.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
-	h := NewTradeLogHandler(zap.S(), client, s, []parser.Parser{p}, "test", mockKafka)
+	mockState := &mocks.MockState{}
+	mockState.On("SetState", mock.Anything, mock.Anything).Return(nil)
+
+	h := NewTradeLogHandler(zap.S(), client, s, []parser.Parser{p}, "test", mockKafka, mockState)
 
 	err = h.ProcessBlock("0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048", 20181990, 1725436442)
 	if err != nil {

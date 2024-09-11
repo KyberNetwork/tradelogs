@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/KyberNetwork/tradelogs/v2/internal/testutil"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
+	"github.com/KyberNetwork/tradinglib/pkg/testutil"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -21,7 +21,11 @@ type TestCase struct {
 
 func TestSimple(t *testing.T) {
 	l := zap.S()
-	db, tearDown := testutil.MustNewDevelopmentDB("../../../cmd/parse_log/migrations")
+	db, tearDown := testutil.MustNewDevelopmentDB(
+		"../../../../cmd/parse_log/migrations",
+		testutil.DefaultDSN(),
+		testutil.RandomString(8),
+	)
 	defer func() {
 		assert.NoError(t, tearDown())
 	}()

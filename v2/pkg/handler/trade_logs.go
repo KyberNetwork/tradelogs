@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/storage"
-	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
+	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -19,10 +22,11 @@ import (
 type TradeLogHandler struct {
 	l          *zap.SugaredLogger
 	rpcClient  *rpcnode.Client
-	storage    *storage.Manager
+	storage    *tradelogs.Manager
 	parsers    []parser.Parser
 	kafkaTopic string
 	publisher  kafka.Publisher
+	state      state.Storage
 }
 
 type logMetadata struct {
@@ -33,7 +37,8 @@ type logMetadata struct {
 	timestamp   uint64
 }
 
-func NewTradeLogHandler(l *zap.SugaredLogger, rpc *rpcnode.Client, storage *storage.Manager, parsers []parser.Parser, kafkaTopic string, publisher kafka.Publisher) *TradeLogHandler {
+func NewTradeLogHandler(l *zap.SugaredLogger, rpc *rpcnode.Client, storage *tradelogs.Manager, parsers []parser.Parser,
+	kafkaTopic string, publisher kafka.Publisher, state state.Storage) *TradeLogHandler {
 	return &TradeLogHandler{
 		l:          l,
 		rpcClient:  rpc,
@@ -41,6 +46,7 @@ func NewTradeLogHandler(l *zap.SugaredLogger, rpc *rpcnode.Client, storage *stor
 		parsers:    parsers,
 		kafkaTopic: kafkaTopic,
 		publisher:  publisher,
+		state:      state,
 	}
 }
 
@@ -75,13 +81,13 @@ func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, tim
 		for _, log := range tradeLogs {
 			msgBytes, err := json.Marshal(log)
 			if err != nil {
-				h.l.Errorw(" error when marshal trade log to json", "log", log, "err", err)
+				h.l.Errorw(" error when marshal trade log to json", "blockNumber", blockNumber, "log", log, "err", err)
 				failCount++
 				continue
 			}
 			err = h.publisher.Publish(h.kafkaTopic, msgBytes)
 			if err != nil {
-				h.l.Errorw("error when publish trade log to kafka", "log", log, "err", err)
+				h.l.Errorw("error when publish trade log to kafka", "blockNumber", blockNumber, "log", log, "err", err)
 				failCount++
 				continue
 			}
@@ -89,6 +95,15 @@ func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, tim
 		}
 		h.l.Infow("successfully publish trade logs", "blockNumber", blockNumber, "success", passCount, "fail", failCount)
 	}
+
+	// persist most recent processed block
+	err = h.state.SetState(state.ProcessedBlockKey, strconv.FormatUint(blockNumber, 10))
+	if err != nil {
+		h.l.Errorw("cannot persist processed block", "blockNumber", blockNumber, "err", err)
+		return fmt.Errorf("cannot persist processed block: %w", err)
+	}
+	h.l.Infow("successfully persist processed block", "blockNumber", blockNumber)
+
 	return nil
 }
 

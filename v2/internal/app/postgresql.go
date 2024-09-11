@@ -40,7 +40,7 @@ var (
 	}
 	PostgresMigrationPath = cli.StringFlag{ // nolint: gochecknoglobals
 		Name:   "migration-path",
-		Value:  "v2/cmd/parse_log/migrations",
+		Value:  "migrations",
 		EnvVar: "MIGRATION_PATH",
 	}
 )

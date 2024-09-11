@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"os"
+	"strconv"
+
 	libapp "github.com/KyberNetwork/tradelogs/v2/internal/app"
-	"github.com/KyberNetwork/tradelogs/v2/internal/dbutil"
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
@@ -11,15 +15,15 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/storage"
-	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/types"
-	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/zxotc"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
+	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
+	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
+	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/jmoiron/sqlx"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
-	"log"
-	"os"
 )
 
 func main() {
@@ -57,9 +61,12 @@ func run(c *cli.Context) error {
 		l.Panicw("cannot init DB", "err", err)
 	}
 
-	s := storage.NewManager(l, []storageTypes.Storage{
+	// trade log manager
+	manager := tradelogs.NewManager(l, []storageTypes.Storage{
 		zxotcStorage.New(l, db),
 	})
+	// state storage
+	s := state.New(l, db)
 
 	// rpc node to query trace call
 	rpcURL := c.StringSlice(libapp.RPCUrlFlagName)
@@ -104,13 +111,15 @@ func run(c *cli.Context) error {
 	}
 
 	// trade log handler
-	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, s, parsers, broadcastTopic, kafkaPublisher)
+	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, parsers, broadcastTopic, kafkaPublisher, s)
 
 	// parse log worker
 	w := worker.NewParseLog(tradeLogHandler)
 
-	// redis config for evm listener's block keeper
-	redisCfg := libapp.RedisConfigFromFlags(c)
+	mostRecentBlock, err := getMostRecentBlock(l, s, rpcNode)
+	if err != nil {
+		panic(fmt.Errorf("cannot get most recent block: %w", err))
+	}
 
 	// subscribe evm listener with worker as a consumer
 	return evmlistenerclient.SubscribeEvent(
@@ -118,9 +127,8 @@ func run(c *cli.Context) error {
 		c.String(libapp.EVMListenerWsRPCUrlFlag.Name),
 		c.String(libapp.EVMListenerHTTPRPCUrlFlag.Name),
 		c.Int(libapp.EVMListenerMaxTrackingBlock.Name),
-		c.Duration(libapp.EVMListenerBlockExpiration.Name),
-		redisCfg,
 		w,
+		mostRecentBlock,
 	)
 }
 
@@ -143,4 +151,21 @@ func initDB(c *cli.Context) (*sqlx.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+func getMostRecentBlock(l *zap.SugaredLogger, s state.Storage, rpcClient *rpcnode.Client) (uint64, error) {
+	var blockNumber uint64
+	block, err := s.GetState(state.ProcessedBlockKey)
+	if err == nil {
+		blockNumber, err = strconv.ParseUint(block, 10, 64)
+		if err == nil {
+			return blockNumber, nil
+		}
+	}
+	l.Errorw("cannot get from db", "err", err)
+	blockNumber, err = rpcClient.GetBlockNumber(context.Background())
+	if err != nil {
+		return 0, fmt.Errorf("cannot get from node: %w", err)
+	}
+	return blockNumber, nil
 }

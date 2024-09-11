@@ -2,6 +2,7 @@ package rpcnode
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -81,4 +82,20 @@ func (c *Client) FetchLogsByBlockHash(ctx context.Context, blockHash string) ([]
 	}
 
 	return result, err
+}
+
+func (c *Client) GetBlockNumber(ctx context.Context) (uint64, error) {
+	var (
+		blockNumber uint64
+		err         error
+	)
+	for i, client := range c.ethClient {
+		blockNumber, err = client.BlockNumber(ctx)
+		if err != nil {
+			c.l.Errorw("get block number failed", "error", err, "clientID", i)
+			continue
+		}
+		return blockNumber, nil
+	}
+	return 0, fmt.Errorf("block number not found: %w", err)
 }

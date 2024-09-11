@@ -40,3 +40,9 @@ create index zerox_taker_token_idx
 
 create index zerox_state_idx
     on tradelogs_zerox (state);
+
+create table tradelogs_state
+(
+    key   text not null constraint tradelogs_state_pk primary key,
+    value text not null
+);

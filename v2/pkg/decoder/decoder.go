@@ -15,7 +15,7 @@ func (b Bytes4) Bytes() []byte {
 	return b[:]
 }
 
-func GetBytes4(data []byte) (Bytes4, error) {
+func GetFirst4Bytes(data []byte) (Bytes4, error) {
 	if len(data) < 4 {
 		return Bytes4{}, fmt.Errorf("need atleast 4 bytes, got %d", len(data))
 	}

@@ -19,6 +19,10 @@ func NewParseLog(handler *handler.TradeLogHandler) *ParseLog {
 }
 
 func (w *ParseLog) Publish(ctx context.Context, topic string, data interface{}) error {
+	_, ok := data.(types.Message)
+	if !ok {
+		return fmt.Errorf("invalid data: not a message")
+	}
 	err := w.processMessage(data.(types.Message))
 	if err != nil {
 		return fmt.Errorf("failed to process message: %w", err)

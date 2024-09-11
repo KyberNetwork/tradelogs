@@ -4,23 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/types"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zxotc"
 	"math/big"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
+	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
+	tradingTypes "github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
-
-	tradingTypes "github.com/KyberNetwork/tradelogs/v2/pkg/types"
 )
 
-const rpcURL = ""
+var rpcURL = os.Getenv("TEST_RPC_URL")
 
 func Test(t *testing.T) {
 	var res, tmp []storageTypes.TradeLog

@@ -3,7 +3,7 @@ package parser
 import (
 	"errors"
 
-	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/types"
+	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 )

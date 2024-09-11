@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	types "github.com/KyberNetwork/tradelogs/v2/pkg/storage/types"
+	types "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	mock "github.com/stretchr/testify/mock"
 )
 

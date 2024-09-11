@@ -2,7 +2,6 @@ package app
 
 import (
 	"github.com/urfave/cli"
-	"time"
 )
 
 const (
@@ -32,18 +31,12 @@ var (
 		Usage:  "Max tracking block number for block keeper",
 		Value:  32,
 	}
-	EVMListenerBlockExpiration = &cli.DurationFlag{
-		Name:   EVMBlockExpiration,
-		EnvVar: "EVM_BLOCK_EXPIRATION",
-		Usage:  "Block expiration time for block keeper",
-		Value:  3 * 24 * time.Hour,
-	}
 )
 
 // NewEvmListenerFlags returns flags for evmlistener.
 func EvmListenerFlags() []cli.Flag {
 	return []cli.Flag{
 		EVMListenerHTTPRPCUrlFlag, EVMListenerWsRPCUrlFlag,
-		EVMListenerMaxTrackingBlock, EVMListenerBlockExpiration,
+		EVMListenerMaxTrackingBlock,
 	}
 }
