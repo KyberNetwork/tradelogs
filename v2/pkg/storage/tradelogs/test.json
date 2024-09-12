@@ -10,6 +10,8 @@
     "contract_address": "0x617Dee16B86534a5d792A4d7A62FB491B544111E",
     "block_number": 16232109,
     "tx_hash": "0xb61c3c802df945e215d6894a2bc3765e1175ebecdd7148dfc7aa5c9f599b9c13",
+    "message_sender":"0x50f77c5640e07c304432af44fb4034cd51e36f6f",
+    "interact_contract":"0xdef1c0ded9bec7f1a1670819833240f027b25eff",
     "log_index": 198,
     "timestamp": 1671614015000
   },

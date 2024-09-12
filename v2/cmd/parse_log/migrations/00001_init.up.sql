@@ -15,6 +15,8 @@ create table tradelogs_zerox
     tx_hash            text                                            not null,
     timestamp          bigint                                          not null,
     event_hash         text             default ''::text               not null,
+    message_sender     text             default ''::text               not null,
+    interact_contract  text             default ''::text               not null,
     maker_token_price  double precision default 0                      not null,
     taker_token_price  double precision default 0                      not null,
     maker_usd_amount   double precision default 0                      not null,

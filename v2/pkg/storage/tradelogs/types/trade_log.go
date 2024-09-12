@@ -21,6 +21,8 @@ type CommonTradeLog struct {
 	LogIndex         uint64 `db:"log_index" json:"log_index,omitempty"`
 	Timestamp        uint64 `db:"timestamp" json:"timestamp,omitempty"`
 	EventHash        string `db:"event_hash" json:"event_hash,omitempty"`
+	MessageSender    string `db:"message_sender" json:"message_sender,omitempty"`
+	InteractContract string `db:"interact_contract" json:"interact_contract,omitempty"`
 	//MakerTraits      string        `db:"maker_traits" json:"maker_traits,omitempty"`
 	Expiry          uint64        `db:"expiration_date" json:"expiration_date"`
 	MakerTokenPrice float64       `db:"maker_token_price" json:"maker_token_price"`
@@ -56,6 +58,8 @@ func (o *CommonTradeLog) Serialize() []interface{} {
 		o.LogIndex,
 		o.Timestamp,
 		o.EventHash,
+		o.MessageSender,
+		o.InteractContract,
 		o.MakerTokenPrice,
 		o.TakerTokenPrice,
 		o.MakerUsdAmount,
@@ -79,10 +83,26 @@ func CommonTradeLogColumns() []string {
 		"log_index",
 		"timestamp",
 		"event_hash",
+		"message_sender",
+		"interact_contract",
 		"maker_token_price",
 		"taker_token_price",
 		"maker_usd_amount",
 		"taker_usd_amount",
 		"state",
+	}
+}
+
+type Option func(c *CommonTradeLog)
+
+func WithMessageSender(msgSender string) Option {
+	return func(c *CommonTradeLog) {
+		c.MessageSender = msgSender
+	}
+}
+
+func WithInteractContract(interactContract string) Option {
+	return func(c *CommonTradeLog) {
+		c.InteractContract = interactContract
 	}
 }

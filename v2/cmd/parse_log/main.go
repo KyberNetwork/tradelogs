@@ -78,7 +78,7 @@ func run(c *cli.Context) error {
 	for i, url := range rpcURL {
 		client, err := ethclient.Dial(url)
 		if err != nil {
-			panic(err)
+			panic(fmt.Errorf("cannot dial eth client: %w", err))
 		}
 		ethClients[i] = client
 	}

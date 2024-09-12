@@ -96,7 +96,7 @@ func (p *Parser) UseTraceCall() bool {
 	return false
 }
 
-func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) ([]storageTypes.TradeLog, error) {
+func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64, options ...storageTypes.Option) ([]storageTypes.TradeLog, error) {
 	orderRfq, err := p.getRFQOrderParams(callFrame)
 	if err != nil {
 		return nil, err
@@ -108,6 +108,10 @@ func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes
 	}
 
 	tradeLog.Expiry = orderRfq.GetExpiry()
+
+	for _, option := range options {
+		option(tradeLog.CommonTradeLog)
+	}
 
 	return []storageTypes.TradeLog{tradeLog}, nil
 }

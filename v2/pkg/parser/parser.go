@@ -48,6 +48,6 @@ type Parser interface {
 	Topics() []string
 	Exchange() string
 	UseTraceCall() bool
-	ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) ([]storageTypes.TradeLog, error)
+	ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64, options ...storageTypes.Option) ([]storageTypes.TradeLog, error)
 	LogFromExchange(log ethereumTypes.Log) bool
 }

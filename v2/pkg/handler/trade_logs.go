@@ -30,11 +30,13 @@ type TradeLogHandler struct {
 }
 
 type logMetadata struct {
-	blockNumber uint64
-	blockHash   string
-	txHash      string
-	txIndex     int
-	timestamp   uint64
+	blockNumber      uint64
+	blockHash        string
+	txHash           string
+	txIndex          int
+	timestamp        uint64
+	messageSender    string
+	interactContract string
 }
 
 func NewTradeLogHandler(l *zap.SugaredLogger, rpc *rpcnode.Client, storage *tradelogs.Manager, parsers []parser.Parser,
@@ -59,11 +61,13 @@ func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, tim
 	for i, call := range calls {
 		logIndexStart = assignLogIndexes(&call.CallFrame, logIndexStart)
 		metadata := logMetadata{
-			blockNumber: blockNumber,
-			blockHash:   blockHash,
-			txHash:      call.TxHash,
-			txIndex:     i,
-			timestamp:   timestamp,
+			blockNumber:      blockNumber,
+			blockHash:        blockHash,
+			txHash:           call.TxHash,
+			txIndex:          i,
+			timestamp:        timestamp,
+			messageSender:    call.CallFrame.From,
+			interactContract: call.CallFrame.To,
 		}
 
 		tradeLogs := h.processCallFrame(call.CallFrame, metadata)
@@ -136,7 +140,11 @@ func (h *TradeLogHandler) processCallFrame(call types.CallFrame, metadata logMet
 		}
 
 		// parse trade log
-		tradeLogs, err := p.ParseWithCallFrame(call, ethLog, metadata.timestamp)
+		tradeLogs, err := p.ParseWithCallFrame(
+			call, ethLog, metadata.timestamp,
+			storageTypes.WithMessageSender(metadata.messageSender),
+			storageTypes.WithInteractContract(metadata.interactContract),
+		)
 		if err != nil {
 			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", p.Exchange())
 			continue

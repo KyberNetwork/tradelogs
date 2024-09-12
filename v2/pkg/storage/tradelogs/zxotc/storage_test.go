@@ -75,6 +75,8 @@ func TestSimple(t *testing.T) {
 						LogIndex:         198,
 						Timestamp:        1671614015000,
 						State:            "new",
+						MessageSender:    "0x50f77c5640e07c304432af44fb4034cd51e36f6f",
+						InteractContract: "0xdef1c0ded9bec7f1a1670819833240f027b25eff",
 					},
 				},
 			},
