@@ -72,7 +72,7 @@ func TestParseEvent(t *testing.T) {
 	log, err := p.Parse(event, uint64(time.Now().Unix()))
 	require.NoError(t, err)
 	require.Equal(t, log[0].(*zxotc.TradeLog).EventHash, p.eventHash)
-	jsonLog, err := json.Marshal(log)
+	jsonLog, _ := json.Marshal(log)
 	t.Log(string(jsonLog))
 }
 
@@ -91,7 +91,7 @@ func TestParseTxEvent(t *testing.T) {
 		if log.Topics[0].Hex() == p.eventHash {
 			tradeLog, err := p.Parse(*log, tx.BlockNumber.Uint64())
 			require.NoError(t, err)
-			jsonLog, err := json.Marshal(tradeLog)
+			jsonLog, _ := json.Marshal(tradeLog)
 			t.Log(string(jsonLog))
 		}
 	}
