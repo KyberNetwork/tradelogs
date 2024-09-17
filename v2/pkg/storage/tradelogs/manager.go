@@ -25,16 +25,16 @@ func (m *Manager) Insert(orders []types.TradeLog) error {
 	}
 	tradeLogsByExchange := make(map[string][]types.TradeLog)
 	for _, order := range orders {
-		exchange := order.Type()
+		exchange := order.Exchange
 		tradeLogsByExchange[exchange] = append(tradeLogsByExchange[exchange], order)
 	}
 	for _, storage := range m.storages {
-		err := storage.Insert(tradeLogsByExchange[storage.Type()])
+		err := storage.Insert(tradeLogsByExchange[storage.Exchange()])
 		if err != nil {
-			m.l.Errorw("insert trade logs failed", "exchange", storage.Type())
-			return fmt.Errorf("insert trade logs for exchange %v failed: %w", storage.Type(), err)
+			m.l.Errorw("insert trade logs failed", "exchange", storage.Exchange())
+			return fmt.Errorf("insert trade logs for exchange %v failed: %w", storage.Exchange(), err)
 		}
-		m.l.Infow("insert trade logs", "exchange", storage.Type(), "number", len(tradeLogsByExchange[storage.Type()]))
+		m.l.Infow("insert trade logs", "exchange", storage.Exchange(), "number", len(tradeLogsByExchange[storage.Exchange()]))
 	}
 	return nil
 }

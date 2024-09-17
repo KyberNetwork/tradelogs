@@ -11,7 +11,6 @@ import (
 	"time"
 
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
 	tradingTypes "github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -71,7 +70,7 @@ func TestParseEvent(t *testing.T) {
 	p := MustNewParser()
 	log, err := p.Parse(event, uint64(time.Now().Unix()))
 	require.NoError(t, err)
-	require.Equal(t, log[0].(*zxotc.TradeLog).EventHash, p.eventHash)
+	require.Equal(t, log[0].EventHash, p.eventHash)
 	jsonLog, _ := json.Marshal(log)
 	t.Log(string(jsonLog))
 }
@@ -111,8 +110,9 @@ func TestGetExpiry(t *testing.T) {
 
 func TestParseWithCallFrame(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
-	expectedTradeLog := &zxotc.TradeLog{
-		CommonTradeLog: &storageTypes.CommonTradeLog{
+	expectedTradeLog := []storageTypes.TradeLog{
+		{
+			Exchange:         "zerox",
 			OrderHash:        "0xceefc26698e9c77d3bff738449a28f2a29c72ffc93392c4d8a156b56f8d03a22",
 			Maker:            "0xff8Ba4D1fC3762f6154cc942CCF30049A2A0cEC6",
 			Taker:            "0x22F9dCF4647084d6C31b2765F6910cd85C178C18",
@@ -127,7 +127,8 @@ func TestParseWithCallFrame(t *testing.T) {
 			Timestamp:        0,
 			EventHash:        "0xac75f773e3a92f1a02b12134d65e1f47f8a14eabe4eaf1e24624918e6a8b269f",
 			Expiry:           1719460132,
-		}}
+		},
+	}
 	p := MustNewParser()
 	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
@@ -154,6 +155,6 @@ func TestParseWithCallFrame(t *testing.T) {
 		parse, err := p.ParseWithCallFrame(callFrame, *eventLog, 0)
 		require.NoError(t, err)
 		t.Log(parse)
-		require.Equal(t, expectedTradeLog, parse[0])
+		require.Equal(t, expectedTradeLog, parse)
 	}
 }

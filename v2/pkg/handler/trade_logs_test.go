@@ -31,7 +31,7 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	client := rpcnode.NewClient(zap.S(), ethClient)
 
 	mockStorage := &mocks.MockStorage{}
-	mockStorage.On("Type").Return("zerox").
+	mockStorage.On("Exchange").Return("zerox").
 		On("Insert", mock.Anything).Return(nil)
 	s := tradelogs.NewManager(zap.S(), []types.Storage{mockStorage})
 

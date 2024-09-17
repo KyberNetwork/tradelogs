@@ -14,9 +14,9 @@ import (
 )
 
 func SubscribeEvent(l *zap.SugaredLogger, wsRPC, httpRPC string, maxTrackingBlock int,
-	publisher pubsub.Publisher, processedBlock uint64) error {
+	publisher pubsub.Publisher, processedBlock uint64, timeoutSecond int) error {
 	httpClient := &http.Client{
-		Timeout:   time.Second * 15,
+		Timeout:   time.Second * time.Duration(timeoutSecond),
 		Transport: &http.Transport{},
 	}
 

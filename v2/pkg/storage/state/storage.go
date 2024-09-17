@@ -38,9 +38,8 @@ func (s *State) GetState(key string) (string, error) {
 }
 
 func (s *State) SetState(key string, value string) error {
-	var newKey string
-	err := s.db.Get(&newKey,
-		`INSERT INTO tradelogs_state (key,value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=excluded.value RETURNING key`,
+	_, err := s.db.Exec(
+		`INSERT INTO tradelogs_state (key,value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=excluded.value`,
 		key, value)
 	if err != nil {
 		return fmt.Errorf("failed to set state: %w", err)

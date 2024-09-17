@@ -2,12 +2,8 @@ package types
 
 import "strings"
 
-type TradeLog interface {
-	Serialize() []interface{}
-	Type() string
-}
-
-type CommonTradeLog struct {
+type TradeLog struct {
+	Exchange         string `json:"exchange"`
 	OrderHash        string `db:"order_hash" json:"order_hash,omitempty"`
 	Maker            string `db:"maker" json:"maker,omitempty"`
 	Taker            string `db:"taker" json:"taker,omitempty"`
@@ -39,7 +35,9 @@ const (
 	TradeLogStateProcessed TradeLogState = "processed"
 )
 
-func (o *CommonTradeLog) Serialize() []interface{} {
+// CommonTradeLogSerialize used for exchanges only storing fields in common trade logs,
+// if these exchanges need to store extra fields, they have to use themselves serialize function
+func CommonTradeLogSerialize(o *TradeLog) []interface{} {
 	// set default state is new
 	if o.State == "" {
 		o.State = TradeLogStateNew
@@ -68,6 +66,7 @@ func (o *CommonTradeLog) Serialize() []interface{} {
 	}
 }
 
+// CommonTradeLogColumns used for query in db and corresponding to CommonTradeLogSerialize function above when insert new row in db
 func CommonTradeLogColumns() []string {
 	return []string{
 		"order_hash",
@@ -90,19 +89,5 @@ func CommonTradeLogColumns() []string {
 		"maker_usd_amount",
 		"taker_usd_amount",
 		"state",
-	}
-}
-
-type Option func(c *CommonTradeLog)
-
-func WithMessageSender(msgSender string) Option {
-	return func(c *CommonTradeLog) {
-		c.MessageSender = msgSender
-	}
-}
-
-func WithInteractContract(interactContract string) Option {
-	return func(c *CommonTradeLog) {
-		c.InteractContract = interactContract
 	}
 }

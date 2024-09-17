@@ -30,13 +30,11 @@ type TradeLogHandler struct {
 }
 
 type logMetadata struct {
-	blockNumber      uint64
-	blockHash        string
-	txHash           string
-	txIndex          int
-	timestamp        uint64
-	messageSender    string
-	interactContract string
+	blockNumber uint64
+	blockHash   string
+	txHash      string
+	txIndex     int
+	timestamp   uint64
 }
 
 func NewTradeLogHandler(l *zap.SugaredLogger, rpc *rpcnode.Client, storage *tradelogs.Manager, parsers []parser.Parser,
@@ -61,18 +59,21 @@ func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, tim
 	for i, call := range calls {
 		logIndexStart = assignLogIndexes(&call.CallFrame, logIndexStart)
 		metadata := logMetadata{
-			blockNumber:      blockNumber,
-			blockHash:        blockHash,
-			txHash:           call.TxHash,
-			txIndex:          i,
-			timestamp:        timestamp,
-			messageSender:    call.CallFrame.From,
-			interactContract: call.CallFrame.To,
+			blockNumber: blockNumber,
+			blockHash:   blockHash,
+			txHash:      call.TxHash,
+			txIndex:     i,
+			timestamp:   timestamp,
 		}
 
 		tradeLogs := h.processCallFrame(call.CallFrame, metadata)
 		if len(tradeLogs) == 0 {
 			continue
+		}
+
+		for j := range tradeLogs {
+			tradeLogs[j].MessageSender = call.CallFrame.From
+			tradeLogs[j].InteractContract = call.CallFrame.To
 		}
 
 		err = h.storage.Insert(tradeLogs)
@@ -83,7 +84,10 @@ func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, tim
 
 		passCount, failCount := 0, 0
 		for _, log := range tradeLogs {
-			msgBytes, err := json.Marshal(log)
+			msgBytes, err := json.Marshal(kafka.Message{
+				Type: kafka.MessageTypeTradeLog,
+				Data: log,
+			})
 			if err != nil {
 				h.l.Errorw(" error when marshal trade log to json", "blockNumber", blockNumber, "log", log, "err", err)
 				failCount++
@@ -140,11 +144,7 @@ func (h *TradeLogHandler) processCallFrame(call types.CallFrame, metadata logMet
 		}
 
 		// parse trade log
-		tradeLogs, err := p.ParseWithCallFrame(
-			call, ethLog, metadata.timestamp,
-			storageTypes.WithMessageSender(metadata.messageSender),
-			storageTypes.WithInteractContract(metadata.interactContract),
-		)
+		tradeLogs, err := p.ParseWithCallFrame(call, ethLog, metadata.timestamp)
 		if err != nil {
 			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", p.Exchange())
 			continue
@@ -164,10 +164,28 @@ func (h *TradeLogHandler) findMatchingParser(log ethereumTypes.Log) parser.Parse
 }
 
 func (h *TradeLogHandler) RevertBlock(blocks []uint64) error {
+	if len(blocks) == 0 {
+		return nil
+	}
+
 	err := h.storage.Delete(blocks)
 	if err != nil {
 		return fmt.Errorf("delete blocks error: %w", err)
 	}
+
+	msgBytes, err := json.Marshal(kafka.Message{
+		Type: kafka.MessageTypeRevert,
+		Data: blocks,
+	})
+	if err != nil {
+		h.l.Errorw(" error when marshal revert message to json", "err", err)
+	}
+	err = h.publisher.Publish(h.kafkaTopic, msgBytes)
+	if err != nil {
+		h.l.Errorw("error when publish revert message", "err", err)
+	}
+	h.l.Infow("published revert message", "message", msgBytes)
+
 	return nil
 }
 

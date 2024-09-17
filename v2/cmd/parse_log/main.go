@@ -58,7 +58,7 @@ func run(c *cli.Context) error {
 
 	db, err := initDB(c)
 	if err != nil {
-		l.Panicw("cannot init DB", "err", err)
+		return fmt.Errorf("cannot init DB: %w", err)
 	}
 
 	// trade log manager
@@ -78,7 +78,7 @@ func run(c *cli.Context) error {
 	for i, url := range rpcURL {
 		client, err := ethclient.Dial(url)
 		if err != nil {
-			panic(fmt.Errorf("cannot dial eth client: %w", err))
+			return fmt.Errorf("cannot dial eth client: %w", err)
 		}
 		ethClients[i] = client
 	}
@@ -101,13 +101,13 @@ func run(c *cli.Context) error {
 	broadcastTopic := c.String(libapp.KafkaBroadcastTopic.Name)
 	err = kafka.ValidateTopicName(broadcastTopic)
 	if err != nil {
-		panic(fmt.Errorf("invalid kafka topic: %w", err))
+		return fmt.Errorf("invalid kafka topic: %w", err)
 	}
 
 	// kafka publisher for broadcasting trade logs
 	kafkaPublisher, err := kafka.NewPublisher(libapp.KafkaConfigFromFlags(c))
 	if err != nil {
-		panic(fmt.Errorf("cannot create kafka publisher: %w", err))
+		return fmt.Errorf("cannot create kafka publisher: %w", err)
 	}
 
 	// trade log handler
@@ -118,7 +118,7 @@ func run(c *cli.Context) error {
 
 	mostRecentBlock, err := getMostRecentBlock(l, s, rpcNode)
 	if err != nil {
-		panic(fmt.Errorf("cannot get most recent block: %w", err))
+		return fmt.Errorf("cannot get most recent block: %w", err)
 	}
 
 	// subscribe evm listener with worker as a consumer
@@ -129,6 +129,7 @@ func run(c *cli.Context) error {
 		c.Int(libapp.EVMListenerMaxTrackingBlock.Name),
 		w,
 		mostRecentBlock,
+		c.Int(libapp.EVMListenerClientTimeoutSecondFlag.Name),
 	)
 }
 

@@ -79,11 +79,11 @@ func (_m *MockStorage) Insert(orders []types.TradeLog) error {
 }
 
 // Type provides a mock function with given fields:
-func (_m *MockStorage) Type() string {
+func (_m *MockStorage) Exchange() string {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for Type")
+		panic("no return value specified for Exchange")
 	}
 
 	var r0 string

@@ -3,6 +3,7 @@ package rpcnode
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -44,7 +45,7 @@ func (c *Client) FetchTraceCalls(ctx context.Context, blockHash string) ([]types
 	return result, err
 }
 
-func (c *Client) FetchLogs(ctx context.Context, fromBlock, toBlock string, topics []string) ([]ethereumTypes.Log, error) {
+func (c *Client) FetchLogs(ctx context.Context, fromBlock, toBlock *big.Int, topics []string) ([]ethereumTypes.Log, error) {
 	var (
 		result []ethereumTypes.Log
 		err    error

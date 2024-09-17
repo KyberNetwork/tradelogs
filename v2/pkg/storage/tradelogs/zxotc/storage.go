@@ -5,14 +5,11 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"
-)
-
-const (
-	tradeLogsTable = "tradelogs_zerox"
 )
 
 type Storage struct {
@@ -27,20 +24,24 @@ func New(l *zap.SugaredLogger, db *sqlx.DB) *Storage {
 	}
 }
 
-func (s *Storage) Type() string {
-	return tradeLogsTable
+func (s *Storage) Exchange() string {
+	return constant.ExZeroX
+}
+
+func (s *Storage) tableName() string {
+	return constant.TableZeroX
 }
 
 func (s *Storage) Insert(orders []storageTypes.TradeLog) error {
 	if len(orders) == 0 {
 		return nil
 	}
-	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(tradeLogsTable).Columns(
+	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(s.tableName()).Columns(
 		storageTypes.CommonTradeLogColumns()...,
 	)
 	for _, order := range orders {
 		b = b.Values(
-			order.Serialize()...,
+			storageTypes.CommonTradeLogSerialize(&order)...,
 		)
 	}
 	q, p, err := b.Suffix(`ON CONFLICT(block_number, log_index) DO UPDATE 
@@ -78,7 +79,7 @@ func (s *Storage) Insert(orders []storageTypes.TradeLog) error {
 func (s *Storage) Get(query storageTypes.TradeLogsQuery) ([]storageTypes.TradeLog, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Select(storageTypes.CommonTradeLogColumns()...).
-		From(tradeLogsTable)
+		From(s.tableName())
 	if query.FromTime != 0 {
 		builder = builder.Where(squirrel.GtOrEq{"timestamp": query.FromTime})
 	}
@@ -104,15 +105,11 @@ func (s *Storage) Get(query storageTypes.TradeLogsQuery) ([]storageTypes.TradeLo
 	if err != nil {
 		return nil, err
 	}
-	var tradeLogs []TradeLog
-	if err := s.db.Select(&tradeLogs, q, p...); err != nil {
+	var results []storageTypes.TradeLog
+	if err := s.db.Select(&results, q, p...); err != nil {
 		return nil, err
 	}
-	result := make([]storageTypes.TradeLog, len(tradeLogs))
-	for i, tradeLog := range tradeLogs {
-		result[i] = &tradeLog
-	}
-	return result, nil
+	return results, nil
 }
 
 func (s *Storage) Delete(blocks []uint64) error {
@@ -120,24 +117,16 @@ func (s *Storage) Delete(blocks []uint64) error {
 		return nil
 	}
 	q, p, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Delete(tradeLogsTable).
+		Delete(s.tableName()).
 		Where(squirrel.Eq{"block_number": blocks}).
 		ToSql()
 	if err != nil {
-		s.l.Errorw("Error while building query", "exchange", s.Type(), "error", err)
-		return fmt.Errorf("failed to build query for exchange %s: %w", s.Type(), err)
+		s.l.Errorw("Error while building query", "exchange", s.Exchange(), "error", err)
+		return fmt.Errorf("failed to build query for exchange %s: %w", s.Exchange(), err)
 	}
 	if _, err = s.db.Exec(q, p...); err != nil {
-		s.l.Errorw("Error while deleting", "exchange", s.Type(), "error", err)
-		return fmt.Errorf("failed to delete blocks for exchange %s: %w", s.Type(), err)
+		s.l.Errorw("Error while deleting", "exchange", s.Exchange(), "error", err)
+		return fmt.Errorf("failed to delete blocks for exchange %s: %w", s.Exchange(), err)
 	}
 	return nil
-}
-
-type TradeLog struct {
-	*storageTypes.CommonTradeLog
-}
-
-func (t *TradeLog) Type() string {
-	return tradeLogsTable
 }
