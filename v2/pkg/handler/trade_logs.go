@@ -51,10 +51,18 @@ func NewTradeLogHandler(l *zap.SugaredLogger, rpc *rpcnode.Client, storage *trad
 }
 
 func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, timestamp uint64) error {
+	// remove old trade log in db of processing block
+	err := h.RevertBlock([]uint64{blockNumber})
+	if err != nil {
+		return fmt.Errorf("error when revert block number %d before processing: %w", blockNumber, err)
+	}
+
+	// fetch trace call
 	calls, err := h.rpcClient.FetchTraceCalls(context.Background(), blockHash)
 	if err != nil {
 		return fmt.Errorf("fetch calls error: %w", err)
 	}
+
 	logIndexStart := 0
 	for i, call := range calls {
 		logIndexStart = assignLogIndexes(&call.CallFrame, logIndexStart)
