@@ -8,17 +8,17 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 )
 
-type ParseLog struct {
+type LogParser struct {
 	handler *handler.TradeLogHandler
 }
 
-func NewParseLog(handler *handler.TradeLogHandler) *ParseLog {
-	return &ParseLog{
+func NewParseLog(handler *handler.TradeLogHandler) *LogParser {
+	return &LogParser{
 		handler: handler,
 	}
 }
 
-func (w *ParseLog) Publish(ctx context.Context, topic string, data interface{}) error {
+func (w *LogParser) Publish(ctx context.Context, topic string, data interface{}) error {
 	_, ok := data.(types.Message)
 	if !ok {
 		return fmt.Errorf("invalid data: not a message")
@@ -30,7 +30,7 @@ func (w *ParseLog) Publish(ctx context.Context, topic string, data interface{}) 
 	return nil
 }
 
-func (w *ParseLog) processMessage(msg types.Message) error {
+func (w *LogParser) processMessage(msg types.Message) error {
 	var deleteBlocks []uint64
 
 	for _, block := range msg.RevertedBlocks {

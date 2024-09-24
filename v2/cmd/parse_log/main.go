@@ -7,8 +7,8 @@ import (
 	"os"
 	"strconv"
 
-	libapp "github.com/KyberNetwork/tradelogs/v2/internal/app"
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
+	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
@@ -32,9 +32,7 @@ func main() {
 	app.Action = run
 
 	app.Flags = append(app.Flags, libapp.PostgresSQLFlags("tradelogs_v2")...)
-	app.Flags = append(app.Flags, libapp.RedisFlags()...)
 	app.Flags = append(app.Flags, libapp.EvmListenerFlags()...)
-	app.Flags = append(app.Flags, libapp.HTTPServerFlags()...)
 	app.Flags = append(app.Flags, libapp.RPCNodeFlags()...)
 	app.Flags = append(app.Flags, libapp.KafkaFlag()...)
 	//app.Flags = append(app.Flags, pricefiller.PriceFillerFlags()...)
