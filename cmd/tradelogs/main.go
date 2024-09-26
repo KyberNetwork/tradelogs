@@ -13,6 +13,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/bebop"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinchv6"
+	"github.com/KyberNetwork/tradelogs/pkg/parser/pancakeswap"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/uniswapx"
 	uniswapxv1 "github.com/KyberNetwork/tradelogs/pkg/parser/uniswapx_v1"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3"
@@ -119,6 +120,7 @@ func run(c *cli.Context) error {
 		uniswapx.MustNewParser(traceCalls),
 		bebop.MustNewParser(traceCalls),
 		zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClients[0], common.HexToAddress(parser.Deployer0xV3)),
+		pancakeswap.MustNewParser(traceCalls),
 	}
 
 	binanceClient := binance.NewClient(c.String(pricefiller.BinanceAPIKeyFlag.Name), c.String(pricefiller.BinanceSecretKeyFlag.Name))
