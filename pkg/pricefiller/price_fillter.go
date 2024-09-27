@@ -29,6 +29,11 @@ const (
 var (
 	ErrNoPrice               = errors.New(("no price from binance"))
 	ErrWeirdTokenCatalogResp = errors.New("weird token catalog response")
+
+	mappedMultiplier = map[string]float64{
+		"1MBABYDOGE": 1e-6,
+		"1000SATS":   1e-3,
+	}
 )
 
 type CoinInfo struct {
@@ -97,7 +102,11 @@ func (p *PriceFiller) getPrice(token string, timestamp int64) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return (low + high) / 2, nil
+	multiplier := 1.0
+	if m, ok := mappedMultiplier[token]; ok {
+		multiplier = m
+	}
+	return multiplier * (low + high) / 2, nil
 }
 
 func (p *PriceFiller) updateAllCoinInfo() error {
