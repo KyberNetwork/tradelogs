@@ -27,6 +27,6 @@ COPY cmd/tradelogs/migrations migrations
 ### tradelogs v2
 WORKDIR /parse_log
 COPY --from=builder /src/parse_log /parse_log/parse_log
-COPY v2/cmd/parse_log/migrations migrations
+COPY v2/cmd/parse_log/migrations /parse_log/migrations
 
-ENTRYPOINT /cmd/app
+CMD /cmd/app
