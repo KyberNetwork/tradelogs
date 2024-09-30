@@ -8,7 +8,12 @@ services:
       POSTGRES_PASSWORD: test
     ports:
       - '127.0.0.1:5432:5432'
+  # redis for trade log v1
   redis:
     image: 'redis:7'
     ports:
       - '127.0.0.1:6379:6379'
+  kafka:
+    image: 'apache/kafka:3.8.0'
+    ports:
+      - '127.0.0.1:9092:9092'
