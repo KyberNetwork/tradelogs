@@ -151,7 +151,7 @@ func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog) (storage.TradeLog
 	order, err = p.recursiveDetectOneInchRFQTrades(order, traceCall, &count)
 	if err != nil {
 		traceData, _ := json.Marshal(traceCall)
-		return order, fmt.Errorf("error when parse tracecall %s %w", string(traceData), err)
+		return order, fmt.Errorf("error when parse tracecall %s %d %w", string(traceData), count, err)
 	}
 
 	return order, nil
