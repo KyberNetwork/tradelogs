@@ -20,6 +20,8 @@ const (
 	FilledEvent = "Fill"
 )
 
+var BPS = big.NewInt(10000)
+
 type ResolvedOrder struct {
 	Info struct {
 		Reactor                      common.Address "json:\"reactor\""
@@ -260,9 +262,11 @@ func (p *Parser) updateOrder(internal storage.TradeLog, parsed []interface{}) (s
 
 	makerAmount := big.NewInt(0)
 	for _, o := range order.Outputs {
-		makerAmount = makerAmount.Add(makerAmount, decay(o.StartAmount, o.EndAmount,
+		output := decay(o.StartAmount, o.EndAmount,
 			order.CosignerData.DecayStartTime, order.CosignerData.DecayEndTime,
-			big.NewInt(int64(internal.Timestamp/1000))))
+			big.NewInt(int64(internal.Timestamp/1000)))
+		output = mulDivUp(output, new(big.Int).Add(BPS, order.CosignerData.ExclusivityOverrideBps), BPS)
+		makerAmount = makerAmount.Add(makerAmount, output)
 	}
 	internal.MakerTokenAmount = makerAmount.String()
 	if order.Info.Deadline != nil {
