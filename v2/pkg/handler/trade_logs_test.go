@@ -22,7 +22,7 @@ import (
 var rpcURL = os.Getenv("TEST_RPC_URL")
 
 func TestTradeLogHandler_ProcessBlock(t *testing.T) {
-	t.Skip("Need to set the rpc url env that enables the trace call JSON-RPC")
+	//t.Skip("Need to set the rpc url env that enables the trace call JSON-RPC")
 
 	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
@@ -32,7 +32,8 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 
 	mockStorage := &mocks.MockStorage{}
 	mockStorage.On("Exchange").Return("zerox").
-		On("Insert", mock.Anything).Return(nil)
+		On("Insert", mock.Anything).Return(nil).
+		On("Delete", mock.Anything).Return(nil)
 	s := tradelogs.NewManager(zap.S(), []types.Storage{mockStorage})
 
 	p := zxotc2.MustNewParser()
@@ -40,10 +41,7 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	mockKafka := &mocks.MockPublisher{}
 	mockKafka.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
-	mockState := &mocks.MockState{}
-	mockState.On("SetState", mock.Anything, mock.Anything).Return(nil)
-
-	h := NewTradeLogHandler(zap.S(), client, s, []parser.Parser{p}, "test", mockKafka, mockState)
+	h := NewTradeLogHandler(zap.S(), client, s, []parser.Parser{p}, "test", mockKafka)
 
 	err = h.ProcessBlock("0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048", 20181990, 1725436442)
 	if err != nil {
@@ -51,7 +49,7 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	}
 
 	assert.True(t, mockStorage.AssertNumberOfCalls(t, "Insert", 1))
-	assert.True(t, mockKafka.AssertNumberOfCalls(t, "Publish", 1))
+	assert.True(t, mockKafka.AssertNumberOfCalls(t, "Publish", 2))
 }
 
 func TestAssignLogIndexes(t *testing.T) {

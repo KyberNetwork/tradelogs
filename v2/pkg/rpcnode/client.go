@@ -45,27 +45,6 @@ func (c *Client) FetchTraceCalls(ctx context.Context, blockHash string) ([]types
 	return result, err
 }
 
-func (c *Client) FetchLogs(ctx context.Context, fromBlock, toBlock *big.Int, topics []string) ([]ethereumTypes.Log, error) {
-	var (
-		result []ethereumTypes.Log
-		err    error
-	)
-	for i, client := range c.ethClient {
-		err = client.Client().CallContext(ctx, &result, "eth_getLogs", map[string]interface{}{
-			"fromBlock": fromBlock,
-			"toBlock":   toBlock,
-			"topics":    topics,
-		})
-		if err != nil {
-			c.l.Errorw("fetch logs failed", "error", err, "clientID", i)
-			continue
-		}
-		return result, nil
-	}
-
-	return result, err
-}
-
 func (c *Client) FetchLogsByBlockHash(ctx context.Context, blockHash string) ([]ethereumTypes.Log, error) {
 	var (
 		result []ethereumTypes.Log
@@ -99,4 +78,20 @@ func (c *Client) GetBlockNumber(ctx context.Context) (uint64, error) {
 		return blockNumber, nil
 	}
 	return 0, fmt.Errorf("block number not found: %w", err)
+}
+
+func (c *Client) BlockByNumber(ctx context.Context, blockNumber uint64) (*ethereumTypes.Block, error) {
+	var (
+		block *ethereumTypes.Block
+		err   error
+	)
+	for i, client := range c.ethClient {
+		block, err = client.BlockByNumber(ctx, new(big.Int).SetUint64(blockNumber))
+		if err != nil {
+			c.l.Errorw("get block failed", "error", err, "clientID", i, "blockNumber", blockNumber)
+			continue
+		}
+		return block, nil
+	}
+	return nil, fmt.Errorf("block with number %d not found: %w", blockNumber, err)
 }

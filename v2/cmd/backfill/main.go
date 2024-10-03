@@ -1,21 +1,20 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 
+	"github.com/KyberNetwork/go-binance/v2"
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/pricefiller"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
@@ -31,9 +30,9 @@ func main() {
 	app.Name = "trade log parser service"
 	app.Action = run
 
-	app.Flags = append(app.Flags, libapp.PostgresSQLFlags("tradelogs_v2")...)
-	app.Flags = append(app.Flags, libapp.EvmListenerFlags()...)
+	app.Flags = append(app.Flags, libapp.PriceFillerFlags()...)
 	app.Flags = append(app.Flags, libapp.RPCNodeFlags()...)
+	app.Flags = append(app.Flags, libapp.PostgresSQLFlags("tradelogs_v2")...)
 	app.Flags = append(app.Flags, libapp.KafkaFlag()...)
 
 	if err := app.Run(os.Args); err != nil {
@@ -51,7 +50,7 @@ func run(c *cli.Context) error {
 
 	zap.ReplaceGlobals(logger)
 	l := logger.Sugar()
-	l.Infow("Starting log parser service")
+	l.Infow("Starting backfill service")
 
 	db, err := initDB(c)
 	if err != nil {
@@ -59,11 +58,20 @@ func run(c *cli.Context) error {
 	}
 
 	// trade log manager
-	manager := tradelogs.NewManager(l, []storageTypes.Storage{
+	storages := []storageTypes.Storage{
 		zxotcStorage.New(l, db),
-	})
-	// state storage
-	s := state.New(l, db)
+	}
+	manager := tradelogs.NewManager(l, storages)
+
+	// price filler
+	binanceClient := binance.NewClient(c.String(libapp.BinanceAPIKeyFlag.Name), c.String(libapp.BinanceSecretKeyFlag.Name))
+	_, err = pricefiller.NewPriceFiller(l, binanceClient, storages)
+	if err != nil {
+		return fmt.Errorf("cannot init price filler: %w", err)
+	}
+
+	// backfill storage
+	s := backfill.New(l, db)
 
 	// rpc node to query trace call
 	rpcURL := c.StringSlice(libapp.RPCUrlFlagName)
@@ -111,23 +119,9 @@ func run(c *cli.Context) error {
 	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, parsers, broadcastTopic, kafkaPublisher)
 
 	// parse log worker
-	w := worker.NewParseLog(tradeLogHandler, s, l)
+	w := worker.NewBackFiller(tradeLogHandler, s, l, rpcNode)
 
-	mostRecentBlock, err := getMostRecentBlock(l, s, rpcNode)
-	if err != nil {
-		return fmt.Errorf("cannot get most recent block: %w", err)
-	}
-
-	// subscribe evm listener with worker as a consumer
-	return evmlistenerclient.SubscribeEvent(
-		l,
-		c.String(libapp.EVMListenerWsRPCUrlFlag.Name),
-		c.String(libapp.EVMListenerHTTPRPCUrlFlag.Name),
-		c.Int(libapp.EVMListenerMaxTrackingBlock.Name),
-		w,
-		mostRecentBlock,
-		c.Int(libapp.EVMListenerClientTimeoutSecondFlag.Name),
-	)
+	return w.Run()
 }
 
 func initDB(c *cli.Context) (*sqlx.DB, error) {
@@ -149,21 +143,4 @@ func initDB(c *cli.Context) (*sqlx.DB, error) {
 		return nil, err
 	}
 	return db, nil
-}
-
-func getMostRecentBlock(l *zap.SugaredLogger, s state.Storage, rpcClient *rpcnode.Client) (uint64, error) {
-	var blockNumber uint64
-	block, err := s.GetState(state.ProcessedBlockKey)
-	if err == nil {
-		blockNumber, err = strconv.ParseUint(block, 10, 64)
-		if err == nil {
-			return blockNumber, nil
-		}
-	}
-	l.Errorw("cannot get from db", "err", err)
-	blockNumber, err = rpcClient.GetBlockNumber(context.Background())
-	if err != nil {
-		return 0, fmt.Errorf("cannot get from node: %w", err)
-	}
-	return blockNumber, nil
 }
