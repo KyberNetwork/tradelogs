@@ -131,3 +131,7 @@ func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 		len(log.Topics) > 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.eventHash)
 }
+
+func (p *Parser) Address() string {
+	return parser.Addr0x
+}

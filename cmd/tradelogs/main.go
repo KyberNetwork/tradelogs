@@ -116,7 +116,7 @@ func run(c *cli.Context) error {
 		kyberswaprfq.MustNewParser(),
 		hashflowv3.MustNewParser(),
 		oneinchv6.MustNewParser(traceCalls),
-		uniswapxv1.MustNewParser(traceCalls),
+		// uniswapxv1.MustNewParser(traceCalls),
 		uniswapx.MustNewParser(traceCalls),
 		bebop.MustNewParser(traceCalls),
 		zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClients[0], common.HexToAddress(parser.Deployer0xV3)),
