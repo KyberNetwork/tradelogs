@@ -15,7 +15,6 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/parser/oneinchv6"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/pancakeswap"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/uniswapx"
-	uniswapxv1 "github.com/KyberNetwork/tradelogs/pkg/parser/uniswapx_v1"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3"
 	"github.com/KyberNetwork/tradelogs/pkg/pricefiller"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
