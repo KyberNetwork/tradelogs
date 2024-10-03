@@ -211,7 +211,7 @@ func (p *Parser) recursiveDetectRFQTrades(order storage.TradeLog, call types.Cal
 		if err != nil {
 			continue
 		}
-		finalOrder, err := p.updateOrder(order, parsedOrder)
+		finalOrder, err := p.updateOrder(order, parsedOrder, common.HexToAddress(call.From))
 		if err != nil {
 			continue
 		}
@@ -228,7 +228,7 @@ func (p *Parser) recursiveDetectRFQTrades(order storage.TradeLog, call types.Cal
 	return order, fmt.Errorf("%w %s", parser.ErrNotFoundTrade, string(traceData))
 }
 
-func (p *Parser) updateOrder(internal storage.TradeLog, parsed []interface{}) (storage.TradeLog, error) {
+func (p *Parser) updateOrder(internal storage.TradeLog, parsed []interface{}, sender common.Address) (storage.TradeLog, error) {
 	data, err := json.Marshal(parsed)
 	if err != nil {
 		return storage.TradeLog{}, err
@@ -253,19 +253,21 @@ func (p *Parser) updateOrder(internal storage.TradeLog, parsed []interface{}) (s
 
 	internal.TakerToken = order.InputToken.InputToken.String()
 	internal.MakerToken = order.Outputs[0].Token.String()
-
+	blockTime := big.NewInt(int64(internal.Timestamp / 1000))
 	internal.TakerTokenAmount = decay(order.InputToken.InputStartAmount,
 		order.InputToken.InputEndAmount,
 		order.CosignerData.DecayStartTime,
 		order.CosignerData.DecayEndTime,
-		big.NewInt(int64(internal.Timestamp/1000))).String()
+		blockTime).String()
 
 	makerAmount := big.NewInt(0)
 	for _, o := range order.Outputs {
 		output := decay(o.StartAmount, o.EndAmount,
 			order.CosignerData.DecayStartTime, order.CosignerData.DecayEndTime,
-			big.NewInt(int64(internal.Timestamp/1000)))
-		output = mulDivUp(output, new(big.Int).Add(BPS, order.CosignerData.ExclusivityOverrideBps), BPS)
+			blockTime)
+		if !hasFillingRights(order.CosignerData.ExclusiveFiller, sender, order.CosignerData.DecayStartTime, blockTime) {
+			output = mulDivUp(output, new(big.Int).Add(BPS, order.CosignerData.ExclusivityOverrideBps), BPS)
+		}
 		makerAmount = makerAmount.Add(makerAmount, output)
 	}
 	internal.MakerTokenAmount = makerAmount.String()
@@ -299,10 +301,6 @@ func decay(startAmount, endAmount, decayStartTime, decayEndTime, blockTime *big.
 	return
 }
 
-// func handleOverride(amount, exclusivityOverrideBps, BPS *big.Int) *big.Int {
-// 	return mulDiv(amount, new(big.Int).Add(exclusivityOverrideBps, BPS), BPS)
-// }
-
 func mulDiv(a, b, c *big.Int) *big.Int {
 	return new(big.Int).Div(new(big.Int).Mul(a, b), c)
 }
@@ -317,9 +315,9 @@ func mulDivUp(x, y, denominator *big.Int) *big.Int {
 	return result
 }
 
-// func checkExclusivity(exclusive, sender common.Address, exclusivityEndTime, ts uint64) bool {
-// 	return exclusive == common.Address{} || ts > exclusivityEndTime || exclusive == sender
-// }
+func hasFillingRights(exclusive, sender common.Address, exclusivityEndTime, blockTime *big.Int) bool {
+	return exclusive == common.Address{} || blockTime.Cmp(exclusivityEndTime) > 0 || exclusive == sender
+}
 
 func (p *Parser) Exchange() string {
 	return parser.ExUniswapX
