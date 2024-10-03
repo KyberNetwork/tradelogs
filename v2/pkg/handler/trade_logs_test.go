@@ -22,7 +22,7 @@ import (
 var rpcURL = os.Getenv("TEST_RPC_URL")
 
 func TestTradeLogHandler_ProcessBlock(t *testing.T) {
-	//t.Skip("Need to set the rpc url env that enables the trace call JSON-RPC")
+	t.Skip("Need to set the rpc url env that enables the trace call JSON-RPC")
 
 	ethClient, err := ethclient.Dial(rpcURL)
 	if err != nil {
