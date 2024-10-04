@@ -9,6 +9,7 @@
   "contract_address": "0x7966aF62034313D87Ede39380bf60f1A84c62BE7",
   "block_number": 20285760,
   "tx_hash": "0xb244877d0cf0badcf2ac82dbb3cbf338b420ab5d1c6e6630fce4a4874121e427",
+  "event_hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "log_index": 380,
   "timestamp": 1000,
   "expiration_date": 1720731029
