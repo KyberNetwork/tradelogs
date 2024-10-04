@@ -32,8 +32,8 @@ func TestFetchEvent(t *testing.T) {
 	require.NoError(t, err)
 	logs, err := client.FilterLogs(context.Background(), ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(19517464),
-		ToBlock:   big.NewInt(19517464),
+		FromBlock: big.NewInt(20890481),
+		ToBlock:   big.NewInt(20890481),
 		Addresses: nil,
 		Topics: [][]common.Hash{
 			{
@@ -49,7 +49,7 @@ func TestFetchEvent(t *testing.T) {
 
 func TestParseEvent(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
-	eventRaw := `[{"address":"0x111111125421ca6dc452d289314280a0f8842a65","topics":["0xfec331350fce78ba658e082a71da20ac9f8d798a99b3c79681c8440cbfe77e07"],"data":"0x2c680fc902966ed935ddf9dc75550a32f1b2d1fba7dcaa7e4ab3b541734acddb00000000000000000000000000000000000000000000021246e3d52a827b39b7","blockNumber":"0x129d018","transactionHash":"0x4fa77df92aa4726ddbf54a41f72ca78a57035793c50e86643a25a058a27e35f4","transactionIndex":"0x6","blockHash":"0xa8eaa16d7ca8d934343bfe5fbb14bfeab272143f65fbd51f9caecf67754cfd29","logIndex":"0x53","removed":false},{"address":"0x111111125421ca6dc452d289314280a0f8842a65","topics":["0xfec331350fce78ba658e082a71da20ac9f8d798a99b3c79681c8440cbfe77e07"],"data":"0x2c680fc902966ed935ddf9dc75550a32f1b2d1fba7dcaa7e4ab3b541734acddb00000000000000000000000000000000000000000000020c219b06bffa614286","blockNumber":"0x129d018","transactionHash":"0x4fa77df92aa4726ddbf54a41f72ca78a57035793c50e86643a25a058a27e35f4","transactionIndex":"0x6","blockHash":"0xa8eaa16d7ca8d934343bfe5fbb14bfeab272143f65fbd51f9caecf67754cfd29","logIndex":"0x60","removed":false},{"address":"0x111111125421ca6dc452d289314280a0f8842a65","topics":["0xfec331350fce78ba658e082a71da20ac9f8d798a99b3c79681c8440cbfe77e07"],"data":"0xe0f3e2f9d0dbc1d72d355d2f80328b4e432d316c91a011d2fa26b56b7a39c371000000000000000000000000000000000000000000000000e1394e6d5fa7bd71","blockNumber":"0x129d018","transactionHash":"0x4fa77df92aa4726ddbf54a41f72ca78a57035793c50e86643a25a058a27e35f4","transactionIndex":"0x6","blockHash":"0xa8eaa16d7ca8d934343bfe5fbb14bfeab272143f65fbd51f9caecf67754cfd29","logIndex":"0x6a","removed":false}]`
+	eventRaw := `[{"address":"0x111111125421ca6dc452d289314280a0f8842a65","topics":["0xfec331350fce78ba658e082a71da20ac9f8d798a99b3c79681c8440cbfe77e07"],"data":"0xb81725973077ecc6db7dd73510be46152917f31ab7d02210aace851edc0f3fbb000000000000000000000000000000000000000000000000a5953ec9be11bd73","blockNumber":"0x13ec371","transactionHash":"0x09b63a10295261192885b38af317ba138ad7fe5828ce25524e7f0f053e250458","transactionIndex":"0x7","blockHash":"0x291e59d96ccc8b661842cfd9c4dcce1d11ed30cd4cf2b8034bff2a8d7a595785","logIndex":"0x3e","removed":false}]`
 	events := []types.Log{}
 	err := json.Unmarshal([]byte(eventRaw), &events)
 	require.NoError(t, err)

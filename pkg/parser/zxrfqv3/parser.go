@@ -359,3 +359,7 @@ func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 	return p.contractABIs.containAddress(log.Address) &&
 		len(log.Topics) == 0
 }
+
+func (p *Parser) Address() string {
+	return ""
+}

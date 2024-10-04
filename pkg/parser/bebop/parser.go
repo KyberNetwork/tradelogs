@@ -432,3 +432,7 @@ func getAggregateOrderInfo(order AggregateOrder) *big.Int {
 	}
 	return quoteTakerAmount
 }
+
+func (p *Parser) Address() string {
+	return parser.AddrBebop
+}
