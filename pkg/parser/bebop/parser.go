@@ -23,6 +23,9 @@ import (
 const (
 	TradeEvent = "BebopOrder"
 	OrderParam = "order"
+
+	balanceOfMethodID                  = "0x70a08231"
+	swapSingleFromContractFunctionName = "swapSingleFromContract"
 )
 
 var (
@@ -206,7 +209,7 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 		}
 		break
 	}
-	if filledTakerAmount == nil {
+	if filledTakerAmount == nil && contractCall.Name != swapSingleFromContractFunctionName {
 		return order, ErrParamNotFound
 	}
 	for _, param := range contractCall.Params {
@@ -215,7 +218,7 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 		}
 		switch {
 		case p.singleOrderFunc.Has(contractCall.Name):
-			return p.parseSingleSwap(order, contractCall, param, filledTakerAmount)
+			return p.parseSingleSwap(order, contractCall, param, filledTakerAmount, internalCall)
 		case p.multiOrderFunc.Has(contractCall.Name):
 			return p.parseMultiSwap(order, contractCall, param, filledTakerAmount)
 		case p.aggregateOrderFunc.Has(contractCall.Name):
@@ -281,10 +284,34 @@ func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 		strings.EqualFold(log.Topics[0].String(), p.eventHash)
 }
 
+func (p *Parser) getFilledTakerAmount(order SingleOrder, traceCall types.CallFrame) *big.Int {
+	for _, call := range traceCall.Calls {
+		if call.From != strings.ToLower(p.Address()) {
+			continue
+		}
+		if call.To != order.TakerToken {
+			continue
+		}
+		if !strings.HasPrefix(call.Input, balanceOfMethodID) {
+			continue
+		}
+		if len(call.Output) <= 2 {
+			continue
+		}
+		balance, ok := new(big.Int).SetString(call.Output[2:], 16)
+		if !ok {
+			continue
+		}
+		return balance
+	}
+	return nil
+}
+
 func (p *Parser) parseSingleSwap(order storage.TradeLog,
 	contractCall *tradingTypes.ContractCall,
 	orderParam tradingTypes.ContractCallParam,
-	fillTakerAmount *big.Int) (storage.TradeLog, error) {
+	fillTakerAmount *big.Int,
+	internalCall types.CallFrame) (storage.TradeLog, error) {
 	var rfqOrder SingleOrder
 	if err := unpackOrder(orderParam.Value, &rfqOrder); err != nil {
 		return order, err
@@ -299,6 +326,13 @@ func (p *Parser) parseSingleSwap(order storage.TradeLog,
 			rfqOrder.MakerAmount = oldOrder.MakerAmount
 		}
 		break
+	}
+
+	if contractCall.Name == swapSingleFromContractFunctionName {
+		fillTakerAmount = p.getFilledTakerAmount(rfqOrder, internalCall)
+		if fillTakerAmount == nil {
+			return order, ErrParamNotFound
+		}
 	}
 
 	if fillTakerAmount.Cmp(big.NewInt(0)) > 0 && fillTakerAmount.Cmp(rfqOrder.TakerAmount) < 0 {
@@ -431,4 +465,8 @@ func getAggregateOrderInfo(order AggregateOrder) *big.Int {
 		}
 	}
 	return quoteTakerAmount
+}
+
+func (p *Parser) Address() string {
+	return parser.AddrBebop
 }

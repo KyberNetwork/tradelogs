@@ -20,6 +20,8 @@ const (
 	FilledEvent = "Fill"
 )
 
+var BPS = big.NewInt(10000)
+
 type ResolvedOrder struct {
 	Info struct {
 		Reactor                      common.Address "json:\"reactor\""
@@ -189,7 +191,7 @@ func (p *Parser) recursiveDetectRFQTrades(order storage.TradeLog, call types.Cal
 		if err != nil {
 			continue
 		}
-		finalOrder, err := p.updateOrder(order, parsedOrder)
+		finalOrder, err := p.updateOrder(order, parsedOrder, common.HexToAddress(call.From))
 		if err != nil {
 			continue
 		}
@@ -206,7 +208,7 @@ func (p *Parser) recursiveDetectRFQTrades(order storage.TradeLog, call types.Cal
 	return order, fmt.Errorf("%w %s", parser.ErrNotFoundTrade, string(traceData))
 }
 
-func (p *Parser) updateOrder(internal storage.TradeLog, parsed []interface{}) (storage.TradeLog, error) {
+func (p *Parser) updateOrder(internal storage.TradeLog, parsed []interface{}, sender common.Address) (storage.TradeLog, error) {
 	data, err := json.Marshal(parsed)
 	if err != nil {
 		return storage.TradeLog{}, err
@@ -220,18 +222,21 @@ func (p *Parser) updateOrder(internal storage.TradeLog, parsed []interface{}) (s
 	}
 	order := resolvedOrder[0]
 	internal.TakerToken = order.InputToken.String()
+	blockTime := big.NewInt(int64(internal.Timestamp / 1000))
 	internal.TakerTokenAmount = decay(order.InputStartAmount,
 		order.InputEndAmount,
 		order.DecayStartTime,
 		order.DecayEndTime,
-		big.NewInt(int64(internal.Timestamp/1000))).String()
+		blockTime).String()
 	internal.MakerToken = order.Outputs[0].Token.String()
 
 	makerAmount := big.NewInt(0)
 	for _, o := range order.Outputs {
-		makerAmount = makerAmount.Add(makerAmount, decay(o.StartAmount, o.EndAmount,
-			order.DecayStartTime, order.DecayEndTime,
-			big.NewInt(int64(internal.Timestamp/1000))))
+		output := decay(o.StartAmount, o.EndAmount, order.DecayStartTime, order.DecayEndTime, blockTime)
+		if !hasFillingRights(order.ExclusiveFiller, sender, order.DecayStartTime, blockTime) {
+			output = mulDivUp(output, new(big.Int).Add(BPS, order.ExclusivityOverrideBps), BPS)
+		}
+		makerAmount = makerAmount.Add(makerAmount, output)
 	}
 	internal.MakerTokenAmount = makerAmount.String()
 	if order.Info.Deadline != nil {
@@ -266,6 +271,20 @@ func mulDiv(a, b, c *big.Int) *big.Int {
 	return new(big.Int).Div(new(big.Int).Mul(a, b), c)
 }
 
+func mulDivUp(x, y, denominator *big.Int) *big.Int {
+	product := new(big.Int).Mul(x, y)
+	remainder := new(big.Int).Mod(product, denominator)
+	result := new(big.Int).Div(product, denominator)
+	if remainder.Cmp(big.NewInt(0)) > 0 {
+		result.Add(result, big.NewInt(1))
+	}
+	return result
+}
+
+func hasFillingRights(exclusive, sender common.Address, exclusivityEndTime, blockTime *big.Int) bool {
+	return exclusive == common.Address{} || blockTime.Cmp(exclusivityEndTime) > 0 || exclusive == sender
+}
+
 func (p *Parser) Exchange() string {
 	return parser.ExPancackeSwap
 }
@@ -290,4 +309,8 @@ func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 	return strings.EqualFold(log.Address.String(), parser.AddrPancakewap) &&
 		len(log.Topics) > 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.eventHash)
+}
+
+func (p *Parser) Address() string {
+	return parser.AddrPancakewap
 }

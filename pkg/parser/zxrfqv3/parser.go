@@ -31,6 +31,8 @@ type Parser struct {
 	l               *zap.SugaredLogger
 }
 
+const altEventHash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
 func MustNewParserWithDeployer(cache *tracecall.Cache, ethClient *ethclient.Client, deployerAddress common.Address, contractAbiSupported ...ContractABI) *Parser {
 	if isZeroAddress(deployerAddress) {
 		log.Fatalf("deployer Address is zero Address")
@@ -153,6 +155,7 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (stora
 	tradeLog.TxHash = log.TxHash.Hex()
 	tradeLog.Timestamp = blockTime * 1000
 	tradeLog.ContractAddress = log.Address.Hex()
+	tradeLog.EventHash = altEventHash
 	orderHash, err := getOrderHash(log.Data)
 	if err != nil {
 		return storage.TradeLog{}, fmt.Errorf("get order hash error %w", err)
@@ -355,4 +358,8 @@ func calculateTakerTokenAmount(makerTokenAmount *big.Int, maxTakerTokenAmount *b
 func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 	return p.contractABIs.containAddress(log.Address) &&
 		len(log.Topics) == 0
+}
+
+func (p *Parser) Address() string {
+	return ""
 }

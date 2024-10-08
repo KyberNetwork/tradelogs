@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/lru"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -38,11 +37,10 @@ func init() {
 }
 
 type Parser struct {
-	abi            *abi.ABI
-	ps             *Oneinchv6Filterer
-	eventHash      string
-	traceCalls     *tracecall.Cache
-	orderHashCount lru.BasicLRU[string, int]
+	abi        *abi.ABI
+	ps         *Oneinchv6Filterer
+	eventHash  string
+	traceCalls *tracecall.Cache
 }
 
 func MustNewParser(cache *tracecall.Cache) *Parser {
@@ -60,11 +58,10 @@ func MustNewParser(cache *tracecall.Cache) *Parser {
 	}
 
 	return &Parser{
-		ps:             ps,
-		abi:            ab,
-		eventHash:      event.ID.String(),
-		traceCalls:     cache,
-		orderHashCount: lru.NewBasicLRU[string, int](100),
+		ps:         ps,
+		abi:        ab,
+		eventHash:  event.ID.String(),
+		traceCalls: cache,
 	}
 }
 
@@ -75,25 +72,25 @@ func (p *Parser) Topics() []string {
 }
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	order, err := p.buildOrderByLog(log)
+	order, remain, err := p.buildOrderByLog(log)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
 	order.Timestamp = blockTime * 1000
-	order, err = p.detectOneInchRfqTrade(order)
+	order, err = p.detectOneInchRfqTrade(order, remain)
 	if err != nil {
 		return order, err
 	}
 	return order, nil
 }
 
-func (p *Parser) buildOrderByLog(log ethereumTypes.Log) (storage.TradeLog, error) {
+func (p *Parser) buildOrderByLog(log ethereumTypes.Log) (storage.TradeLog, *big.Int, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storage.TradeLog{}, parser.ErrInvalidTopic
+		return storage.TradeLog{}, nil, parser.ErrInvalidTopic
 	}
 	e, err := p.ps.ParseOrderFilled(log)
 	if err != nil {
-		return storage.TradeLog{}, fmt.Errorf("error when parse log %w", err)
+		return storage.TradeLog{}, nil, fmt.Errorf("error when parse log %w", err)
 	}
 	order := storage.TradeLog{
 		OrderHash:       common.Hash(e.OrderHash).String(),
@@ -103,7 +100,7 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log) (storage.TradeLog, error
 		LogIndex:        uint64(e.Raw.Index),
 		EventHash:       p.eventHash,
 	}
-	return order, nil
+	return order, e.RemainingAmount, nil
 }
 
 func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall types.CallFrame) (storage.TradeLog, error) {
@@ -126,7 +123,6 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 	if err != nil {
 		return order, fmt.Errorf("error when decode input %w", err)
 	}
-
 	order, err = ToTradeLog(order, contractCall)
 	if err != nil {
 		return order, fmt.Errorf("error when parse contract call to order %w", err)
@@ -136,7 +132,7 @@ func (p *Parser) ParseFromInternalCall(order storage.TradeLog, internalCall type
 	return order, nil
 }
 
-func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog) (storage.TradeLog, error) {
+func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog, remain *big.Int) (storage.TradeLog, error) {
 	var (
 		traceCall types.CallFrame
 		err       error
@@ -147,26 +143,28 @@ func (p *Parser) detectOneInchRfqTrade(order storage.TradeLog) (storage.TradeLog
 		return order, fmt.Errorf("error when get tracecall %w", err)
 	}
 
-	count := 0
-	order, err = p.recursiveDetectOneInchRFQTrades(order, traceCall, &count)
+	order, err = p.recursiveDetectOneInchRFQTrades(order, traceCall, remain)
 	if err != nil {
 		traceData, _ := json.Marshal(traceCall)
-		return order, fmt.Errorf("error when parse tracecall %s %d %w", string(traceData), count, err)
+		return order, fmt.Errorf("error when parse tracecall %s %s %w", string(traceData), remain.String(), err)
 	}
 
 	return order, nil
 }
 
-func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, traceCall types.CallFrame, count *int) (storage.TradeLog, error) {
+func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, traceCall types.CallFrame, remain *big.Int) (storage.TradeLog, error) {
 	var (
 		err error
 	)
-	if p.isOneInchRFQTrades(tradeLog.TxHash, tradeLog.OrderHash, traceCall, count) {
-		return p.ParseFromInternalCall(tradeLog, traceCall)
+	if p.isOneInchRFQTrades(tradeLog.OrderHash, traceCall, remain) {
+		trade, err := p.ParseFromInternalCall(tradeLog, traceCall)
+		if err == nil {
+			return trade, err
+		}
 	}
 
 	for _, subCall := range traceCall.Calls {
-		tradeLog, err = p.recursiveDetectOneInchRFQTrades(tradeLog, subCall, count)
+		tradeLog, err = p.recursiveDetectOneInchRFQTrades(tradeLog, subCall, remain)
 		if err == nil {
 			return tradeLog, nil
 		}
@@ -175,7 +173,7 @@ func (p *Parser) recursiveDetectOneInchRFQTrades(tradeLog storage.TradeLog, trac
 	return tradeLog, parser.ErrNotFoundTrade
 }
 
-func (p *Parser) isOneInchRFQTrades(txHash, orderHash string, traceCall types.CallFrame, count *int) bool {
+func (p *Parser) isOneInchRFQTrades(orderHash string, traceCall types.CallFrame, remain *big.Int) bool {
 	for _, eventLog := range traceCall.Logs {
 		if len(eventLog.Topics) == 0 {
 			continue
@@ -185,23 +183,24 @@ func (p *Parser) isOneInchRFQTrades(txHash, orderHash string, traceCall types.Ca
 			continue
 		}
 
-		_, _, orderHashFromOutput, err := p.decodeOutput(traceCall.Output)
+		data, err := hexutil.Decode(eventLog.Data)
 		if err != nil {
 			return false
 		}
-
-		if orderHash != orderHashFromOutput {
+		e, err := p.ps.ParseOrderFilled(ethereumTypes.Log{
+			Address: eventLog.Address,
+			Topics:  eventLog.Topics,
+			Data:    data,
+		})
+		if err != nil {
 			return false
 		}
-		last, ok := p.orderHashCount.Get(fmt.Sprintf("%s-%s", txHash, orderHash))
-		if !ok {
-			last = 0
-		}
-		if last != *count {
-			*count += 1
+		if orderHash != common.Hash(e.OrderHash).String() {
 			return false
 		}
-		p.orderHashCount.Add(fmt.Sprintf("%s-%s", txHash, orderHash), last+1)
+		if remain.Cmp(e.RemainingAmount) != 0 {
+			return false
+		}
 		return true
 	}
 	return false
@@ -248,17 +247,20 @@ func (p *Parser) UseTraceCall() bool {
 }
 
 func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storage.TradeLog, error) {
-	order, err := p.buildOrderByLog(log)
+	order, remain, err := p.buildOrderByLog(log)
 	if err != nil {
 		return storage.TradeLog{}, err
 	}
 	order.Timestamp = blockTime * 1000
-	count := 0
-	return p.recursiveDetectOneInchRFQTrades(order, callFrame, &count)
+	return p.recursiveDetectOneInchRFQTrades(order, callFrame, remain)
 }
 
 func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 	return strings.EqualFold(log.Address.String(), parser.Addr1InchV6) &&
 		len(log.Topics) > 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.eventHash)
+}
+
+func (p *Parser) Address() string {
+	return parser.Addr1InchV6
 }
