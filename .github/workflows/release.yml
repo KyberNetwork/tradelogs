@@ -16,6 +16,7 @@ jobs:
     outputs:
       version_tag: ${{ steps.version_tag.outputs.value }}
       build_date: ${{ steps.build_date.outputs.value }}
+      dockerfile_path: ${{ steps.determine_dockerfile.outputs.dockerfile }}
     steps:
       - name: Format version tag
         shell: bash
@@ -29,6 +30,17 @@ jobs:
         shell: bash
         id: build_date
         run: echo "::set-output name=value::$(date +%FT%T%z)"
+
+      - name: Determine Dockerfile
+        id: determine_dockerfile
+        run: |
+          if [[ "${{ github.event.inputs.version }}" == v1* ]]; then
+            echo "::set-output name=dockerfile::Dockerfile"
+          elif [[ "${{ github.event.inputs.version }}" == v2* ]]; then
+            echo "::set-output name=dockerfile::Dockerfile-v2"
+          else
+            echo "::set-output name=dockerfile::Dockerfile"  # Default to Dockerfile if not v1 or v2
+          fi
 
   docker:
     needs:
@@ -66,6 +78,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
+          file: ${{ needs.prepare.outputs.dockerfile_path }}  # Use the corresponding Dockerfile version
           push: true
           build-args: |
             VERSION=${{ env.VERSION_TAG }}
