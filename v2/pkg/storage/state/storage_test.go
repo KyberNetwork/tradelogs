@@ -11,7 +11,7 @@ import (
 func TestState_GetState(t *testing.T) {
 	l := zap.S()
 	db, tearDown := testutil.MustNewDevelopmentDB(
-		"../../../cmd/parse_log/migrations",
+		"../../../cmd/migrations",
 		testutil.DefaultDSN(),
 		testutil.RandomString(8),
 	)

@@ -26,6 +26,7 @@ jobs:
       image_name: "asia.gcr.io/kyber-operation/foundation/trading/${{ env.SERVICE }}"
       image_tag: ${{ steps.get_tag.outputs.image_tag }}
       branch_tag: ${{ steps.get_tag.outputs.branch_tag }}
+      dockerfile_path: ${{ steps.determine_dockerfile.outputs.dockerfile }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -66,6 +67,18 @@ jobs:
           branch_tag="$(echo "$CURRENT_BRANCH" | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/--*/-/g' | sed 's/-$//g')"
           echo "::set-output name=image_tag::$branch_tag-$short_sha"
           echo "::set-output name=branch_tag::$branch_tag-$short_sha"
+
+      - name: Determine Dockerfile
+        id: determine_dockerfile
+        run: |
+          if [[ "${{ steps.current_branch.outputs.value }}" == v1* ]]; then
+            echo "::set-output name=dockerfile::Dockerfile"
+          elif [[ "${{ steps.current_branch.outputs.value }}" == v2* ]]; then
+            echo "::set-output name=dockerfile::Dockerfile-v2"
+          else
+            echo "::set-output name=dockerfile::Dockerfile" # Default to Dockerfile if not v1 or v2
+          fi
+
   lint:
     name: Run golangci-lint
     runs-on: [ubuntu-22.04]
@@ -182,6 +195,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
+          file: ${{ needs.prepare.outputs.dockerfile_path }}  # Use the corresponding Dockerfile version
           push: true
           labels: |
             commit=${{ github.sha }}
