@@ -5,4 +5,4 @@ create table backfill (
 );
 
 insert into backfill (exchange, deploy_block)
-values ('zerox', 10247094)
+values ('zerox', 20926953)
