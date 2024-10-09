@@ -20,4 +20,5 @@ type Parser interface {
 	UseTraceCall() bool
 	ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) ([]storageTypes.TradeLog, error)
 	LogFromExchange(log ethereumTypes.Log) bool
+	Address() string
 }

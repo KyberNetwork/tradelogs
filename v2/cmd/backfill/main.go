@@ -5,16 +5,16 @@ import (
 	"log"
 	"os"
 
-	"github.com/KyberNetwork/go-binance/v2"
+	"github.com/KyberNetwork/tradelogs/v2/internal/server"
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/pricefiller"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
@@ -27,13 +27,13 @@ import (
 
 func main() {
 	app := libapp.NewApp()
-	app.Name = "trade log parser service"
+	app.Name = "trade log backfill service"
 	app.Action = run
 
-	app.Flags = append(app.Flags, libapp.PriceFillerFlags()...)
 	app.Flags = append(app.Flags, libapp.RPCNodeFlags()...)
 	app.Flags = append(app.Flags, libapp.PostgresSQLFlags("tradelogs_v2")...)
 	app.Flags = append(app.Flags, libapp.KafkaFlag()...)
+	app.Flags = append(app.Flags, libapp.HTTPServerFlags()...)
 
 	if err := app.Run(os.Args); err != nil {
 		log.Panic(err)
@@ -63,15 +63,11 @@ func run(c *cli.Context) error {
 	}
 	manager := tradelogs.NewManager(l, storages)
 
-	// price filler
-	binanceClient := binance.NewClient(c.String(libapp.BinanceAPIKeyFlag.Name), c.String(libapp.BinanceSecretKeyFlag.Name))
-	_, err = pricefiller.NewPriceFiller(l, binanceClient, storages)
-	if err != nil {
-		return fmt.Errorf("cannot init price filler: %w", err)
-	}
-
 	// backfill storage
-	s := backfill.New(l, db)
+	backfillStorage := backfill.New(l, db)
+
+	// state storage
+	stateStorage := state.New(l, db)
 
 	// rpc node to query trace call
 	rpcURL := c.StringSlice(libapp.RPCUrlFlagName)
@@ -119,9 +115,17 @@ func run(c *cli.Context) error {
 	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, parsers, broadcastTopic, kafkaPublisher)
 
 	// parse log worker
-	w := worker.NewBackFiller(tradeLogHandler, s, l, rpcNode)
+	w := worker.NewBackFiller(tradeLogHandler, backfillStorage, stateStorage, l, rpcNode, parsers)
 
-	return w.Run()
+	go func() {
+		if err = w.Run(); err != nil {
+			panic(err)
+		}
+	}()
+
+	s := server.NewBackfill(l, c.String(libapp.HTTPBackfillServerFlag.Name), w)
+
+	return s.Run()
 }
 
 func initDB(c *cli.Context) (*sqlx.DB, error) {

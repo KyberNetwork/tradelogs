@@ -48,9 +48,9 @@ func NewTradeLogHandler(l *zap.SugaredLogger, rpc *rpcnode.Client, storage *trad
 
 func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, timestamp uint64) error {
 	// remove old trade log in db of processing block
-	err := h.RevertBlock([]uint64{blockNumber})
+	err := h.storage.Delete([]uint64{blockNumber})
 	if err != nil {
-		return fmt.Errorf("error when revert block number %d before processing: %w", blockNumber, err)
+		return fmt.Errorf("delete blocks error: %w", err)
 	}
 
 	// fetch trace call
@@ -178,10 +178,12 @@ func (h *TradeLogHandler) RevertBlock(blocks []uint64) error {
 	if err != nil {
 		h.l.Errorw(" error when marshal revert message to json", "err", err)
 	}
+
 	err = h.publisher.Publish(h.kafkaTopic, msgBytes)
 	if err != nil {
 		h.l.Errorw("error when publish revert message", "err", err)
 	}
+
 	h.l.Infow("published revert message", "message", string(msgBytes))
 
 	return nil
