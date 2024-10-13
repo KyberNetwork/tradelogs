@@ -54,6 +54,7 @@ func run(c *cli.Context) error {
 	l.Infow("Starting log parser service")
 
 	db, err := initDB(c)
+	l.Infow("init db successfully")
 	if err != nil {
 		return fmt.Errorf("cannot init DB: %w", err)
 	}
@@ -151,7 +152,7 @@ func initDB(c *cli.Context) (*sqlx.DB, error) {
 	return db, nil
 }
 
-func getMostRecentBlock(l *zap.SugaredLogger, s state.Storage, rpcClient *rpcnode.Client) (uint64, error) {
+func getMostRecentBlock(l *zap.SugaredLogger, s state.Storage, rpcClient rpcnode.IClient) (uint64, error) {
 	var blockNumber uint64
 	block, err := s.GetState(state.ProcessedBlockKey)
 	if err == nil {

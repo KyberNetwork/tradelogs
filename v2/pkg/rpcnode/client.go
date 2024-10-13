@@ -13,6 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
+type IClient interface {
+	FetchTraceCalls(ctx context.Context, blockHash string) ([]types.TransactionCallFrame, error)
+	FetchLogsByBlockHash(ctx context.Context, blockHash string) ([]ethereumTypes.Log, error)
+	GetBlockNumber(ctx context.Context) (uint64, error)
+	BlockByNumber(ctx context.Context, blockNumber uint64) (*ethereumTypes.Block, error)
+	FetchLogs(ctx context.Context, from, to uint64, address string, topics []string) ([]ethereumTypes.Log, error)
+}
+
 type Client struct {
 	l         *zap.SugaredLogger
 	ethClient []*ethclient.Client

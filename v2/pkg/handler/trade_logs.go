@@ -15,11 +15,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 type TradeLogHandler struct {
 	l          *zap.SugaredLogger
-	rpcClient  *rpcnode.Client
+	rpcClient  rpcnode.IClient
 	storage    *tradelogs.Manager
 	parsers    []parser.Parser
 	kafkaTopic string
@@ -34,7 +35,7 @@ type logMetadata struct {
 	timestamp   uint64
 }
 
-func NewTradeLogHandler(l *zap.SugaredLogger, rpc *rpcnode.Client, storage *tradelogs.Manager, parsers []parser.Parser,
+func NewTradeLogHandler(l *zap.SugaredLogger, rpc rpcnode.IClient, storage *tradelogs.Manager, parsers []parser.Parser,
 	kafkaTopic string, publisher kafka.Publisher) *TradeLogHandler {
 	return &TradeLogHandler{
 		l:          l,
@@ -47,8 +48,12 @@ func NewTradeLogHandler(l *zap.SugaredLogger, rpc *rpcnode.Client, storage *trad
 }
 
 func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, timestamp uint64) error {
+	return h.ProcessBlockWithExclusion(blockHash, blockNumber, timestamp, sets.New[string]())
+}
+
+func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumber uint64, timestamp uint64, exclusions sets.Set[string]) error {
 	// remove old trade log in db of processing block
-	err := h.storage.Delete([]uint64{blockNumber})
+	err := h.storage.DeleteWithExclusions([]uint64{blockNumber}, exclusions)
 	if err != nil {
 		return fmt.Errorf("delete blocks error: %w", err)
 	}
@@ -70,7 +75,7 @@ func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, tim
 			timestamp:   timestamp,
 		}
 
-		tradeLogs := h.processCallFrame(call.CallFrame, metadata)
+		tradeLogs := h.processCallFrame(call.CallFrame, metadata, exclusions)
 		if len(tradeLogs) == 0 {
 			continue
 		}
@@ -113,12 +118,12 @@ func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, tim
 	return nil
 }
 
-func (h *TradeLogHandler) processCallFrame(call types.CallFrame, metadata logMetadata) []storageTypes.TradeLog {
+func (h *TradeLogHandler) processCallFrame(call types.CallFrame, metadata logMetadata, exclusions sets.Set[string]) []storageTypes.TradeLog {
 	result := make([]storageTypes.TradeLog, 0)
 
 	// process the sub trace calls
 	for _, traceCall := range call.Calls {
-		tradeLogs := h.processCallFrame(traceCall, metadata)
+		tradeLogs := h.processCallFrame(traceCall, metadata, exclusions)
 		result = append(result, tradeLogs...)
 	}
 
@@ -137,7 +142,7 @@ func (h *TradeLogHandler) processCallFrame(call types.CallFrame, metadata logMet
 
 		// find the corresponding parser
 		p := h.findMatchingParser(ethLog)
-		if p == nil {
+		if p == nil || exclusions.Has(p.Exchange()) {
 			continue
 		}
 
