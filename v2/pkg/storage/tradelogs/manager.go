@@ -5,6 +5,7 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 type Manager struct {
@@ -56,6 +57,23 @@ func (m *Manager) Delete(blocks []uint64) error {
 		return nil
 	}
 	for _, storage := range m.storages {
+		err := storage.Delete(blocks)
+		if err != nil {
+			return fmt.Errorf("delete trade logs failed: %w", err)
+		}
+	}
+	m.l.Infow("deleted trade logs", "blocks", blocks)
+	return nil
+}
+
+func (m *Manager) DeleteWithExclusions(blocks []uint64, exclusions sets.Set[string]) error {
+	if len(blocks) == 0 {
+		return nil
+	}
+	for _, storage := range m.storages {
+		if exclusions.Has(storage.Exchange()) {
+			continue
+		}
 		err := storage.Delete(blocks)
 		if err != nil {
 			return fmt.Errorf("delete trade logs failed: %w", err)

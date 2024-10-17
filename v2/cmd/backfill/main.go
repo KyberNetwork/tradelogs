@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/KyberNetwork/tradelogs/v2/internal/server"
+	"github.com/KyberNetwork/tradelogs/v2/internal/service"
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
@@ -53,6 +54,7 @@ func run(c *cli.Context) error {
 	l.Infow("Starting backfill service")
 
 	db, err := initDB(c)
+	l.Infow("init db successfully")
 	if err != nil {
 		return fmt.Errorf("cannot init DB: %w", err)
 	}
@@ -123,7 +125,12 @@ func run(c *cli.Context) error {
 		}
 	}()
 
-	s := server.NewBackfill(l, c.String(libapp.HTTPBackfillServerFlag.Name), w)
+	srv, err := service.NewBackfillService(backfillStorage, l, w)
+	if err != nil {
+		return fmt.Errorf("cannot create backfill service: %w", err)
+	}
+
+	s := server.NewBackfill(l, c.String(libapp.HTTPBackfillServerFlag.Name), srv)
 
 	return s.Run()
 }
