@@ -314,7 +314,7 @@ func (p *Parser) getExecuteActionData(contractAddress common.Address, callFrame 
 	if err != nil {
 		return nil, err
 	}
-	if contractCall.Name == executeFunctionName {
+	if contractCall.Name == executeFunctionName || contractCall.Name == executeMetaTxnFunctionName {
 		for _, param := range contractCall.Params {
 			if param.Name == actionParamName {
 				data, ok := param.Value.([][]byte)

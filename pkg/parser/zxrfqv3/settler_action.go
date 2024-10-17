@@ -19,8 +19,9 @@ const (
 	rfqVIPName               FunctionName = "RFQ_VIP"
 	rfqName                  FunctionName = "RFQ"
 
-	executeFunctionName = "execute"
-	actionParamName     = "actions"
+	executeFunctionName        = "execute"
+	executeMetaTxnFunctionName = "executeMetaTxn"
+	actionParamName            = "actions"
 )
 
 var mSettlerActionName map[FunctionName]FunctionABI
