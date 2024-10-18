@@ -52,16 +52,16 @@ func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, tim
 }
 
 func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumber uint64, timestamp uint64, exclusions sets.Set[string]) error {
-	// remove old trade log in db of processing block
-	err := h.storage.DeleteWithExclusions([]uint64{blockNumber}, exclusions)
-	if err != nil {
-		return fmt.Errorf("delete blocks error: %w", err)
-	}
-
 	// fetch trace call
 	calls, err := h.rpcClient.FetchTraceCalls(context.Background(), blockHash)
 	if err != nil {
 		return fmt.Errorf("fetch calls error: %w", err)
+	}
+
+	// remove old trade log in db of processing block
+	err = h.storage.DeleteWithExclusions([]uint64{blockNumber}, exclusions)
+	if err != nil {
+		return fmt.Errorf("delete blocks error: %w", err)
 	}
 
 	logIndexStart := 0

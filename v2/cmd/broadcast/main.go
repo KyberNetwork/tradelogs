@@ -68,7 +68,7 @@ func run(c *cli.Context) error {
 
 	broadcaster := worker.NewBroadcaster(l, tradeLogsChan)
 
-	broadcaster.Run()
+	go broadcaster.Run()
 
 	s := server.New(l, c.String(libapp.HTTPBroadcastServerFlag.Name), broadcaster)
 	return s.Run()
