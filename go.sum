@@ -40,8 +40,6 @@ github.com/KyberNetwork/go-binance/v2 v2.0.3 h1:VsBBHXAJTxryBsdO6U9MyK+oHEJ9qZtQ
 github.com/KyberNetwork/go-binance/v2 v2.0.3/go.mod h1:ihNzjOXDgxZ4cSENV2sQfXnO30wobXQPpqTuKxxUVjw=
 github.com/KyberNetwork/kyber-trace-go v0.1.1 h1:YgzZb7jSg0Rgj7zFv9zUnSlB13Iksv1eVO5MSWAvjmM=
 github.com/KyberNetwork/kyber-trace-go v0.1.1/go.mod h1:X6hVacmKMeOEOlFh4TyfEHaEVRerFQ5YLuQ4keRV3hw=
-github.com/KyberNetwork/tradinglib v0.4.36 h1:h8+pKMPiqnR/3Q+wGq1JWYxP3qFJ3qXqsPJQETuJcFw=
-github.com/KyberNetwork/tradinglib v0.4.36/go.mod h1:3Ciie58Qmd0mFSnUWAg6phbalao6f2GGcAZ6nxw/lcQ=
 github.com/KyberNetwork/tradinglib v0.5.10 h1:4R9XWkfCDeisuUyxq8px1JMXNGl73+c3tIuqBX9jWl8=
 github.com/KyberNetwork/tradinglib v0.5.10/go.mod h1:3Ciie58Qmd0mFSnUWAg6phbalao6f2GGcAZ6nxw/lcQ=
 github.com/Masterminds/squirrel v1.5.4 h1:uUcX/aBc8O7Fg9kaISIUsHXdKuqehiXAMQTYX8afzqM=
