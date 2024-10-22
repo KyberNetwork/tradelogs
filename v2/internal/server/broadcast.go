@@ -2,10 +2,9 @@ package server
 
 import (
 	"fmt"
-	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	"net/http"
-	"time"
 
+	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -13,8 +12,7 @@ import (
 )
 
 var (
-	maxTimeRange uint64 = uint64(7 * 24 * time.Hour.Milliseconds())
-	wsupgrader          = websocket.Upgrader{
+	wsupgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		// Allow connections from any Origin

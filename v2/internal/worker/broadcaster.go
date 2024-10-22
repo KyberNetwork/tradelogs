@@ -2,14 +2,15 @@ package worker
 
 import (
 	"encoding/json"
+	"strings"
+	"sync"
+
 	"github.com/IBM/sarama"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/gorilla/websocket"
 	"github.com/rs/xid"
 	"go.uber.org/zap"
-	"strings"
-	"sync"
 )
 
 type Broadcaster struct {
@@ -118,13 +119,16 @@ func (b *Broadcaster) writeTradeLog(log storage.TradeLog) {
 		Type: kafka.MessageTypeTradeLog,
 		Data: log,
 	}
+	var failCount int
 	for _, conn := range b.clients {
 		if match(log, conn.params) {
 			if err := conn.ws.WriteJSON(msg); err != nil {
-				b.l.Errorw("error when send msg", "err", err)
+				b.l.Errorw("error when send msg", "err", err, "id", conn.id)
+				failCount++
 			}
 		}
 	}
+	b.l.Infow("broadcast trade log message", "total", len(b.clients), "fail", failCount, "message", msg)
 }
 
 func match(log storage.TradeLog, params RegisterRequest) bool {
@@ -153,11 +157,12 @@ func (b *Broadcaster) writeRevert(blocks []uint64) {
 		Type: kafka.MessageTypeRevert,
 		Data: blocks,
 	}
+	var failCount int
 	for _, conn := range b.clients {
-
 		if err := conn.ws.WriteJSON(msg); err != nil {
-			b.l.Errorw("error when send msg", "err", err)
+			b.l.Errorw("error when send msg", "err", err, "id", conn.id)
+			failCount++
 		}
-
 	}
+	b.l.Infow("broadcast revert message", "total", len(b.clients), "fail", failCount, "message", msg)
 }
