@@ -3,6 +3,10 @@ package oneinchv6
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -10,7 +14,9 @@ import (
 )
 
 const (
-	paramName = "order"
+	paramName            = "order"
+	takerTraitsParamName = "takerTraits"
+	argsParamName        = "args"
 )
 
 func ToTradeLog(tradeLog storage.TradeLog, contractCall *tradingTypes.ContractCall) (storage.TradeLog, error) {
@@ -40,8 +46,39 @@ func ToTradeLog(tradeLog storage.TradeLog, contractCall *tradingTypes.ContractCa
 			return tradeLog, err
 		}
 		tradeLog.Expiry = uint64(makerTraitsOption.Expiration)
+
+		// if maker is Permit2WitnessProxy
+		if strings.EqualFold(tradeLog.MakerToken, permit2WitnessProxyAddress) {
+			tradeLog.MakerToken, err = getMakerAsset(contractCall)
+			if err != nil {
+				return tradeLog, err
+			}
+		}
 	}
 
 	return tradeLog, nil
 
+}
+
+func getMakerAsset(contractCall *tradingTypes.ContractCall) (string, error) {
+	var (
+		takerTraits *big.Int
+		args        []byte
+	)
+	for _, param := range contractCall.Params {
+		switch param.Name {
+		case takerTraitsParamName:
+			takerTraits = param.Value.(*big.Int)
+		case argsParamName:
+			args = param.Value.([]byte)
+		}
+	}
+	if takerTraits == nil || len(args) == 0 {
+		return "", fmt.Errorf("taker traits or args is empty")
+	}
+	token, err := decodeMakerAssetSuffix(takerTraits, args)
+	if err != nil {
+		return "", fmt.Errorf("fail to decode marker asset suffix: %w", err)
+	}
+	return token.String(), nil
 }
