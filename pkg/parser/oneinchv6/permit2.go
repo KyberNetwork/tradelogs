@@ -61,7 +61,6 @@ func getMakerAssetSuffix(extension []byte, field dynamicField) []byte {
 	// Simulate loading offsets and extracting concatenated data
 	offsets := new(big.Int).SetBytes(extension[:32])
 	concat := extension[32:]
-	fmt.Println(offsets.String())
 
 	bitShift := uint(field * 32)
 	mask := big.NewInt(0xFFFFFFFF)
