@@ -409,14 +409,15 @@ func (p *Parser) DecodeExecuteInput(input string) ([][]byte, bool, error) {
 	baseOffset := int(offsetActions + paddingByteSize)
 	// skip actions size
 	offset += paddingByteSize
-	var eachActionOffset []int
+	eachActionOffset := make([]int, actionsSize)
 
 	for i := 0; i < int(actionsSize); i++ {
 		actionOffset := new(big.Int).SetBytes(data[offset : offset+paddingByteSize]).Uint64()
-		eachActionOffset = append(eachActionOffset, int(actionOffset))
+		eachActionOffset[i] = int(actionOffset)
 		offset += paddingByteSize
 	}
-	var actions [][]byte
+
+	actions := make([][]byte, actionsSize)
 	for i := 0; i < int(actionsSize); i++ {
 		startOffset := baseOffset + eachActionOffset[i] + paddingByteSize
 		actionSize := int(new(big.Int).SetBytes(data[eachActionOffset[i]:startOffset]).Int64())
@@ -424,7 +425,7 @@ func (p *Parser) DecodeExecuteInput(input string) ([][]byte, bool, error) {
 		if actionSize > len(data) {
 			endIndex = len(data)
 		}
-		actions = append(actions, data[startOffset:endIndex])
+		actions[i] = data[startOffset:endIndex]
 	}
 	return actions, true, nil
 }
