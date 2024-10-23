@@ -44,24 +44,7 @@ func (s *Storage) Insert(promotees []Promotee) error {
 	if len(promotees) == 0 {
 		return nil
 	}
-	var query PromoteesQuery
-	for i := len(promotees) - 1; i >= 0; i-- {
-		promotee := promotees[i]
-		query.Promoter = promotee.Promoter
-		query.Promotee = promotee.Promotee
-		query.ChainId = promotee.ChainId
-		pwithname, err := s.Get(query)
-		if err != nil {
-			s.l.Errorw("Error get info promoter", "error", err)
-			return err
-		}
-		if len(pwithname) > 0 {
-			promotees = append(promotees[:i], promotees[i+1:]...)
-		}
-	}
-	if len(promotees) == 0 {
-		return nil
-	}
+
 	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(promoteesTable).Columns(
 		promoteesColumns()...,
 	)
@@ -70,7 +53,7 @@ func (s *Storage) Insert(promotees []Promotee) error {
 			promotee.SerializePromotees()...,
 		)
 	}
-	q, p, err := b.ToSql()
+	q, p, err := b.Suffix("ON CONFLICT (promotee, promoter, chain_id) DO NOTHING").ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
 		return err
@@ -82,10 +65,12 @@ func (s *Storage) Insert(promotees []Promotee) error {
 	return nil
 }
 
-func (s *Storage) Get(query PromoteesQuery) ([]PromoteeWithName, error) {
+func (s *Storage) Get(query PromoteesQuery) ([]Promotee, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(promoteesColumns()...).
-		From(promoteesTable)
+		Select(fmt.Sprintf("%s.promoter, promotee, chain_id, event_hash, timestamp, name", promoteesTable)).
+		From(promoteesTable).
+		Join(fmt.Sprintf("%s ON %s.promoter = %s.promoter", nameTable, promoteesTable, nameTable))
+
 	v := reflect.ValueOf(query)
 	types := v.Type()
 	for i := 0; i < v.NumField(); i++ {
@@ -95,75 +80,18 @@ func (s *Storage) Get(query PromoteesQuery) ([]PromoteeWithName, error) {
 		}
 		builder = builder.Where(squirrel.Eq{tag: strings.ToLower(v.Field(i).String())})
 	}
-	q, p, err := builder.OrderBy("timestamp DESC").ToSql()
+
+	q, p, err := builder.OrderBy(fmt.Sprintf("%s.timestamp DESC", promoteesTable)).ToSql()
 	if err != nil {
 		return nil, err
 	}
+
 	var promotees []Promotee
 	if err := s.db.Select(&promotees, q, p...); err != nil {
 		return nil, err
 	}
 
-	var result []PromoteeWithName
-	if len(promotees) == 0 {
-		return result, nil
-	}
-
-	promoters := make([]string, len(promotees))
-	for i, p := range promotees {
-		promoters[i] = p.Promoter
-	}
-
-	for _, promoter := range promoters {
-		fmt.Println(promoter)
-	}
-	var promoterNames []struct {
-		Promoter string `db:"promoter"`
-		Name     string `db:"name"`
-	}
-
-	q2, p2, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Select(nameColumns()...).
-		From(nameTable).
-		Where(squirrel.Eq{"promoter": promoters}).
-		ToSql()
-
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.db.Select(&promoterNames, q2, p2...); err != nil {
-		return nil, err
-	}
-	fmt.Println(promoterNames)
-	nameMap := make(map[string]string)
-	for _, pn := range promoterNames {
-		nameMap[pn.Promoter] = pn.Name
-	}
-	fmt.Println(nameMap)
-
-	for i := range promotees {
-		if name, ok := nameMap[promotees[i].Promoter]; ok {
-			result = append(result, PromoteeWithName{
-				Promoter:  promotees[i].Promoter,
-				Promotee:  promotees[i].Promotee,
-				Timestamp: promotees[i].Timestamp,
-				EventHash: promotees[i].EventHash,
-				ChainId:   promotees[i].ChainId,
-				Name:      name,
-			})
-		} else {
-			result = append(result, PromoteeWithName{
-				Promoter:  promotees[i].Promoter,
-				Promotee:  promotees[i].Promotee,
-				Timestamp: promotees[i].Timestamp,
-				EventHash: promotees[i].EventHash,
-				ChainId:   promotees[i].ChainId,
-				Name:      "",
-			})
-		}
-	}
-
-	return result, nil
+	return promotees, nil
 }
 
 func (s *Storage) Delete(blocks []uint64) error {
@@ -192,12 +120,5 @@ func promoteesColumns() []string {
 		"event_hash",
 		"chain_id",
 		"block_number",
-	}
-}
-
-func nameColumns() []string {
-	return []string{
-		"promoter",
-		"name",
 	}
 }

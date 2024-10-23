@@ -11,15 +11,7 @@ type Promotee struct {
 	EventHash   string `db:"event_hash" json:"event_hash,omitempty"`
 	ChainId     string `db:"chain_id" json:"chain_id,omitempty"`
 	BlockNumber uint64 `db:"block_number" json:"block_number,omitempty"`
-}
-
-type PromoteeWithName struct {
-	Promoter  string `db:"promoter" json:"promoter,omitempty"`
-	Promotee  string `db:"promotee" json:"promotee,omitempty"`
-	Timestamp uint64 `db:"timestamp" json:"timestamp,omitempty"`
-	EventHash string `db:"event_hash" json:"event_hash,omitempty"`
-	ChainId   string `db:"chain_id" json:"chain_id,omitempty"`
-	Name      string `json:"name,omitempty"`
+	Name        string `db:"name" json:"name,omitempty"`
 }
 
 type PromoteesQuery struct {

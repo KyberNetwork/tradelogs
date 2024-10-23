@@ -65,11 +65,7 @@ func run(c *cli.Context) error {
 
 	parsers := []promotionparser.Parser{oneinchv2.MustNewParser()}
 
-	w, err := promotionworker.New(l, s, listener, parsers)
-	if err != nil {
-		l.Errorw("Error while init worker")
-		return err
-	}
+	w := promotionworker.New(l, s, listener, parsers)
 
 	apiServer := server.New(s, c.String(libapp.HTTPPromoteeServerFlag.Name))
 	go func() {
@@ -77,11 +73,6 @@ func run(c *cli.Context) error {
 			panic(err)
 		}
 	}()
-
-	// err = listener.SendLog(context.Background(), "{\"revertedBlocks\":null,\"newBlocks\":[{\"number\":20389423,\"hash\":\"0xfbce2d84f1822fabc605e5c7492f201e18d4b9f309c7224093f76af17971de58\",\"timestamp\":1721981219,\"parentHash\":\"0x9e8b6b70a88f6813968733450aed3298782017ac96562c49f7fd2a2123a995cc\",\"reorgedHash\":\"\",\"logs\":[{\"address\":\"0xF55684BC536487394B423e70567413faB8e45E26\",\"topics\":[\"0xb863cf86b291171e4b0332ea12b59af030f98a2c74a6d51effaf1109ae4c7f1e\"],\"data\":\"0x000000000000000000000000a8be6b2afe6e060985675675615c2108a66135c80000000000000000000000000000000000000000000000000000000000000001000000000000000000000000b6613cc55866e282638006455390207c1d485be9\",\"blockNumber\":\"0x1371E2F\",\"transactionHash\":\"0x8a695a7b9264fef4c70b78df9b787989559f7a63916511faee79a667fb602163\",\"transactionIndex\":\"0x152\",\"blockHash\":\"0xfbce2d84f1822fabc605e5c7492f201e18d4b9f309c7224093f76af17971de58\",\"logIndex\":\"0x152\",\"removed\":false}]}]}")
-	// if err != nil {
-	// 	l.Errorw("Error sending log", "error", err)
-	// }
 
 	return w.Run(context.Background())
 }

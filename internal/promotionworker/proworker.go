@@ -19,13 +19,13 @@ type Proworker struct {
 }
 
 func New(l *zap.SugaredLogger, s *promotionstorage.Storage, listener *evmlistenerclient.Client,
-	parsers []promotionparser.Parser) (*Proworker, error) {
+	parsers []promotionparser.Parser) *Proworker {
 	return &Proworker{
 		listener: listener,
 		l:        l,
 		s:        s,
 		p:        parsers,
-	}, nil
+	}
 }
 
 func (w *Proworker) Run(ctx context.Context) error {
