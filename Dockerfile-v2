@@ -7,6 +7,7 @@ COPY . .
 
 RUN go build -o parse_log ./v2/cmd/parse_log
 RUN go build -o backfill ./v2/cmd/backfill
+RUN go build -o broadcast ./v2/cmd/broadcast
 
 
 ## DEPLOY
@@ -21,6 +22,7 @@ WORKDIR /v2
 
 COPY --from=builder /src/parse_log /v2/parse_log
 COPY --from=builder /src/backfill /v2/backfill
+COPY --from=builder /src/broadcast /v2/broadcast
 
 COPY v2/cmd/migrations /v2/migrations
 

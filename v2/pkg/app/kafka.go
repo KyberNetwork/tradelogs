@@ -34,8 +34,7 @@ var (
 		Name:   "kafka-broadcast-topic",
 		Usage:  "Kafka broadcast topic",
 		EnvVar: "KAFKA_BROADCAST_TOPIC",
-		//Required: true,
-		Value: "trade-logs",
+		Value:  "trade-logs",
 	}
 )
 

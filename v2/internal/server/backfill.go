@@ -60,29 +60,15 @@ func (s *BackfillServer) register() {
 	s.r.GET("/backfill/restart/:id", s.restartTask)
 }
 
-func responseErr(c *gin.Context, err error) {
-	c.JSON(http.StatusBadRequest, gin.H{
-		"success": false,
-		"error":   err.Error(),
-	})
-}
-
-func internalServerError(c *gin.Context, err error) {
-	c.JSON(http.StatusInternalServerError, gin.H{
-		"success": false,
-		"error":   err.Error(),
-	})
-}
-
 func (s *BackfillServer) backfill(c *gin.Context) {
 	var params Query
 	if err := c.BindJSON(&params); err != nil {
-		responseErr(c, err)
+		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
 
 	if params.FromBlock > params.ToBlock {
-		responseErr(c, fmt.Errorf("from block is greater than to block"))
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("from block is greater than to block"))
 		return
 	}
 
@@ -92,7 +78,7 @@ func (s *BackfillServer) backfill(c *gin.Context) {
 	id, message, err := s.service.NewBackfillTask(params.FromBlock, params.ToBlock, params.Exchange)
 	if err != nil {
 		l.Errorw("error when backfill", "error", err)
-		internalServerError(c, err)
+		responseErr(c, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -106,7 +92,7 @@ func (s *BackfillServer) backfill(c *gin.Context) {
 func (s *BackfillServer) getAllTask(c *gin.Context) {
 	tasks, err := s.service.ListTask()
 	if err != nil {
-		internalServerError(c, err)
+		responseErr(c, http.StatusInternalServerError, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -119,12 +105,12 @@ func (s *BackfillServer) getTask(c *gin.Context) {
 	id := c.Param("id")
 	taskID, err := strconv.ParseInt(id, 10, 32)
 	if err != nil || len(id) == 0 {
-		responseErr(c, fmt.Errorf("invalid task id: %s", id))
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("invalid task id: %s", id))
 		return
 	}
 	task, err := s.service.GetTask(int(taskID))
 	if err != nil {
-		internalServerError(c, err)
+		responseErr(c, http.StatusInternalServerError, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -137,12 +123,12 @@ func (s *BackfillServer) cancelTask(c *gin.Context) {
 	id := c.Param("id")
 	taskID, err := strconv.ParseInt(id, 10, 32)
 	if err != nil {
-		responseErr(c, fmt.Errorf("invalid task id: %w", err))
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("invalid task id: %w", err))
 		return
 	}
 	err = s.service.CancelBackfillTask(int(taskID))
 	if err != nil {
-		internalServerError(c, err)
+		responseErr(c, http.StatusInternalServerError, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -154,12 +140,12 @@ func (s *BackfillServer) restartTask(c *gin.Context) {
 	id := c.Param("id")
 	taskID, err := strconv.ParseInt(id, 10, 32)
 	if err != nil {
-		responseErr(c, fmt.Errorf("invalid task id: %w", err))
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("invalid task id: %w", err))
 		return
 	}
 	err = s.service.RestartBackfillTask(int(taskID))
 	if err != nil {
-		internalServerError(c, err)
+		responseErr(c, http.StatusInternalServerError, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
