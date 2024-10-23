@@ -1,3 +1,21 @@
+CREATE TABLE IF NOT EXISTS promoteesName (
+    promoter TEXT NOT NULL,
+    name TEXT NOT NULL,
+    PRIMARY KEY(promoter)
+);
+
+CREATE TABLE IF NOT EXISTS promotees (
+    promoter    TEXT NOT NULL,
+	promotee    TEXT NOT NULL,
+	timestamp   BIGINT, 
+	event_hash   TEXT,
+	chain_id     TEXT NOT NULL,
+	block_number BIGINT,
+    PRIMARY KEY(promoter, promotee, chain_id)
+);
+
+CREATE INDEX block_number_idx ON promotees (block_number);
+
 INSERT INTO promotees (promoter, promotee, timestamp, event_hash, chain_id, block_number) VALUES 
 ('0xd7f6f541d4210550ca56f7b4c4a549efd4cafb49', '0x1e9d349cec77fea6481f009593101d0e20a69490',1690672115, '0xf8cf20ddcd5eaf81ea4967c60402d1f3805804126fd4371bf9e39a7605ccad02', '1', 17800000),
 ('0xa260f8b7c8f37c2f1bc11b04c19902829de6ac8a', '0x09804914f1e3f18e234540f6ecec1386d8ef4d9f',1695356375, '0xa74b54b6c147ad9a91fa9921b7f293bd8ba0b56c14122cb2b2096bc2b7a16723', '137', 18200000),
