@@ -22,6 +22,9 @@ const (
 	executeFunctionName        = "execute"
 	executeMetaTxnFunctionName = "executeMetaTxn"
 	actionParamName            = "actions"
+
+	executeFunctionSelector        = "0x1fff991f"
+	executeMetaTxnFunctionSelector = "0xfd3ad6d4"
 )
 
 var mSettlerActionName map[FunctionName]FunctionABI

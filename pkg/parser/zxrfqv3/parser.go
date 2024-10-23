@@ -2,9 +2,11 @@ package zxrfqv3
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/KyberNetwork/tradelogs/pkg/decoder"
@@ -32,6 +34,7 @@ type Parser struct {
 }
 
 const altEventHash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+const paddingByteSize = 32
 
 func MustNewParserWithDeployer(cache *tracecall.Cache, ethClient *ethclient.Client, deployerAddress common.Address, contractAbiSupported ...ContractABI) *Parser {
 	if isZeroAddress(deployerAddress) {
@@ -312,6 +315,13 @@ func (p *Parser) getExecuteActionData(contractAddress common.Address, callFrame 
 	}
 	contractCall, err := decoder.Decode(abi, callFrame.Input)
 	if err != nil {
+		actions, ok, errAction := p.DecodeExecuteInput(callFrame.Input)
+		if errAction != nil {
+			return nil, errAction
+		}
+		if ok {
+			return actions, nil
+		}
 		return nil, err
 	}
 	if contractCall.Name == executeFunctionName || contractCall.Name == executeMetaTxnFunctionName {
@@ -362,4 +372,60 @@ func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 
 func (p *Parser) Address() string {
 	return ""
+}
+
+func (p *Parser) DecodeExecuteInput(input string) ([][]byte, bool, error) {
+	if len(input) < 10 {
+		return nil, false, ErrorInputDataIsNotEnough
+	}
+	if !strings.HasPrefix(input, executeFunctionSelector) && !strings.HasPrefix(input, executeMetaTxnFunctionSelector) {
+		return nil, false, nil
+	}
+
+	data, err := hex.DecodeString(input[10:])
+	if err != nil {
+		return nil, false, err
+	}
+	// function executeMetaTxn((address,address,uint256) slippage, bytes[] actions, bytes32 zid, address msgSender, bytes sig)
+	// function execute((address,address,uint256) slippage, bytes[] actions, bytes32 zid)
+	// skip: slippage (address,address,uint256): 32 + 32 + 32 = 96 bytes
+	offset := paddingByteSize * 3
+	if len(data) < offset {
+		return nil, false, ErrorInputDataIsNotEnough
+	}
+
+	offsetActions := new(big.Int).SetBytes(data[offset : offset+paddingByteSize]).Uint64()
+	// skip actions and zid
+	offset += paddingByteSize * 2
+
+	// with executeMetaTxn we need to skip msgSender and sig too
+	if strings.HasPrefix(input, executeMetaTxnFunctionSelector) {
+		offset += paddingByteSize * 2
+	}
+	if len(data) < offset {
+		return nil, false, ErrorInputDataIsNotEnough
+	}
+	actionsSize := new(big.Int).SetBytes(data[offsetActions : offsetActions+paddingByteSize]).Uint64()
+	baseOffset := int(offsetActions + paddingByteSize)
+	// skip actions size
+	offset += paddingByteSize
+	eachActionOffset := make([]int, actionsSize)
+
+	for i := 0; i < int(actionsSize); i++ {
+		actionOffset := new(big.Int).SetBytes(data[offset : offset+paddingByteSize]).Uint64()
+		eachActionOffset[i] = int(actionOffset)
+		offset += paddingByteSize
+	}
+
+	actions := make([][]byte, actionsSize)
+	for i := 0; i < int(actionsSize); i++ {
+		startOffset := baseOffset + eachActionOffset[i] + paddingByteSize
+		actionSize := int(new(big.Int).SetBytes(data[eachActionOffset[i]:startOffset]).Int64())
+		endIndex := startOffset + actionSize
+		if actionSize > len(data) {
+			endIndex = len(data)
+		}
+		actions[i] = data[startOffset:endIndex]
+	}
+	return actions, true, nil
 }
