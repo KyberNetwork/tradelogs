@@ -38,7 +38,7 @@ func New(l *zap.SugaredLogger, cfg Config, client redis.UniversalClient) *Client
 		client:    client,
 		config:    cfg,
 		l:         l,
-		groupName: "trading-tradelogs",
+		groupName: cfg.GroupName,
 	}
 }
 

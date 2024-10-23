@@ -29,11 +29,19 @@ var DuneKeyFlag = cli.StringFlag{
 	EnvVar: "DUNE_KEY",
 }
 
+var HTTPPromoteeServerFlag = cli.StringFlag{
+	Name:   "promotee-server-address",
+	Usage:  "Run the rest for promotees server",
+	EnvVar: "PROMOTEE_SERVER_ADDRESS",
+	Value:  "localhost:8082",
+}
+
 func HTTPServerFlags() []cli.Flag {
 	return []cli.Flag{
 		HTTPServerFlag,
 		HTTPBackfillServerFlag,
 		DuneURLFlag,
 		DuneKeyFlag,
+		HTTPPromoteeServerFlag,
 	}
 }
