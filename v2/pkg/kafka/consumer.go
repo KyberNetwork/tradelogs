@@ -34,6 +34,7 @@ func NewConsumer(config *Config, consumerGroup string) (*SaramaConsumer, error) 
 
 func (c *SaramaConsumer) Consume(ctx context.Context, l *zap.SugaredLogger, topic string, ch chan<- *sarama.ConsumerMessage) error {
 	messageHandler := newConsumerGroupHandler(ch)
+	defer close(ch)
 	for {
 		select {
 		case <-ctx.Done():

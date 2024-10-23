@@ -1,7 +1,9 @@
 package worker
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -16,17 +18,20 @@ import (
 type Broadcaster struct {
 	l       *zap.SugaredLogger
 	mu      sync.Mutex
-	clients map[string]Conn
-	channel chan *sarama.ConsumerMessage
+	clients map[string]*Client
+	config  *kafka.Config
+	topic   string
 }
 
 type (
-	Conn struct {
+	Client struct {
+		l      *zap.SugaredLogger
 		id     string
 		ws     *websocket.Conn
 		params RegisterRequest
 	}
 	RegisterRequest struct {
+		ID         string `form:"id"`
 		EventHash  string `form:"event_hash"`
 		Maker      string `form:"maker"`
 		Taker      string `form:"taker"`
@@ -35,30 +40,105 @@ type (
 	}
 )
 
-func NewBroadcaster(logger *zap.SugaredLogger, ch chan *sarama.ConsumerMessage) *Broadcaster {
+func NewBroadcaster(logger *zap.SugaredLogger, cfg *kafka.Config, topic string) *Broadcaster {
 	return &Broadcaster{
 		l:       logger,
-		channel: ch,
-		clients: make(map[string]Conn),
+		config:  cfg,
+		topic:   topic,
+		clients: make(map[string]*Client),
 	}
 }
 
-func (b *Broadcaster) Run() {
-	for msg := range b.channel {
-		b.broadcast(msg)
+func (b *Broadcaster) NewConn(req RegisterRequest, conn *websocket.Conn) error {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// new connection
+	if len(req.ID) == 0 {
+		// create id for the connection
+		req.ID = xid.New().String()
+
+		// write the id
+		err := conn.WriteJSON(map[string]interface{}{"id": req.ID})
+		if err != nil {
+			b.removeClient(cancel, conn, req.ID)
+			return fmt.Errorf("write conn id err: %v", err)
+		}
+	}
+	b.l.Infow("connected socket", "id", req.ID)
+
+	go func() {
+		msgType, msg, err := conn.ReadMessage()
+		b.l.Infow("read msg result", "id", req.ID, "msgType", msgType, "msg", msg, "err", err)
+		if err != nil {
+			b.l.Errorw("error when read ws connection", "id", req.ID, "err", err)
+			b.removeClient(cancel, conn, req.ID)
+		}
+	}()
+
+	b.addClient(conn, req.ID, req)
+
+	err := b.clients[req.ID].run(ctx, b.config, b.topic)
+	if err != nil {
+		b.removeClient(cancel, conn, req.ID)
+		return fmt.Errorf("cannot run client: %w", err)
+	}
+	return nil
+}
+
+func (b *Broadcaster) removeClient(cancel context.CancelFunc, conn *websocket.Conn, id string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	cancel()
+	_ = conn.Close()
+	delete(b.clients, id)
+}
+
+func (b *Broadcaster) addClient(conn *websocket.Conn, id string, params RegisterRequest) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.clients[id] = &Client{
+		l:      b.l.With("id", id),
+		id:     id,
+		ws:     conn,
+		params: params,
 	}
 }
 
-func (b *Broadcaster) broadcast(msg *sarama.ConsumerMessage) {
+func (c *Client) run(ctx context.Context, cfg *kafka.Config, topic string) error {
+	// kafka consumer for broadcasting trade logs
+	consumer, err := kafka.NewConsumer(cfg, c.id)
+	if err != nil {
+		return fmt.Errorf("failed to create kafka consumer: %w", err)
+	}
+
+	tradeLogsChan := make(chan *sarama.ConsumerMessage, 100)
+
+	go func() {
+		err = consumer.Consume(ctx, c.l, topic, tradeLogsChan)
+		if err != nil {
+			panic(fmt.Errorf("failed to consume trade logs: %w", err))
+		}
+	}()
+
+	go func() {
+		for msg := range tradeLogsChan {
+			c.broadcast(msg)
+		}
+	}()
+
+	return nil
+}
+
+func (c *Client) broadcast(msg *sarama.ConsumerMessage) {
 	var newMsg kafka.Message
 	err := json.Unmarshal(msg.Value, &newMsg)
 	if err != nil {
-		b.l.Errorw("error when unmarshal message", "err", err, "msg", string(msg.Value))
+		c.l.Errorw("error when unmarshal message", "err", err, "msg", string(msg.Value))
 		return
 	}
 	dataBytes, err := json.Marshal(newMsg.Data)
 	if err != nil {
-		b.l.Errorw("error when marshal message data", "err", err, "data", newMsg.Data)
+		c.l.Errorw("error when marshal message data", "err", err, "data", newMsg.Data)
 		return
 	}
 
@@ -67,71 +147,34 @@ func (b *Broadcaster) broadcast(msg *sarama.ConsumerMessage) {
 		var blocks []uint64
 		err = json.Unmarshal(dataBytes, &blocks)
 		if err != nil {
-			b.l.Errorw("error when unmarshal reverted blocks", "err", err, "data", string(dataBytes))
+			c.l.Errorw("error when unmarshal reverted blocks", "err", err, "data", string(dataBytes))
 			return
 		}
-		b.writeRevert(blocks)
+		newMsg.Data = blocks
+		if err = c.ws.WriteJSON(newMsg); err != nil {
+			c.l.Errorw("error when send msg", "err", err)
+		}
+		c.l.Infow("broadcast revert message", "message", newMsg)
+
 	case kafka.MessageTypeTradeLog:
 		var tradelog storage.TradeLog
 		err = json.Unmarshal(dataBytes, &tradelog)
 		if err != nil {
-			b.l.Errorw("error when unmarshal trade log", "err", err, "data", string(dataBytes))
+			c.l.Errorw("error when unmarshal trade log", "err", err, "data", string(dataBytes))
 			return
 		}
-		b.writeTradeLog(tradelog)
-	}
-}
-
-func (b *Broadcaster) NewConn(req RegisterRequest, conn *websocket.Conn) {
-	id := xid.New().String()
-	b.l.Infow("connected socket", "id", id)
-	go func() {
-		msgType, msg, err := conn.ReadMessage()
-		b.l.Infow("read msg result", "id", id, "msgType", msgType, "msg", msg, "err", err)
-		if err != nil {
-			b.removeConn(conn, id)
-		}
-	}()
-	b.addConn(conn, id, req)
-}
-
-func (b *Broadcaster) removeConn(conn *websocket.Conn, id string) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	_ = conn.Close()
-	delete(b.clients, id)
-}
-
-func (b *Broadcaster) addConn(conn *websocket.Conn, id string, params RegisterRequest) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	b.clients[id] = Conn{
-		id:     id,
-		ws:     conn,
-		params: params,
-	}
-}
-
-func (b *Broadcaster) writeTradeLog(log storage.TradeLog) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	msg := kafka.Message{
-		Type: kafka.MessageTypeTradeLog,
-		Data: log,
-	}
-	var failCount int
-	for _, conn := range b.clients {
-		if match(log, conn.params) {
-			if err := conn.ws.WriteJSON(msg); err != nil {
-				b.l.Errorw("error when send msg", "err", err, "id", conn.id)
-				failCount++
+		newMsg.Data = tradelog
+		if c.match(tradelog) {
+			if err = c.ws.WriteJSON(newMsg); err != nil {
+				c.l.Errorw("error when send msg", "err", err)
 			}
 		}
+		c.l.Infow("broadcast trade log message", "message", newMsg)
 	}
-	b.l.Infow("broadcast trade log message", "total", len(b.clients), "fail", failCount, "message", msg)
 }
 
-func match(log storage.TradeLog, params RegisterRequest) bool {
+func (c *Client) match(log storage.TradeLog) bool {
+	params := c.params
 	if len(params.EventHash) != 0 && !strings.EqualFold(params.EventHash, log.EventHash) {
 		return false
 	}
@@ -148,21 +191,4 @@ func match(log storage.TradeLog, params RegisterRequest) bool {
 		return false
 	}
 	return true
-}
-
-func (b *Broadcaster) writeRevert(blocks []uint64) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	msg := kafka.Message{
-		Type: kafka.MessageTypeRevert,
-		Data: blocks,
-	}
-	var failCount int
-	for _, conn := range b.clients {
-		if err := conn.ws.WriteJSON(msg); err != nil {
-			b.l.Errorw("error when send msg", "err", err, "id", conn.id)
-			failCount++
-		}
-	}
-	b.l.Infow("broadcast revert message", "total", len(b.clients), "fail", failCount, "message", msg)
 }

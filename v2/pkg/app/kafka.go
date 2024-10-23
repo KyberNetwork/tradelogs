@@ -36,17 +36,11 @@ var (
 		EnvVar: "KAFKA_BROADCAST_TOPIC",
 		Value:  "trade-logs",
 	}
-	KafkaConsumerGroup = cli.StringFlag{
-		Name:   "kafka-consumer-group",
-		Usage:  "Kafka consumer group",
-		EnvVar: "KAFKA_CONSUMER_GROUP",
-		Value:  "trade-logs-broadcaster",
-	}
 )
 
 func KafkaFlag() []cli.Flag {
 	return []cli.Flag{
-		kafkaAddresses, kafkaAuthentication, kafkaUsername, kafkaPassword, KafkaBroadcastTopic, KafkaConsumerGroup,
+		kafkaAddresses, kafkaAuthentication, kafkaUsername, kafkaPassword, KafkaBroadcastTopic,
 	}
 }
 

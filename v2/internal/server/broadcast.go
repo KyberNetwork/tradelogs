@@ -83,5 +83,11 @@ func (s *Server) registerEventLogWS(c *gin.Context) {
 		responseErr(c, http.StatusInternalServerError, fmt.Errorf("can't create ws"))
 		return
 	}
-	s.bc.NewConn(param, conn)
+
+	err = s.bc.NewConn(param, conn)
+	if err != nil {
+		s.l.Errorw("Failed to create websocket connection", "error", err)
+		responseErr(c, http.StatusInternalServerError, fmt.Errorf("can't create new connection"))
+		return
+	}
 }
