@@ -57,9 +57,6 @@ func (w *Proworker) processMessages(m []evmlistenerclient.Message) error {
 			deleteBlocks    []uint64
 		)
 		for _, block := range message.NewBlocks {
-			for _, block := range message.RevertedBlocks {
-				deleteBlocks = append(deleteBlocks, block.Number.Uint64())
-			}
 			for _, log := range block.Logs {
 				ethLog := convert.ToETHLog(log)
 				ps := w.findMatchingParser(ethLog)
@@ -72,6 +69,9 @@ func (w *Proworker) processMessages(m []evmlistenerclient.Message) error {
 				}
 				insertPromotees = append(insertPromotees, promotee)
 			}
+		}
+		for _, block := range message.RevertedBlocks {
+			deleteBlocks = append(deleteBlocks, block.Number.Uint64())
 		}
 
 		if err := w.s.Delete(deleteBlocks); err != nil {

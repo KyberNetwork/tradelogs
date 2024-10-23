@@ -17,7 +17,7 @@ import (
 const rpcURL = ""
 
 func TestFetchEvent(t *testing.T) {
-	// t.Skip()
+	t.Skip()
 	p := MustNewParser()
 	require.Equal(t, p.abi.Events[PromotionEvent].ID, common.HexToHash("0xb863cf86b291171e4b0332ea12b59af030f98a2c74a6d51effaf1109ae4c7f1e"))
 	client, err := ethclient.Dial(rpcURL)
