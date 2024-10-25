@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -13,23 +12,28 @@ import (
 )
 
 type Con struct {
-	id        string
-	ws        *websocket.Conn
-	eventHash string
-	maker     string
+	id    string
+	ws    *websocket.Conn
+	param RegisterRequest
 }
 
 type Broadcaster struct {
 	mu           sync.Mutex
 	l            *zap.SugaredLogger
-	clients      map[string]map[string]Con
+	clients      map[RegisterRequest]map[string]Con
 	tradeLogChan chan storage.TradeLog
+}
+
+type RegisterRequest struct {
+	EventHash       string `form:"event_hash"`
+	Maker           string `form:"maker"`
+	ContractAddress string `form:"contract_address"`
 }
 
 func NewBroadcaster(tradeChan chan storage.TradeLog) *Broadcaster {
 	return &Broadcaster{
 		l:            zap.S(),
-		clients:      make(map[string]map[string]Con),
+		clients:      make(map[RegisterRequest]map[string]Con),
 		tradeLogChan: tradeChan,
 	}
 }
@@ -40,21 +44,17 @@ func (b *Broadcaster) BroadcastLog() {
 	}
 }
 
-func (b *Broadcaster) newConn(event, maker string, conn *websocket.Conn) {
+func (b *Broadcaster) newConn(param RegisterRequest, conn *websocket.Conn) {
 	id := xid.New().String()
 	b.l.Infow("connected socket", "id", id)
 	go func() {
 		msgType, msg, err := conn.ReadMessage()
 		b.l.Infow("read msg result", "id", id, "msgType", msgType, "msg", msg, "err", err)
 		if err != nil {
-			b.removeConn(conn, id, event, maker)
+			b.removeConn(conn, id, param)
 		}
 	}()
-	b.addConn(conn, id, event, maker)
-}
-
-func combine(event, maker string) string {
-	return fmt.Sprintf("%s-%s", event, maker)
+	b.addConn(conn, id, param)
 }
 
 func (b *Broadcaster) Test() {
@@ -66,11 +66,12 @@ func (b *Broadcaster) Test() {
 	}
 }
 
-func (b *Broadcaster) removeConn(conn *websocket.Conn, id, event, maker string) {
+func (b *Broadcaster) removeConn(conn *websocket.Conn, id string, param RegisterRequest) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	maker = strings.ToLower(maker)
-	e, ok := b.clients[fmt.Sprintf("%s-%s", event, maker)]
+	param.Maker = strings.ToLower(param.Maker)
+	param.ContractAddress = strings.ToLower(param.ContractAddress)
+	e, ok := b.clients[param]
 	if !ok {
 		return
 	}
@@ -78,28 +79,41 @@ func (b *Broadcaster) removeConn(conn *websocket.Conn, id, event, maker string) 
 	delete(e, id)
 }
 
-func (b *Broadcaster) addConn(conn *websocket.Conn, id, event, maker string) {
+func (b *Broadcaster) addConn(conn *websocket.Conn, id string, param RegisterRequest) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	maker = strings.ToLower(maker)
-	cons, ok := b.clients[combine(event, maker)]
+	param.Maker = strings.ToLower(param.Maker)
+	param.ContractAddress = strings.ToLower(param.ContractAddress)
+	cons, ok := b.clients[param]
 	if !ok {
 		cons = map[string]Con{}
 	}
 	cons[id] = Con{
-		id:        id,
-		ws:        conn,
-		maker:     maker,
-		eventHash: event,
+		id:    id,
+		ws:    conn,
+		param: param,
 	}
-	b.clients[combine(event, maker)] = cons
+	b.clients[param] = cons
 }
 
 func (b *Broadcaster) writeEvent(log storage.TradeLog) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	maker := strings.ToLower(log.Maker)
-	cons := b.clients[combine(log.EventHash, maker)]
+	contractAddress := strings.ToLower(log.ContractAddress)
+
+	cons := b.clients[RegisterRequest{EventHash: log.EventHash, Maker: maker}]
+	for _, c := range cons {
+		if err := c.ws.WriteJSON(log); err != nil {
+			b.l.Errorw("error when send msg", "err", err)
+		}
+	}
+
+	if len(contractAddress) == 0 {
+		return
+	}
+
+	cons = b.clients[RegisterRequest{EventHash: log.EventHash, Maker: maker, ContractAddress: contractAddress}]
 	for _, c := range cons {
 		if err := c.ws.WriteJSON(log); err != nil {
 			b.l.Errorw("error when send msg", "err", err)
