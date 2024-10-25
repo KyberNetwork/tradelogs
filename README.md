@@ -179,6 +179,67 @@ This server serve the endpoints to manage backfill task: list, create, cancel, r
       }
       ```
 
+## Broadcast Server API Documentation
+
+This server serve the endpoints to subscribe trade logs
+### **WebSocket Connection Creation**
+
+- **URL**: `/eventlogws`
+- **Method**: `GET`
+- **Description**: Connect WebSocket.
+- **Request Params**:
+    - `id` (string, optional): The ID of websocket connection, also the consumer group ID. 
+    Empty if you need to create new connection and subscribe from the newest offset. 
+    Else, pass the ID to continue from the most recently event.
+    - `maker` (string, optional): The maker you want to subscribe.
+    - `taker` (string, optional): The taker you want to subscribe.
+    - `maker_token` (string, optional): The maker token you want to subscribe.
+    - `taker_token` (string, optional): The taker token you want to subscribe.
+    - `event_hash` (string, optional): The event hash you want to subscribe.
+
+  The filter will combine non-empty fields (AND). If no field are pass, all the trade logs will be sent.
+- **Response**:
+    - **ID Message**: With new connection, the first message will be the ID of session.
+      ```json
+      {
+        "id": "<session_id>"
+      }
+      ```
+    - **Trade log Message**: with type `trade_log` and the data containing trade log information
+      ```json
+      {
+        "type": "trade_log",
+        "data": {
+          "order_hash": "0xcccf91f6cc3f636f0c7864ae8bcbc7cddbb54971997f90d81891a139c36c33e9",
+          "maker": "0x51C72848c68a965f66FA7a88855F9f7784502a7F",
+          "taker": "0x22F9dCF4647084d6C31b2765F6910cd85C178C18",
+          "maker_token": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+          "taker_token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "maker_token_amount": "20210895540598740",
+          "taker_token_amount": "50995428",
+          "contract_address": "0xDef1C0ded9bec7F1a1670819833240f027b25EfF",
+          "block_number": 21034739,
+          "tx_hash": "0x6926077a7cfdc78cd1649c43e85da918f10b4ee0c6e930d5107a50de0c9d0837",
+          "log_index": 489,
+          "timestamp": 1729764251000,
+          "event_hash": "0xac75f773e3a92f1a02b12134d65e1f47f8a14eabe4eaf1e24624918e6a8b269f",
+          "expiration_date": 1729764301,
+          "maker_token_price": 0,
+          "taker_token_price": 0,
+          "maker_usd_amount": 0,
+          "taker_usd_amount": 0,
+          "state": ""
+        }
+      }
+      ```
+    - **Revert Message**: with type `revert` and data containing the block numbers of reverted blocks
+      ```json
+      {
+        "type": "revert",
+        "data": [11, 12, 13]
+      }
+      ```
+
 ## Re-generate mock file
 
 First, you need to install `mockery`

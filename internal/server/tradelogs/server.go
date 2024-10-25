@@ -25,11 +25,6 @@ var (
 	}
 )
 
-type RegisterRequest struct {
-	EventHash string `form:"event_hash"`
-	Maker     string `form:"maker"`
-}
-
 // Server to serve the service.
 type Server struct {
 	r        *gin.Engine
@@ -120,5 +115,5 @@ func (s *Server) registerEventLogWS(c *gin.Context) {
 		responseErr(c, http.StatusInternalServerError, fmt.Errorf("can't create ws"))
 		return
 	}
-	s.bc.newConn(param.EventHash, param.Maker, conn)
+	s.bc.newConn(param, conn)
 }
