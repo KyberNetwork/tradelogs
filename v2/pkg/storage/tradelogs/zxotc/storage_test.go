@@ -52,6 +52,7 @@ func TestSimple(t *testing.T) {
 			},
 			Result: []types.TradeLog{
 				{
+					Exchange:         "zerox",
 					Taker:            "0xb94d9c1d39c41fbd61d37cb4235993f4eb4aa160",
 					MakerToken:       "0xd4df22556e07148e591b4c7b4f555a17188cf5cf",
 					TakerToken:       "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
@@ -76,6 +77,7 @@ func TestSimple(t *testing.T) {
 			},
 			Result: []types.TradeLog{
 				{
+					Exchange:         "zerox",
 					OrderHash:        "0x199cdfca0dad729ec73c03b980964568ee18b7164b1ad42dcfeee05ca789555b",
 					Maker:            "0xaf0b0000f0210d0f421f0009c72406703b50506b",
 					Taker:            "0x22f9dcf4647084d6c31b2765f6910cd85c178c18",
