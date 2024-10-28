@@ -109,6 +109,9 @@ func (s *Storage) Get(query storageTypes.TradeLogsQuery) ([]storageTypes.TradeLo
 	if err := s.db.Select(&results, q, p...); err != nil {
 		return nil, err
 	}
+	for i := range results {
+		results[i].Exchange = s.Exchange()
+	}
 	return results, nil
 }
 
