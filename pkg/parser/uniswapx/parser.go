@@ -178,7 +178,7 @@ func (p *Parser) detectRfqTrade(order storage.TradeLog) (storage.TradeLog, error
 }
 
 func (p *Parser) recursiveDetectRFQTrades(order storage.TradeLog, call types.CallFrame) (storage.TradeLog, error) {
-	for _, l := range call.Logs {
+	for i, l := range call.Logs {
 		if len(l.Topics) < 2 {
 			continue
 		}
@@ -204,7 +204,7 @@ func (p *Parser) recursiveDetectRFQTrades(order storage.TradeLog, call types.Cal
 			if !ok || len(inputOrders) == 0 {
 				continue
 			}
-			inputOrder = inputOrders[0]
+			inputOrder = inputOrders[i]
 		}
 
 		parsedOrder, err := p.orderArguments.Unpack(inputOrder.Order)

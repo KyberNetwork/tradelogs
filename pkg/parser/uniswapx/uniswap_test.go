@@ -70,3 +70,31 @@ func TestParseEvent(t *testing.T) {
 	require.Equal(t, log.Expiry, uint64(0x66fd5e45))
 	t.Log(log)
 }
+
+func TestParseBatchEvent(t *testing.T) {
+	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
+	eventRaw := `[{"address":"0x00000011f84b9aa48e5f8aa8b9897600006289be","topics":["0x78ad7ec0e9f89e74012afa58738b6b661c024cb0fd185ee2f616c0a28924bd66","0x1d62255d2fd90374be846f2114e2540a8b80242c4f849fd6dfb58a316479e9ca","0x00000000000000000000000043ee35d5542f5b826fa92832bd97caff153675a8","0x0000000000000000000000002d2e4848fa164911f935e713c58a3ce251f95ddf"],"data":"0x046832f5aa4b6a391a75b577e69c7409cf31d676a3983732f7cce4a8100f4001","blockNumber":"0x1414756","transactionHash":"0xe2530de46bf952c22a0c094586b6c2408a6b4900f07488f838a76874bde6cbf7","transactionIndex":"0x15","blockHash":"0x81279855a5a4d20e4369dc27928e08d8076ff342c4af02710862672c853659e4","logIndex":"0xa7","removed":false},{"address":"0x00000011f84b9aa48e5f8aa8b9897600006289be","topics":["0x78ad7ec0e9f89e74012afa58738b6b661c024cb0fd185ee2f616c0a28924bd66","0x7a70f8eb7d8a241a9016a9bee57b5166fa1aab9bdfe22bdf2a08d32b0ac4dd13","0x00000000000000000000000043ee35d5542f5b826fa92832bd97caff153675a8","0x00000000000000000000000085e3d047e92feb7879c302b92b689d7538b34691"],"data":"0x0468321cf5cd8349ef1d43cbdc795973c2c38a7392e7bc6e246e42051702840f","blockNumber":"0x1414756","transactionHash":"0xe2530de46bf952c22a0c094586b6c2408a6b4900f07488f838a76874bde6cbf7","transactionIndex":"0x15","blockHash":"0x81279855a5a4d20e4369dc27928e08d8076ff342c4af02710862672c853659e4","logIndex":"0xa8","removed":false}]`
+	var events []types.Log
+	err := json.Unmarshal([]byte(eventRaw), &events)
+	require.NoError(t, err)
+	ethClient, err := ethclient.Dial(rpcURL)
+	if err != nil {
+		panic(err)
+	}
+	block, err := ethClient.BlockByHash(context.Background(), events[0].BlockHash)
+	require.NoError(t, err)
+	traceCalls := tracecall.NewCache(rpcnode.NewClient(zap.S(), ethClient))
+	p := MustNewParser(traceCalls)
+	for _, e := range events {
+		log, err := p.Parse(e, block.Time())
+		require.NoError(t, err)
+		require.Equal(t, log.EventHash, p.eventHash)
+		t.Log("maker", log.Maker)
+		t.Log("maker_token", log.MakerToken)
+		t.Log("taker", log.Taker)
+		t.Log("taker_token", log.TakerToken)
+		t.Log("maker_amount", log.MakerTokenAmount)
+		t.Log("taker_amount", log.TakerTokenAmount)
+		t.Log("------------------------")
+	}
+}
