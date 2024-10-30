@@ -20,28 +20,16 @@ type TradeLog struct {
 	MessageSender    string `db:"message_sender" json:"message_sender,omitempty"`
 	InteractContract string `db:"interact_contract" json:"interact_contract,omitempty"`
 	//MakerTraits      string        `db:"maker_traits" json:"maker_traits,omitempty"`
-	Expiry          uint64        `db:"expiration_date" json:"expiration_date"`
-	MakerTokenPrice float64       `db:"maker_token_price" json:"maker_token_price"`
-	TakerTokenPrice float64       `db:"taker_token_price" json:"taker_token_price"`
-	MakerUsdAmount  float64       `db:"maker_usd_amount" json:"maker_usd_amount"`
-	TakerUsdAmount  float64       `db:"taker_usd_amount" json:"taker_usd_amount"`
-	State           TradeLogState `db:"state" json:"state"`
+	Expiry          uint64   `db:"expiration_date" json:"expiration_date"`
+	MakerTokenPrice *float64 `db:"maker_token_price" json:"maker_token_price"`
+	TakerTokenPrice *float64 `db:"taker_token_price" json:"taker_token_price"`
+	MakerUsdAmount  *float64 `db:"maker_usd_amount" json:"maker_usd_amount"`
+	TakerUsdAmount  *float64 `db:"taker_usd_amount" json:"taker_usd_amount"`
 }
-
-type TradeLogState string
-
-const (
-	TradeLogStateNew       TradeLogState = "new"
-	TradeLogStateProcessed TradeLogState = "processed"
-)
 
 // CommonTradeLogSerialize used for exchanges only storing fields in common trade logs,
 // if these exchanges need to store extra fields, they have to use themselves serialize function
 func CommonTradeLogSerialize(o *TradeLog) []interface{} {
-	// set default state is new
-	if o.State == "" {
-		o.State = TradeLogStateNew
-	}
 	return []interface{}{
 		o.OrderHash,
 		strings.ToLower(o.Maker),
@@ -62,7 +50,6 @@ func CommonTradeLogSerialize(o *TradeLog) []interface{} {
 		o.TakerTokenPrice,
 		o.MakerUsdAmount,
 		o.TakerUsdAmount,
-		o.State,
 	}
 }
 
@@ -88,6 +75,5 @@ func CommonTradeLogColumns() []string {
 		"taker_token_price",
 		"maker_usd_amount",
 		"taker_usd_amount",
-		"state",
 	}
 }

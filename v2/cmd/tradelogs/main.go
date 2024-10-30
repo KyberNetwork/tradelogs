@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/KyberNetwork/tradelogs/v2/internal/server"
 	"log"
 	"os"
 
+	"github.com/KyberNetwork/tradelogs/v2/internal/server"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"

@@ -157,10 +157,7 @@ func (p *PriceFiller) runBackFillTradelogPriceRoutine() {
 
 	for ; ; <-ticker.C {
 		for _, s := range p.s {
-			tradeLogs, err := s.Get(storageTypes.TradeLogsQuery{
-				State: string(storageTypes.TradeLogStateNew),
-				Limit: backfillTradeLogsLimit,
-			})
+			tradeLogs, err := s.GetEmptyPrice(backfillTradeLogsLimit)
 			if err != nil {
 				p.l.Errorw("Failed to get tradeLogs", "exchange", s.Exchange(), "err", err)
 				continue
@@ -187,8 +184,8 @@ func (p *PriceFiller) fullFillTradeLog(tradeLog storageTypes.TradeLog) (storageT
 		}
 	}
 
-	tradeLog.MakerTokenPrice = makerPrice
-	tradeLog.MakerUsdAmount = makerUsdAmount
+	tradeLog.MakerTokenPrice = &makerPrice
+	tradeLog.MakerUsdAmount = &makerUsdAmount
 
 	takerPrice, takerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.TakerToken),
 		tradeLog.TakerTokenAmount, int64(tradeLog.Timestamp))
@@ -199,9 +196,8 @@ func (p *PriceFiller) fullFillTradeLog(tradeLog storageTypes.TradeLog) (storageT
 		}
 	}
 
-	tradeLog.TakerTokenPrice = takerPrice
-	tradeLog.TakerUsdAmount = takerUsdAmount
-	tradeLog.State = storageTypes.TradeLogStateProcessed
+	tradeLog.TakerTokenPrice = &takerPrice
+	tradeLog.TakerUsdAmount = &takerUsdAmount
 
 	return tradeLog, nil
 }
