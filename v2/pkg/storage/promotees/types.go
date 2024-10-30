@@ -38,3 +38,21 @@ func (o *Promotee) SerializeNames() []interface{} {
 		o.Name,
 	}
 }
+
+func promoteesColumns() []string {
+	return []string{
+		"promoter",
+		"promotee",
+		"timestamp",
+		"tx_hash",
+		"chain_id",
+		"block_number",
+	}
+}
+
+func nameColumns() []string {
+	return []string{
+		"promoter",
+		"name",
+	}
+}

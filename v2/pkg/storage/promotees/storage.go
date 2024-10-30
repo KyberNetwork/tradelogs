@@ -13,7 +13,7 @@ import (
 
 const (
 	promoteesTable = "promotees"
-	nameTable      = "promoteesName"
+	nameTable      = "promotees_name"
 )
 
 type Storage struct {
@@ -127,22 +127,4 @@ func (s *Storage) InsertPromoterName(promotees []Promotee) error {
 		return err
 	}
 	return nil
-}
-
-func promoteesColumns() []string {
-	return []string{
-		"promoter",
-		"promotee",
-		"timestamp",
-		"tx_hash",
-		"chain_id",
-		"block_number",
-	}
-}
-
-func nameColumns() []string {
-	return []string{
-		"promoter",
-		"name",
-	}
 }

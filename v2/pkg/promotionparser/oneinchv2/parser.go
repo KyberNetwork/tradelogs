@@ -6,7 +6,6 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -68,14 +67,6 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storageTypes.Pr
 
 func (p *Parser) Contract() string {
 	return constant.Promotion1InchV2
-}
-
-func (p *Parser) UseTraceCall() bool {
-	return false
-}
-
-func (p *Parser) ParseWithCallFrame(_ types.CallFrame, log ethereumTypes.Log, blockTime uint64) (storageTypes.Promotee, error) {
-	return p.Parse(log, blockTime)
 }
 
 func (p *Parser) LogFromContract(log ethereumTypes.Log) bool {

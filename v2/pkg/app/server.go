@@ -25,7 +25,7 @@ var (
 		Name:   "promotee-server-address",
 		Usage:  "Run the rest for promotees server",
 		EnvVar: "PROMOTEE_SERVER_ADDRESS",
-		Value:  "localhost:8082",
+		Value:  "localhost:8083",
 	}
 )
 

@@ -60,18 +60,19 @@ func (h *TradeLogHandler) ProcessBlock(blockHash string, blockNumber uint64, tim
 }
 
 func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumber uint64, timestamp uint64, exclusions sets.Set[string]) error {
-	// remove old trade log in db of processing block
-	err := h.storage.DeleteWithExclusions([]uint64{blockNumber}, exclusions)
-	if err != nil {
-		return fmt.Errorf("delete blocks error: %w", err)
-	}
-
 	// fetch trace call
 	calls, err := h.rpcClient.FetchTraceCalls(context.Background(), blockHash)
 
 	if err != nil {
 		return fmt.Errorf("fetch calls error: %w", err)
 	}
+
+	// remove old trade log in db of processing block
+	err = h.storage.DeleteWithExclusions([]uint64{blockNumber}, exclusions)
+	if err != nil {
+		return fmt.Errorf("delete blocks error: %w", err)
+	}
+
 	err = h.processForTradelog(calls, blockHash, blockNumber, timestamp, exclusions)
 	if err != nil {
 		return fmt.Errorf("error when process block: %d", blockNumber)
@@ -82,6 +83,7 @@ func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumbe
 		return fmt.Errorf("error when process block: %d", blockNumber)
 	}
 
+	h.l.Infow("successfully process block", "blockNumber", blockNumber)
 	return nil
 }
 
@@ -135,7 +137,6 @@ func (h *TradeLogHandler) processForTradelog(calls []types.TransactionCallFrame,
 		h.l.Infow("successfully publish trade logs", "blockNumber", blockNumber, "success", passCount, "fail", failCount)
 	}
 
-	h.l.Infow("successfully process block", "blockNumber", blockNumber)
 	return nil
 }
 
@@ -162,7 +163,6 @@ func (h *TradeLogHandler) processForPromotion(calls []types.TransactionCallFrame
 
 	}
 
-	h.l.Infow("successfully process block", "blockNumber", blockNumber)
 	return nil
 }
 
@@ -233,7 +233,7 @@ func (h *TradeLogHandler) processCallFrameForPromotion(call types.CallFrame, met
 		}
 
 		// parse
-		promotee, err := p.ParseWithCallFrame(call, ethLog, metadata.timestamp)
+		promotee, err := p.Parse(ethLog, metadata.timestamp)
 		if err != nil {
 			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", p.Contract())
 			continue
