@@ -7,7 +7,9 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
+	promoteeTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
@@ -19,12 +21,14 @@ import (
 )
 
 type TradeLogHandler struct {
-	l          *zap.SugaredLogger
-	rpcClient  rpcnode.IClient
-	storage    *tradelogs.Manager
-	parsers    []parser.Parser
-	kafkaTopic string
-	publisher  kafka.Publisher
+	l                *zap.SugaredLogger
+	rpcClient        rpcnode.IClient
+	storage          *tradelogs.Manager
+	promoteestorage  *promoteeTypes.Storage
+	parsers          []parser.Parser
+	promotionparsers []promotionparser.Parser
+	kafkaTopic       string
+	publisher        kafka.Publisher
 }
 
 type logMetadata struct {
@@ -35,15 +39,19 @@ type logMetadata struct {
 	timestamp   uint64
 }
 
-func NewTradeLogHandler(l *zap.SugaredLogger, rpc rpcnode.IClient, storage *tradelogs.Manager, parsers []parser.Parser,
+func NewTradeLogHandler(l *zap.SugaredLogger, rpc rpcnode.IClient,
+	storage *tradelogs.Manager, proStorage *promoteeTypes.Storage,
+	parsers []parser.Parser, proParsers []promotionparser.Parser,
 	kafkaTopic string, publisher kafka.Publisher) *TradeLogHandler {
 	return &TradeLogHandler{
-		l:          l,
-		rpcClient:  rpc,
-		storage:    storage,
-		parsers:    parsers,
-		kafkaTopic: kafkaTopic,
-		publisher:  publisher,
+		l:                l,
+		rpcClient:        rpc,
+		storage:          storage,
+		promoteestorage:  proStorage,
+		parsers:          parsers,
+		promotionparsers: proParsers,
+		kafkaTopic:       kafkaTopic,
+		publisher:        publisher,
 	}
 }
 
@@ -60,10 +68,24 @@ func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumbe
 
 	// fetch trace call
 	calls, err := h.rpcClient.FetchTraceCalls(context.Background(), blockHash)
+
 	if err != nil {
 		return fmt.Errorf("fetch calls error: %w", err)
 	}
+	err = h.processForTradelog(calls, blockHash, blockNumber, timestamp, exclusions)
+	if err != nil {
+		return fmt.Errorf("error when process block: %d", blockNumber)
+	}
 
+	err = h.processForPromotion(calls, blockHash, blockNumber, timestamp)
+	if err != nil {
+		return fmt.Errorf("error when process block: %d", blockNumber)
+	}
+
+	return nil
+}
+
+func (h *TradeLogHandler) processForTradelog(calls []types.TransactionCallFrame, blockHash string, blockNumber uint64, timestamp uint64, exclusions sets.Set[string]) error {
 	logIndexStart := 0
 	for i, call := range calls {
 		logIndexStart = assignLogIndexes(&call.CallFrame, logIndexStart)
@@ -75,7 +97,7 @@ func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumbe
 			timestamp:   timestamp,
 		}
 
-		tradeLogs := h.processCallFrame(call.CallFrame, metadata, exclusions)
+		tradeLogs := h.processCallFrameForTradelog(call.CallFrame, metadata, exclusions)
 		if len(tradeLogs) == 0 {
 			continue
 		}
@@ -85,7 +107,7 @@ func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumbe
 			tradeLogs[j].InteractContract = call.CallFrame.To
 		}
 
-		err = h.storage.Insert(tradeLogs)
+		err := h.storage.Insert(tradeLogs)
 		if err != nil {
 			return fmt.Errorf("write to storage error: %w", err)
 		}
@@ -114,16 +136,42 @@ func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumbe
 	}
 
 	h.l.Infow("successfully process block", "blockNumber", blockNumber)
-
 	return nil
 }
 
-func (h *TradeLogHandler) processCallFrame(call types.CallFrame, metadata logMetadata, exclusions sets.Set[string]) []storageTypes.TradeLog {
+func (h *TradeLogHandler) processForPromotion(calls []types.TransactionCallFrame, blockHash string, blockNumber uint64, timestamp uint64) error {
+	for i, call := range calls {
+		metadata := logMetadata{
+			blockNumber: blockNumber,
+			blockHash:   blockHash,
+			txHash:      call.TxHash,
+			txIndex:     i,
+			timestamp:   timestamp,
+		}
+
+		promotees := h.processCallFrameForPromotion(call.CallFrame, metadata)
+		if len(promotees) == 0 {
+			continue
+		}
+
+		err := h.promoteestorage.Insert(promotees)
+		if err != nil {
+			return fmt.Errorf("write to storage error: %w", err)
+		}
+		h.l.Infow("successfully insert promotees", "blockNumber", blockNumber)
+
+	}
+
+	h.l.Infow("successfully process block", "blockNumber", blockNumber)
+	return nil
+}
+
+func (h *TradeLogHandler) processCallFrameForTradelog(call types.CallFrame, metadata logMetadata, exclusions sets.Set[string]) []storageTypes.TradeLog {
 	result := make([]storageTypes.TradeLog, 0)
 
 	// process the sub trace calls
 	for _, traceCall := range call.Calls {
-		tradeLogs := h.processCallFrame(traceCall, metadata, exclusions)
+		tradeLogs := h.processCallFrameForTradelog(traceCall, metadata, exclusions)
 		result = append(result, tradeLogs...)
 	}
 
@@ -157,9 +205,56 @@ func (h *TradeLogHandler) processCallFrame(call types.CallFrame, metadata logMet
 	return result
 }
 
+func (h *TradeLogHandler) processCallFrameForPromotion(call types.CallFrame, metadata logMetadata) []promoteeTypes.Promotee {
+	result := make([]promoteeTypes.Promotee, 0)
+
+	// process the sub trace calls
+	for _, traceCall := range call.Calls {
+		promotees := h.processCallFrameForPromotion(traceCall, metadata)
+		result = append(result, promotees...)
+	}
+
+	// process current trace call
+	for _, log := range call.Logs {
+		ethLog := ethereumTypes.Log{
+			Address:     log.Address,
+			Topics:      log.Topics,
+			Data:        common.FromHex(log.Data),
+			TxIndex:     uint(metadata.txIndex),
+			TxHash:      common.HexToHash(metadata.txHash),
+			BlockHash:   common.HexToHash(metadata.blockHash),
+			BlockNumber: metadata.blockNumber,
+			Index:       uint(log.Index),
+		}
+		// find the corresponding promotion parser
+		p := h.findMatchingPromotionParser(ethLog)
+		if p == nil {
+			continue
+		}
+
+		// parse
+		promotee, err := p.ParseWithCallFrame(call, ethLog, metadata.timestamp)
+		if err != nil {
+			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", p.Contract())
+			continue
+		}
+		result = append(result, promotee)
+	}
+	return result
+}
+
 func (h *TradeLogHandler) findMatchingParser(log ethereumTypes.Log) parser.Parser {
 	for _, p := range h.parsers {
 		if p.LogFromExchange(log) {
+			return p
+		}
+	}
+	return nil
+}
+
+func (h *TradeLogHandler) findMatchingPromotionParser(log ethereumTypes.Log) promotionparser.Parser {
+	for _, p := range h.promotionparsers {
+		if p.LogFromContract(log) {
 			return p
 		}
 	}
@@ -172,6 +267,11 @@ func (h *TradeLogHandler) RevertBlock(blocks []uint64) error {
 	}
 
 	err := h.storage.Delete(blocks)
+	if err != nil {
+		return fmt.Errorf("delete blocks error: %w", err)
+	}
+
+	err = h.promoteestorage.Delete((blocks))
 	if err != nil {
 		return fmt.Errorf("delete blocks error: %w", err)
 	}

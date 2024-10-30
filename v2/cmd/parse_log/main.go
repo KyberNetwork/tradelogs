@@ -14,7 +14,10 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
+	pro1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser/oneinchv2"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
+	promoteeTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
@@ -63,6 +66,10 @@ func run(c *cli.Context) error {
 	manager := tradelogs.NewManager(l, []storageTypes.Storage{
 		zxotcStorage.New(l, db),
 	})
+
+	//promotion storage
+	proStorage := promoteeTypes.New(l, db)
+
 	// state storage
 	s := state.New(l, db)
 
@@ -95,6 +102,8 @@ func run(c *cli.Context) error {
 		//zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClient, common.HexToAddress(parser.Deployer0xV3)),
 	}
 
+	proParsers := []promotionparser.Parser{pro1inchv2.MustNewParser()}
+
 	// kafka broadcast topic
 	broadcastTopic := c.String(libapp.KafkaBroadcastTopic.Name)
 	err = kafka.ValidateTopicName(broadcastTopic)
@@ -109,7 +118,7 @@ func run(c *cli.Context) error {
 	}
 
 	// trade log handler
-	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, parsers, broadcastTopic, kafkaPublisher)
+	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, proStorage, parsers, proParsers, broadcastTopic, kafkaPublisher)
 
 	// parse log worker
 	w := worker.NewParseLog(tradeLogHandler, s, l)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
@@ -49,8 +50,9 @@ func (w *LogParser) processMessage(msg types.Message) error {
 
 	for _, block := range msg.NewBlocks {
 		blockNumber := block.Number.Uint64()
-
+		time.Sleep(2 * time.Second)
 		err := w.handler.ProcessBlock(block.Hash, blockNumber, block.Timestamp)
+
 		if err != nil {
 			return fmt.Errorf("failed to process new block: %w", err)
 		}
