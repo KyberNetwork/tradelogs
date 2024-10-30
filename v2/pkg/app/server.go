@@ -15,11 +15,18 @@ var (
 		EnvVar: "BROADCAST_SERVER_ADDRESS",
 		Value:  "localhost:8082",
 	}
+	HTTPTradeLogsServerFlag = cli.StringFlag{
+		Name:   "tradelogs-server-address",
+		Usage:  "Run the rest for tradelogs server",
+		EnvVar: "TRADELOGS_SERVER_ADDRESS",
+		Value:  "localhost:8080",
+	}
 )
 
 func HTTPServerFlags() []cli.Flag {
 	return []cli.Flag{
 		HTTPBackfillServerFlag,
 		HTTPBroadcastServerFlag,
+		HTTPTradeLogsServerFlag,
 	}
 }

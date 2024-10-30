@@ -62,8 +62,7 @@ func (s *Storage) Insert(orders []storageTypes.TradeLog) error {
 			maker_token_price=excluded.maker_token_price,
 			taker_token_price=excluded.taker_token_price,
 			maker_usd_amount=excluded.maker_usd_amount,
-			taker_usd_amount=excluded.taker_usd_amount,
-			state=excluded.state
+			taker_usd_amount=excluded.taker_usd_amount
 	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
@@ -106,7 +105,25 @@ func (s *Storage) Get(query storageTypes.TradeLogsQuery) ([]storageTypes.TradeLo
 		return nil, err
 	}
 	var results []storageTypes.TradeLog
-	if err := s.db.Select(&results, q, p...); err != nil {
+	if err = s.db.Select(&results, q, p...); err != nil {
+		return nil, err
+	}
+	for i := range results {
+		results[i].Exchange = s.Exchange()
+	}
+	return results, nil
+}
+
+func (s *Storage) GetEmptyPrice(limit uint64) ([]storageTypes.TradeLog, error) {
+	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Select(storageTypes.CommonTradeLogColumns()...).
+		From(s.tableName()).Where(squirrel.Eq{"maker_token_price": nil}).Limit(limit)
+	q, p, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+	var results []storageTypes.TradeLog
+	if err = s.db.Select(&results, q, p...); err != nil {
 		return nil, err
 	}
 	return results, nil

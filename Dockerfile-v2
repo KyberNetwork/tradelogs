@@ -8,6 +8,8 @@ COPY . .
 RUN go build -o parse_log ./v2/cmd/parse_log
 RUN go build -o backfill ./v2/cmd/backfill
 RUN go build -o broadcast ./v2/cmd/broadcast
+RUN go build -o price_filler ./v2/cmd/price_filler
+RUN go build -o tradelogs ./v2/cmd/tradelogs
 
 
 ## DEPLOY
@@ -23,6 +25,8 @@ WORKDIR /v2
 COPY --from=builder /src/parse_log /v2/parse_log
 COPY --from=builder /src/backfill /v2/backfill
 COPY --from=builder /src/broadcast /v2/broadcast
+COPY --from=builder /src/price_filler /v2/price_filler
+COPY --from=builder /src/tradelogs /v2/tradelogs
 
 COPY v2/cmd/migrations /v2/migrations
 
