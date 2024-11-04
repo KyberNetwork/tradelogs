@@ -19,7 +19,7 @@ import (
 const (
 	RetryInterval          = 4 * time.Second
 	RemoveInterval         = time.Hour
-	ParsingErrorMetricName = "tradelogs_parse_error"
+	ParsingErrorMetricName = "trading_tradelogs_parse_error"
 )
 
 type Worker struct {
@@ -81,13 +81,6 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 }
 func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
-	var errCount int64
-	defer func() {
-		if err := metrics.RecordCounter(context.Background(), ParsingErrorMetricName, errCount); err != nil {
-			w.l.Errorw("error when record parsing error", "err", err)
-		}
-	}()
-
 	for _, message := range m {
 		var (
 			insertOrders []storage.TradeLog
@@ -108,7 +101,9 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 				}
 				order, err := ps.Parse(ethLog, block.Timestamp)
 				if err != nil {
-					errCount++
+					if err = metrics.RecordCounter(context.Background(), ParsingErrorMetricName, 1); err != nil {
+						w.l.Errorw("error when record parsing error", "err", err)
+					}
 					w.l.Errorw("error when parse log", "log", log, "order", order, "err", err)
 					if err := w.s.InsertErrorLog(storage.EVMLog{
 						Address:     log.Address,
@@ -152,13 +147,6 @@ func (w *Worker) retryParseLog() error {
 	}
 	w.l.Infow("start retry logs", "len", len(logs))
 
-	var errCount int64
-	defer func() {
-		if err := metrics.RecordCounter(context.Background(), ParsingErrorMetricName, errCount); err != nil {
-			w.l.Errorw("error when record parsing error", "err", err)
-		}
-	}()
-
 	for _, l := range logs {
 		topics := strings.Split(l.Topics, ",")
 		if len(topics) == 0 {
@@ -180,7 +168,9 @@ func (w *Worker) retryParseLog() error {
 		}
 		order, err := ps.Parse(ethLog, l.Time)
 		if err != nil {
-			errCount++
+			if err := metrics.RecordCounter(context.Background(), ParsingErrorMetricName, 1); err != nil {
+				w.l.Errorw("error when record parsing error", "err", err)
+			}
 			w.l.Errorw("error when retry log", "log", l, "err", err)
 			continue
 		}
