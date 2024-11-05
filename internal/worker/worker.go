@@ -101,10 +101,10 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 				}
 				order, err := ps.Parse(ethLog, block.Timestamp)
 				if err != nil {
+					w.l.Errorw("error when parse log", "log", log, "order", order, "err", err)
 					if err = metrics.RecordCounter(context.Background(), ParsingErrorMetricName, 1); err != nil {
 						w.l.Errorw("error when record parsing error", "err", err)
 					}
-					w.l.Errorw("error when parse log", "log", log, "order", order, "err", err)
 					if err := w.s.InsertErrorLog(storage.EVMLog{
 						Address:     log.Address,
 						Topics:      strings.Join(log.Topics, ","),
@@ -168,10 +168,10 @@ func (w *Worker) retryParseLog() error {
 		}
 		order, err := ps.Parse(ethLog, l.Time)
 		if err != nil {
+			w.l.Errorw("error when retry log", "log", l, "err", err)
 			if err := metrics.RecordCounter(context.Background(), ParsingErrorMetricName, 1); err != nil {
 				w.l.Errorw("error when record parsing error", "err", err)
 			}
-			w.l.Errorw("error when retry log", "log", l, "err", err)
 			continue
 		}
 
