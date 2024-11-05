@@ -286,7 +286,7 @@ func hasFillingRights(exclusive, sender common.Address, exclusivityEndTime, bloc
 }
 
 func (p *Parser) Exchange() string {
-	return parser.ExPancackeSwap
+	return parser.ExPancakeSwap
 }
 
 func (p *Parser) UseTraceCall() bool {
@@ -306,11 +306,11 @@ func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes
 }
 
 func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
-	return strings.EqualFold(log.Address.String(), parser.AddrPancakewap) &&
+	return strings.EqualFold(log.Address.String(), parser.AddrPancakeswap) &&
 		len(log.Topics) > 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.eventHash)
 }
 
 func (p *Parser) Address() string {
-	return parser.AddrPancakewap
+	return parser.AddrPancakeswap
 }
