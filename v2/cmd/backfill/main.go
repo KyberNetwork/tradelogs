@@ -14,7 +14,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
-	pro1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser/oneinchv2"
+	promotion1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser/oneinchv2"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
 	promoteeTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
@@ -106,7 +106,7 @@ func run(c *cli.Context) error {
 		//zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClient, common.HexToAddress(parser.Deployer0xV3)),
 	}
 
-	promotionParsers := []promotionparser.Parser{pro1inchv2.MustNewParser()}
+	promotionParsers := []promotionparser.Parser{promotion1inchv2.MustNewParser()}
 
 	// kafka broadcast topic
 	broadcastTopic := c.String(libapp.KafkaBroadcastTopic.Name)
