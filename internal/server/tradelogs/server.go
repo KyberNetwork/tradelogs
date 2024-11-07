@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	maxTimeRange uint64 = uint64(7 * 24 * time.Hour.Milliseconds())
+	maxTimeRange uint64 = uint64(24 * time.Hour.Milliseconds())
 	wsupgrader          = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
