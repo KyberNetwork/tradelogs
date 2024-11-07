@@ -40,16 +40,16 @@ type logMetadata struct {
 }
 
 func NewTradeLogHandler(l *zap.SugaredLogger, rpc rpcnode.IClient,
-	storage *tradelogs.Manager, proStorage *promoteeTypes.Storage,
-	parsers []parser.Parser, proParsers []promotionparser.Parser,
+	storage *tradelogs.Manager, promoteeStorage *promoteeTypes.Storage,
+	parsers []parser.Parser, promotionParsers []promotionparser.Parser,
 	kafkaTopic string, publisher kafka.Publisher) *TradeLogHandler {
 	return &TradeLogHandler{
 		l:                l,
 		rpcClient:        rpc,
 		storage:          storage,
-		promoteestorage:  proStorage,
+		promoteestorage:  promoteeStorage,
 		parsers:          parsers,
-		promotionparsers: proParsers,
+		promotionparsers: promotionParsers,
 		kafkaTopic:       kafkaTopic,
 		publisher:        publisher,
 	}

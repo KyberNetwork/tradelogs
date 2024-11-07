@@ -68,8 +68,8 @@ func run(c *cli.Context) error {
 	}
 	manager := tradelogs.NewManager(l, storages)
 
-	//promotion storage
-	proStorage := promoteeTypes.New(l, db)
+	//promotee storage
+	promoteeStorage := promoteeTypes.New(l, db)
 
 	// backfill storage
 	backfillStorage := backfill.New(l, db)
@@ -106,7 +106,7 @@ func run(c *cli.Context) error {
 		//zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClient, common.HexToAddress(parser.Deployer0xV3)),
 	}
 
-	proParsers := []promotionparser.Parser{pro1inchv2.MustNewParser()}
+	promotionParsers := []promotionparser.Parser{pro1inchv2.MustNewParser()}
 
 	// kafka broadcast topic
 	broadcastTopic := c.String(libapp.KafkaBroadcastTopic.Name)
@@ -122,7 +122,7 @@ func run(c *cli.Context) error {
 	}
 
 	// trade log handler
-	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, proStorage, parsers, proParsers, broadcastTopic, kafkaPublisher)
+	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, promoteeStorage, parsers, promotionParsers, broadcastTopic, kafkaPublisher)
 
 	// parse log worker
 	w := worker.NewBackFiller(tradeLogHandler, backfillStorage, stateStorage, l, rpcNode, parsers)
