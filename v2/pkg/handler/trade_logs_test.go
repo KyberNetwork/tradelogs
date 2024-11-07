@@ -41,7 +41,7 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	mockKafka := &mocks.MockPublisher{}
 	mockKafka.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
-	h := NewTradeLogHandler(zap.S(), client, s, []parser.Parser{p}, "test", mockKafka)
+	h := NewTradeLogHandler(zap.S(), client, s, nil, []parser.Parser{p}, nil, "test", mockKafka)
 
 	err = h.ProcessBlock("0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048", 20181990, 1725436442)
 	if err != nil {
@@ -49,7 +49,8 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	}
 
 	assert.True(t, mockStorage.AssertNumberOfCalls(t, "Insert", 1))
-	assert.True(t, mockKafka.AssertNumberOfCalls(t, "Publish", 2))
+	assert.True(t, mockKafka.AssertNumberOfCalls(t, "Publish", 1))
+
 }
 
 func TestAssignLogIndexes(t *testing.T) {

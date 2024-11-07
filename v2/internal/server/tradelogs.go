@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	maxTimeRange = uint64(7 * 24 * time.Hour.Milliseconds())
+	maxTimeRange = uint64(24 * time.Hour.Milliseconds())
 )
 
 type TradeLogs struct {
