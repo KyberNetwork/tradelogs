@@ -10,6 +10,7 @@ RUN go build -o backfill ./v2/cmd/backfill
 RUN go build -o broadcast ./v2/cmd/broadcast
 RUN go build -o price_filler ./v2/cmd/price_filler
 RUN go build -o tradelogs ./v2/cmd/tradelogs
+RUN go build -o promotees ./v2/cmd/promotees
 
 
 ## DEPLOY
@@ -27,6 +28,7 @@ COPY --from=builder /src/backfill /v2/backfill
 COPY --from=builder /src/broadcast /v2/broadcast
 COPY --from=builder /src/price_filler /v2/price_filler
 COPY --from=builder /src/tradelogs /v2/tradelogs
+COPY --from=builder /src/promotees /v2/promotees
 
 COPY v2/cmd/migrations /v2/migrations
 
