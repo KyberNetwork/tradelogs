@@ -3,6 +3,7 @@ package decoder
 import (
 	"encoding/hex"
 	"fmt"
+
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"

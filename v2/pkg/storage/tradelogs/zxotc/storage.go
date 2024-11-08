@@ -37,11 +37,11 @@ func (s *Storage) Insert(orders []storageTypes.TradeLog) error {
 		return nil
 	}
 	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(s.tableName()).Columns(
-		storageTypes.CommonTradeLogColumns()...,
+		storageTypes.RFQTradeLogColumns()...,
 	)
 	for _, order := range orders {
 		b = b.Values(
-			storageTypes.CommonTradeLogSerialize(&order)...,
+			storageTypes.RFQTradeLogSerialize(&order)...,
 		)
 	}
 	q, p, err := b.Suffix(`ON CONFLICT(block_number, log_index) DO UPDATE 
@@ -53,6 +53,8 @@ func (s *Storage) Insert(orders []storageTypes.TradeLog) error {
 			taker_token=excluded.taker_token,
 			maker_token_amount=excluded.maker_token_amount,
 			taker_token_amount=excluded.taker_token_amount,
+			maker_token_origin_amount=excluded.maker_token_origin_amount,
+			taker_token_origin_amount=excluded.taker_token_origin_amount,
 			contract_address=excluded.contract_address,
 			block_number=excluded.block_number,
 			tx_hash=excluded.tx_hash,
@@ -77,7 +79,7 @@ func (s *Storage) Insert(orders []storageTypes.TradeLog) error {
 
 func (s *Storage) Get(query storageTypes.TradeLogsQuery) ([]storageTypes.TradeLog, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(storageTypes.CommonTradeLogColumns()...).
+		Select(storageTypes.RFQTradeLogColumns()...).
 		From(s.tableName())
 	if query.FromTime != 0 {
 		builder = builder.Where(squirrel.GtOrEq{"timestamp": query.FromTime})
@@ -116,7 +118,7 @@ func (s *Storage) Get(query storageTypes.TradeLogsQuery) ([]storageTypes.TradeLo
 
 func (s *Storage) GetEmptyPrice(limit uint64) ([]storageTypes.TradeLog, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(storageTypes.CommonTradeLogColumns()...).
+		Select(storageTypes.RFQTradeLogColumns()...).
 		From(s.tableName()).Where(squirrel.Eq{"maker_token_price": nil}).Limit(limit)
 	q, p, err := builder.ToSql()
 	if err != nil {

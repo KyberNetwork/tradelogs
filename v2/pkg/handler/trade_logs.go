@@ -81,7 +81,7 @@ func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumbe
 		}
 
 		for j := range tradeLogs {
-			tradeLogs[j].MessageSender = call.CallFrame.From
+			tradeLogs[j].TxOrigin = call.CallFrame.From // txOrigin, messageSender == internalCall.From
 			tradeLogs[j].InteractContract = call.CallFrame.To
 		}
 
@@ -152,6 +152,11 @@ func (h *TradeLogHandler) processCallFrame(call types.CallFrame, metadata logMet
 			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", p.Exchange())
 			continue
 		}
+
+		for i := range tradeLogs {
+			tradeLogs[i].MessageSender = call.From
+		}
+
 		result = append(result, tradeLogs...)
 	}
 	return result

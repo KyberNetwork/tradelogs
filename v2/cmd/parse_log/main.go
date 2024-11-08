@@ -9,17 +9,37 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/bebop"
+	hashflowv3 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/hashflow_v3"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap"
+	kyberswaprfq "github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap_rfq"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/oneinchv6"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/pancakeswap"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/paraswap"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/uniswapx"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
+	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
+	hashflowv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/hashflow_v3"
+	kyberswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap"
+	kyberswaprfqStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap_rfq"
+	oneinchv6Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/oneinch_v6"
+	pancakeswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/pancakeswap"
+	paraswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/paraswap"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
+	uniswapxStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/uniswapx"
 	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
+	zxrfqv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxrfqv3"
 	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/jmoiron/sqlx"
 	"github.com/urfave/cli"
@@ -61,7 +81,16 @@ func run(c *cli.Context) error {
 
 	// trade log manager
 	manager := tradelogs.NewManager(l, []storageTypes.Storage{
+		kyberswapStorage.New(l, db),
 		zxotcStorage.New(l, db),
+		paraswapStorage.New(l, db),
+		kyberswaprfqStorage.New(l, db),
+		hashflowv3Storage.New(l, db),
+		oneinchv6Storage.New(l, db),
+		uniswapxStorage.New(l, db),
+		bebopStorage.New(l, db),
+		zxrfqv3Storage.New(l, db),
+		pancakeswapStorage.New(l, db),
 	})
 	// state storage
 	s := state.New(l, db)
@@ -83,16 +112,16 @@ func run(c *cli.Context) error {
 	rpcNode := rpcnode.NewClient(l, ethClients...)
 
 	parsers := []parser.Parser{
-		//kyberswap.MustNewParser(),
+		kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
-		//paraswap.MustNewParser(),
-		//kyberswaprfq.MustNewParser(),
-		//hashflowv3.MustNewParser(),
-		//oneinchv6.MustNewParser(traceCalls),
-		//uniswapxv1.MustNewParser(traceCalls),
-		//uniswapx.MustNewParser(traceCalls),
-		//bebop.MustNewParser(traceCalls),
-		//zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClient, common.HexToAddress(parser.Deployer0xV3)),
+		paraswap.MustNewParser(),
+		kyberswaprfq.MustNewParser(),
+		hashflowv3.MustNewParser(),
+		oneinchv6.MustNewParser(),
+		uniswapx.MustNewParser(),
+		bebop.MustNewParser(),
+		zxrfqv3.MustNewParserWithDeployer(ethClients[0], common.HexToAddress(constant.Deployer0xV3)),
+		pancakeswap.MustNewParser(),
 	}
 
 	// kafka broadcast topic
