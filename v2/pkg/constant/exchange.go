@@ -33,4 +33,10 @@ const (
 	TableBebop        = "tradelogs_bebop"
 	TableZeroXV3      = "tradelogs_zerox_v3"
 	TablePancakeswap  = "tradelogs_pancakeswap"
+
+	Promotion1InchV2 = "oneinchv2"
+	Promotion1InchV1 = "oneinchv1"
+
+	AddrPr1InchV2 = "0xf55684bc536487394b423e70567413fab8e45e26"
+	AddrPr1InchV1 = "0xcb8308fcb7bc2f84ed1bea2c016991d34de5cc77"
 )

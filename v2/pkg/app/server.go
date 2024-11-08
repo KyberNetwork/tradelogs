@@ -21,6 +21,12 @@ var (
 		EnvVar: "TRADELOGS_SERVER_ADDRESS",
 		Value:  "localhost:8080",
 	}
+	HTTPPromoteeServerFlag = cli.StringFlag{
+		Name:   "promotee-server-address",
+		Usage:  "Run the rest for promotees server",
+		EnvVar: "PROMOTEE_SERVER_ADDRESS",
+		Value:  "localhost:8083",
+	}
 )
 
 func HTTPServerFlags() []cli.Flag {
@@ -28,5 +34,6 @@ func HTTPServerFlags() []cli.Flag {
 		HTTPBackfillServerFlag,
 		HTTPBroadcastServerFlag,
 		HTTPTradeLogsServerFlag,
+		HTTPPromoteeServerFlag,
 	}
 }

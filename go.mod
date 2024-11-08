@@ -9,7 +9,7 @@ require (
 	github.com/IBM/sarama v1.43.3
 	github.com/KyberNetwork/cclog v1.1.0
 	github.com/KyberNetwork/go-binance/v2 v2.0.3
-	github.com/KyberNetwork/tradinglib v0.5.10
+	github.com/KyberNetwork/tradinglib v0.6.1
 	github.com/TheZeroSlave/zapsentry v1.20.2
 	github.com/ethereum/go-ethereum v1.13.14
 	github.com/getsentry/sentry-go v0.26.0
@@ -67,7 +67,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
-	github.com/go-logr/logr v1.4.1 // indirect
+	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect

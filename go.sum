@@ -40,8 +40,8 @@ github.com/KyberNetwork/go-binance/v2 v2.0.3 h1:VsBBHXAJTxryBsdO6U9MyK+oHEJ9qZtQ
 github.com/KyberNetwork/go-binance/v2 v2.0.3/go.mod h1:ihNzjOXDgxZ4cSENV2sQfXnO30wobXQPpqTuKxxUVjw=
 github.com/KyberNetwork/kyber-trace-go v0.1.1 h1:YgzZb7jSg0Rgj7zFv9zUnSlB13Iksv1eVO5MSWAvjmM=
 github.com/KyberNetwork/kyber-trace-go v0.1.1/go.mod h1:X6hVacmKMeOEOlFh4TyfEHaEVRerFQ5YLuQ4keRV3hw=
-github.com/KyberNetwork/tradinglib v0.5.10 h1:4R9XWkfCDeisuUyxq8px1JMXNGl73+c3tIuqBX9jWl8=
-github.com/KyberNetwork/tradinglib v0.5.10/go.mod h1:3Ciie58Qmd0mFSnUWAg6phbalao6f2GGcAZ6nxw/lcQ=
+github.com/KyberNetwork/tradinglib v0.6.1 h1:6BIeci/MawEo+vV/3LFQBzBbulimK4gCNKZSwz6h6fg=
+github.com/KyberNetwork/tradinglib v0.6.1/go.mod h1:fRH5mz+qKrwreW2eSppCYRVYGN5RYHlF5xfJBBDzPW8=
 github.com/Masterminds/squirrel v1.5.4 h1:uUcX/aBc8O7Fg9kaISIUsHXdKuqehiXAMQTYX8afzqM=
 github.com/Masterminds/squirrel v1.5.4/go.mod h1:NNaOrjSoIDfDA40n7sr2tPNZRfjzjA400rg+riTZj10=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
@@ -219,8 +219,8 @@ github.com/go-errors/errors v1.0.1/go.mod h1:f4zRHt4oKfwPJE5k8C9vpYG+aDHdBFUsgrm
 github.com/go-errors/errors v1.4.2 h1:J6MZopCL4uSllY1OfXM374weqZFFItUbrImctkmUxIA=
 github.com/go-errors/errors v1.4.2/go.mod h1:sIVyrIiJhuEF+Pj9Ebtd6P/rEYROXFi3BopGUQ5a5Og=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
-github.com/go-logr/logr v1.4.1 h1:pKouT5E8xu9zeFC39JXRDukb6JFQPXM5p5I91188VAQ=
-github.com/go-logr/logr v1.4.1/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
+github.com/go-logr/logr v1.4.2 h1:6pFjapn8bFcIbiKo3XT4j/BhANplGihG6tvd+8rYgrY=
+github.com/go-logr/logr v1.4.2/go.mod h1:9T104GzyrTigFIr8wt5mBrctHMim0Nb2HLGrmQ40KvY=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
 github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
 github.com/go-martini/martini v0.0.0-20170121215854-22fa46961aab/go.mod h1:/P9AEU963A2AYjv4d1V5eVL1CQbEJq6aCNHDDjibzu8=

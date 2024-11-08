@@ -13,8 +13,11 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
+	promotion1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser/oneinchv2"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
+	promoteeTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
@@ -65,6 +68,9 @@ func run(c *cli.Context) error {
 	}
 	manager := tradelogs.NewManager(l, storages)
 
+	//promotee storage
+	promoteeStorage := promoteeTypes.New(l, db)
+
 	// backfill storage
 	backfillStorage := backfill.New(l, db)
 
@@ -100,6 +106,8 @@ func run(c *cli.Context) error {
 		//zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClient, common.HexToAddress(parser.Deployer0xV3)),
 	}
 
+	promotionParsers := []promotionparser.Parser{promotion1inchv2.MustNewParser()}
+
 	// kafka broadcast topic
 	broadcastTopic := c.String(libapp.KafkaBroadcastTopic.Name)
 	err = kafka.ValidateTopicName(broadcastTopic)
@@ -114,7 +122,7 @@ func run(c *cli.Context) error {
 	}
 
 	// trade log handler
-	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, parsers, broadcastTopic, kafkaPublisher)
+	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, promoteeStorage, parsers, promotionParsers, broadcastTopic, kafkaPublisher)
 
 	// parse log worker
 	w := worker.NewBackFiller(tradeLogHandler, backfillStorage, stateStorage, l, rpcNode, parsers)

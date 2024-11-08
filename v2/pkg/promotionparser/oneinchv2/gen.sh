@@ -1,0 +1,1 @@
+abigen --abi=abi.json --pkg=oneinchv2 --out=oneinchv2.go -type Promotion
