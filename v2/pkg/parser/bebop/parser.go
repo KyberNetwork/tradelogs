@@ -198,6 +198,7 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (stora
 		return storageTypes.TradeLog{}, err
 	}
 	order := storageTypes.TradeLog{
+		Exchange:        p.Exchange(),
 		OrderHash:       o.EventId.String(),
 		Maker:           log.Address.Hex(),
 		ContractAddress: o.Raw.Address.String(),
@@ -339,9 +340,7 @@ func (p *Parser) parseMultiSwap(order storageTypes.TradeLog,
 		}
 	}
 
-	//makerTokens, _ := json.Marshal(rfqOrder.MakerTokens)
 	order.MakerToken = strings.Join(rfqOrder.MakerTokens, ",")
-	//takerTokens, _ := json.Marshal(rfqOrder.TakerTokens)
 	order.TakerToken = strings.Join(rfqOrder.TakerTokens, ",")
 	order.Maker = rfqOrder.MakerAddress
 	order.Taker = rfqOrder.TakerAddress
@@ -418,6 +417,7 @@ func (p *Parser) parseAggregateSwap(order storageTypes.TradeLog,
 	for i := range rfqOrder.MakerAmounts {
 		for j := range rfqOrder.MakerAmounts[i] {
 			orders = append(orders, storageTypes.TradeLog{
+				Exchange:               p.Exchange(),
 				OrderHash:              order.OrderHash,
 				Maker:                  rfqOrder.MakerAddresses[i],
 				Taker:                  rfqOrder.TakerAddress,

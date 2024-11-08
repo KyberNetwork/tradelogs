@@ -57,6 +57,7 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) ([]storageTypes.
 		return nil, err
 	}
 	res := storageTypes.TradeLog{
+		Exchange:         p.Exchange(),
 		Taker:            e.Sender.String(),
 		MakerToken:       e.DstToken.String(),
 		TakerToken:       e.SrcToken.String(),

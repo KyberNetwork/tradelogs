@@ -61,6 +61,7 @@ func (p *Parser) parseLog(log ethereumTypes.Log, blockTime uint64) (storageTypes
 		return storageTypes.TradeLog{}, err
 	}
 	res := storageTypes.TradeLog{
+		Exchange:         p.Exchange(),
 		OrderHash:        common.Hash(o.Txid).String(),
 		Maker:            log.Address.Hex(),
 		Taker:            o.Trader.Hex(),

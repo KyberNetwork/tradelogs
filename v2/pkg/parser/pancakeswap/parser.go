@@ -128,6 +128,7 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (stora
 		return storageTypes.TradeLog{}, err
 	}
 	order := storageTypes.TradeLog{
+		Exchange:        p.Exchange(),
 		OrderHash:       common.Hash(e.OrderHash).String(),
 		ContractAddress: e.Raw.Address.String(),
 		BlockNumber:     e.Raw.BlockNumber,

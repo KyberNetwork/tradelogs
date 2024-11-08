@@ -141,13 +141,16 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (stora
 	if len(log.Topics) > 0 || !p.contractABIs.containAddress(log.Address) {
 		return storageTypes.TradeLog{}, ErrInvalidRfqTrade
 	}
-	var tradeLog storageTypes.TradeLog
-	tradeLog.BlockNumber = log.BlockNumber
-	tradeLog.LogIndex = uint64(log.Index)
-	tradeLog.TxHash = log.TxHash.Hex()
-	tradeLog.Timestamp = blockTime * 1000
-	tradeLog.ContractAddress = log.Address.Hex()
-	tradeLog.EventHash = altEventHash
+	var tradeLog = storageTypes.TradeLog{
+		Exchange:        p.Exchange(),
+		BlockNumber:     log.BlockNumber,
+		LogIndex:        uint64(log.Index),
+		TxHash:          log.TxHash.Hex(),
+		Timestamp:       blockTime * 1000,
+		ContractAddress: log.Address.Hex(),
+		EventHash:       altEventHash,
+	}
+
 	orderHash, err := getOrderHash(log.Data)
 	if err != nil {
 		return storageTypes.TradeLog{}, fmt.Errorf("get order hash error %w", err)

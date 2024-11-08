@@ -113,7 +113,7 @@ func (h *TradeLogHandler) processForTradelog(calls []types.TransactionCallFrame,
 		if err != nil {
 			return fmt.Errorf("write to storage error: %w", err)
 		}
-		h.l.Infow("successfully insert trade logs", "blockNumber", blockNumber)
+		h.l.Infow("successfully insert trade logs", "blockNumber", blockNumber, "number", len(tradeLogs))
 
 		passCount, failCount := 0, 0
 		for _, log := range tradeLogs {
