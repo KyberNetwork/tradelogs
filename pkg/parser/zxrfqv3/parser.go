@@ -3,6 +3,7 @@ package zxrfqv3
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -428,4 +429,11 @@ func (p *Parser) DecodeExecuteInput(input string) ([][]byte, bool, error) {
 		actions[i] = data[startOffset:endIndex]
 	}
 	return actions, true, nil
+}
+
+func (p *Parser) ExtraceLogData(log ethereumTypes.Log) (string, *big.Int, error) {
+	if len(log.Data) < 48 {
+		return "", nil, errors.New("invalid data")
+	}
+	return hexutil.Encode(log.Data[:32]), new(big.Int).SetBytes(log.Data[32:48]), nil
 }
