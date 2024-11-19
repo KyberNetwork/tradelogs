@@ -202,7 +202,7 @@ func TestExtractLogData(t *testing.T) {
 	p := MustNewParser(nil)
 	data, err := hexutil.Decode("0x0fe145508fd6aa299e55f8b299284d6fef19bfaffe235a22120caee307bc582e0000000000000000349837334b321000")
 	require.NoError(t, err)
-	orderHash, amount, err := p.ExtraceLogData(etypes.Log{
+	orderHash, amount, err := p.ExtractLogData(etypes.Log{
 		Data: data,
 	})
 	require.NoError(t, err)
