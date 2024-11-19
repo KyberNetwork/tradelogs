@@ -7,8 +7,17 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/v2/internal/server"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
+	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
+	hashflowv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/hashflow_v3"
+	kyberswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap"
+	kyberswaprfqStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap_rfq"
+	oneinchv6Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/oneinch_v6"
+	pancakeswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/pancakeswap"
+	paraswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/paraswap"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
+	uniswapxStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/uniswapx"
 	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
+	zxrfqv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxrfqv3"
 	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
 	"github.com/jmoiron/sqlx"
 	"github.com/urfave/cli"
@@ -47,7 +56,16 @@ func run(c *cli.Context) error {
 
 	// trade log storages
 	storage := []storageTypes.Storage{
+		kyberswapStorage.New(l, db),
 		zxotcStorage.New(l, db),
+		paraswapStorage.New(l, db),
+		kyberswaprfqStorage.New(l, db),
+		hashflowv3Storage.New(l, db),
+		oneinchv6Storage.New(l, db),
+		uniswapxStorage.New(l, db),
+		bebopStorage.New(l, db),
+		zxrfqv3Storage.New(l, db),
+		pancakeswapStorage.New(l, db),
 	}
 
 	s := server.NewTradeLogs(l, storage, c.String(libapp.HTTPTradeLogsServerFlag.Name))

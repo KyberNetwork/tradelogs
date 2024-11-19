@@ -3,6 +3,7 @@ package pricefiller
 import (
 	"context"
 	"errors"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"strconv"
 	"strings"
 	"sync"
@@ -202,6 +203,51 @@ func (p *PriceFiller) fullFillTradeLog(tradeLog storageTypes.TradeLog) (storageT
 	return tradeLog, nil
 }
 
+func (p *PriceFiller) fullFillBebopTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
+	makerTokens := strings.Split(strings.ToLower(tradeLog.MakerToken), ",")
+	takerTokens := strings.Split(strings.ToLower(tradeLog.TakerToken), ",")
+	makerAmounts := strings.Split(tradeLog.MakerTokenAmount, ",")
+	takerAmounts := strings.Split(tradeLog.TakerTokenAmount, ",")
+
+	makerPrice, makerSumUsdAmount, err := p.getSumAmountUsd(makerTokens, makerAmounts, int64(tradeLog.Timestamp))
+
+	if err != nil {
+		return tradeLog, err
+	}
+
+	tradeLog.MakerTokenPrice = &makerPrice // set zero price for multi-maker trade
+	tradeLog.MakerUsdAmount = &makerSumUsdAmount
+
+	takerPrice, takerUsdAmount, err := p.getSumAmountUsd(takerTokens, takerAmounts, int64(tradeLog.Timestamp))
+	if err != nil {
+		return tradeLog, err
+	}
+
+	tradeLog.TakerTokenPrice = &takerPrice
+	tradeLog.TakerUsdAmount = &takerUsdAmount
+
+	return tradeLog, nil
+}
+
+func (p *PriceFiller) getSumAmountUsd(address, rawAmt []string, at int64) (float64, float64, error) {
+	var sumAmount, price float64
+	for i := range address {
+		pr, usdAmount, err := p.getPriceAndAmountUsd(address[i], rawAmt[i], at)
+		if err != nil {
+			if err.Error() != invalidSymbolErrString {
+				p.l.Errorw("Failed to getPriceAndAmountUsd for address", "err", err)
+				return 0, 0, err
+			}
+		}
+		sumAmount += usdAmount
+		price = pr
+	}
+	if len(address) > 1 {
+		price = 0
+	}
+	return price, sumAmount, nil
+}
+
 func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (float64, float64, error) {
 	p.mu.Lock()
 	coin, ok := p.mappedCoinInfo[address]
@@ -225,7 +271,7 @@ func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (fl
 		if coin.Coin == coinUSDT {
 			return 1, calculateAmountUsd(rawAmt, coin.Decimals, 1), nil
 		}
-		price, err := p.getPrice(coin.Coin, int64(at))
+		price, err := p.getPrice(coin.Coin, at)
 		if err != nil {
 			if !errors.Is(err, ErrNoPrice) {
 				p.l.Errorw("Failed to getPrice", "err", err, "coin", coin.Coin, "at", at)
@@ -242,7 +288,11 @@ func (p *PriceFiller) FullFillTradeLogs(tradeLogs []storageTypes.TradeLog) {
 	for idx, tradeLog := range tradeLogs {
 		// for the safety, sleep a bit to avoid Binance rate limit
 		time.Sleep(10 * time.Millisecond)
-		filledTradeLog, err := p.fullFillTradeLog(tradeLog)
+		f := p.fullFillTradeLog
+		if tradeLog.Exchange == constant.ExBebop {
+			f = p.fullFillBebopTradeLog
+		}
+		filledTradeLog, err := f(tradeLog)
 		if err != nil {
 			p.l.Errorw("Failed to fullFillTradeLog", "err", err, "tradeLog", tradeLog)
 			continue
