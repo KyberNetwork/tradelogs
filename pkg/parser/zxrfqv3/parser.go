@@ -3,6 +3,7 @@ package zxrfqv3
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -33,8 +34,12 @@ type Parser struct {
 	l               *zap.SugaredLogger
 }
 
-const altEventHash = "0x0000000000000000000000000000000000000000000000000000000000000000"
-const paddingByteSize = 32
+const (
+	altEventHash    = "0x0000000000000000000000000000000000000000000000000000000000000000"
+	paddingByteSize = 32
+	orderHashLen    = 32
+	fillAmountLen   = 16
+)
 
 func MustNewParserWithDeployer(cache *tracecall.Cache, ethClient *ethclient.Client, deployerAddress common.Address, contractAbiSupported ...ContractABI) *Parser {
 	if isZeroAddress(deployerAddress) {
@@ -428,4 +433,11 @@ func (p *Parser) DecodeExecuteInput(input string) ([][]byte, bool, error) {
 		actions[i] = data[startOffset:endIndex]
 	}
 	return actions, true, nil
+}
+
+func (p *Parser) ExtractLogData(log ethereumTypes.Log) (string, *big.Int, error) {
+	if len(log.Data) < orderHashLen+fillAmountLen {
+		return "", nil, errors.New("invalid data")
+	}
+	return hexutil.Encode(log.Data[:orderHashLen]), new(big.Int).SetBytes(log.Data[orderHashLen : orderHashLen+fillAmountLen]), nil
 }

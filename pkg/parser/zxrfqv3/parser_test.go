@@ -13,6 +13,8 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -194,4 +196,16 @@ func TestParserActionsWithCuttingBytes(t *testing.T) {
 			assert.Equal(t, input.Actions[i], hex.EncodeToString(action), "action not match")
 		}
 	}
+}
+
+func TestExtractLogData(t *testing.T) {
+	p := MustNewParser(nil)
+	data, err := hexutil.Decode("0x0fe145508fd6aa299e55f8b299284d6fef19bfaffe235a22120caee307bc582e0000000000000000349837334b321000")
+	require.NoError(t, err)
+	orderHash, amount, err := p.ExtractLogData(etypes.Log{
+		Data: data,
+	})
+	require.NoError(t, err)
+	t.Log(orderHash, amount)
+	require.Equal(t, "0x0fe145508fd6aa299e55f8b299284d6fef19bfaffe235a22120caee307bc582e", orderHash)
 }
