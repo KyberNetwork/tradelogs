@@ -105,7 +105,7 @@ func (h *TradeLogHandler) processForTradelog(calls []types.TransactionCallFrame,
 		}
 
 		for j := range tradeLogs {
-			tradeLogs[j].MessageSender = call.CallFrame.From
+			tradeLogs[j].TxOrigin = call.CallFrame.From // txOrigin, messageSender == internalCall.From
 			tradeLogs[j].InteractContract = call.CallFrame.To
 		}
 
@@ -113,7 +113,7 @@ func (h *TradeLogHandler) processForTradelog(calls []types.TransactionCallFrame,
 		if err != nil {
 			return fmt.Errorf("write to storage error: %w", err)
 		}
-		h.l.Infow("successfully insert trade logs", "blockNumber", blockNumber)
+		h.l.Infow("successfully insert trade logs", "blockNumber", blockNumber, "number", len(tradeLogs))
 
 		passCount, failCount := 0, 0
 		for _, log := range tradeLogs {
@@ -200,6 +200,11 @@ func (h *TradeLogHandler) processCallFrameForTradelog(call types.CallFrame, meta
 			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", p.Exchange())
 			continue
 		}
+
+		for i := range tradeLogs {
+			tradeLogs[i].MessageSender = call.From
+		}
+
 		result = append(result, tradeLogs...)
 	}
 	return result

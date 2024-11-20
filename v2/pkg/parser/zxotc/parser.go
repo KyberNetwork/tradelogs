@@ -107,6 +107,8 @@ func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes
 	}
 
 	tradeLog.Expiry = orderRfq.GetExpiry()
+	tradeLog.MakerTokenOriginAmount = orderRfq.MakerAmount.String()
+	tradeLog.TakerTokenOriginAmount = orderRfq.TakerAmount.String()
 
 	return []storageTypes.TradeLog{tradeLog}, nil
 }

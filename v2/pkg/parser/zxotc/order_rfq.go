@@ -5,20 +5,17 @@ import (
 )
 
 type OrderRFQ struct {
-	MakerToken     string  `json:"makerToken"`
-	TakerToken     string  `json:"takerToken"`
-	MakerAmount    float64 `json:"makerAmount"`
-	TakerAmount    float64 `json:"takerAmount"`
-	Maker          string  `json:"maker"`
-	Taker          string  `json:"taker"`
-	TxOrigin       string  `json:"txOrigin"`
-	ExpiryAndNonce float64 `json:"expiryAndNonce"`
+	MakerToken     string   `json:"makerToken"`
+	TakerToken     string   `json:"takerToken"`
+	MakerAmount    *big.Int `json:"makerAmount"`
+	TakerAmount    *big.Int `json:"takerAmount"`
+	Maker          string   `json:"maker"`
+	Taker          string   `json:"taker"`
+	TxOrigin       string   `json:"txOrigin"`
+	ExpiryAndNonce *big.Int `json:"expiryAndNonce"`
 }
 
 func (o *OrderRFQ) GetExpiry() uint64 {
-	expiryAndNonceFloat := big.NewFloat(o.ExpiryAndNonce)
-	expiryAndNonce := new(big.Int)
-	expiryAndNonce, _ = expiryAndNonceFloat.Int(expiryAndNonce)
-	expiry := expiryAndNonce.Rsh(expiryAndNonce, 192)
+	expiry := o.ExpiryAndNonce.Rsh(o.ExpiryAndNonce, 192)
 	return expiry.Uint64()
 }
