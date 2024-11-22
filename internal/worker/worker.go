@@ -20,6 +20,7 @@ const (
 	RetryInterval          = 4 * time.Second
 	RemoveInterval         = time.Hour
 	ParsingErrorMetricName = "trading_tradelogs_parse_error"
+	BlockCountMetricName   = "trading_tradelogs_block_count"
 )
 
 type Worker struct {
@@ -86,13 +87,21 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 			insertOrders []storage.TradeLog
 			deleteBlocks []uint64
 		)
-		for _, block := range message.NewBlocks {
-			for _, block := range message.RevertedBlocks {
-				deleteBlocks = append(deleteBlocks, block.Number.Uint64())
-				if err := w.s.DeleteErrorLogsWithBlock(block.Hash); err != nil {
-					return err
-				}
+		// delete revert blocks
+		for _, block := range message.RevertedBlocks {
+			deleteBlocks = append(deleteBlocks, block.Number.Uint64())
+			if err := w.s.DeleteErrorLogsWithBlock(block.Hash); err != nil {
+				return err
 			}
+		}
+
+		// record block count metric
+		if err := metrics.RecordCounter(context.Background(), BlockCountMetricName, int64(len(message.NewBlocks))); err != nil {
+			w.l.Errorw("error when record block count metric", "err", err)
+		}
+
+		// handle new block
+		for _, block := range message.NewBlocks {
 			for _, log := range block.Logs {
 				ethLog := convert.ToETHLog(log)
 				ps := w.findMatchingParser(ethLog)
@@ -102,8 +111,9 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 				order, err := ps.Parse(ethLog, block.Timestamp)
 				if err != nil {
 					w.l.Errorw("error when parse log", "log", log, "order", order, "err", err)
+					// record log parsing error metric
 					if err = metrics.RecordCounter(context.Background(), ParsingErrorMetricName, 1); err != nil {
-						w.l.Errorw("error when record parsing error", "err", err)
+						w.l.Errorw("error when record parsing error metric", "err", err)
 					}
 					if err := w.s.InsertErrorLog(storage.EVMLog{
 						Address:     log.Address,
