@@ -74,6 +74,8 @@ func (s *TradeLogs) getTradeLogs(c *gin.Context) {
 		return
 	}
 
+	s.l.Infow("get trade log query", "query", query)
+
 	var data []storageTypes.TradeLog
 	for _, storage := range s.storage {
 		tradeLogs, err := storage.Get(query)

@@ -83,6 +83,7 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 	for _, message := range m {
+		w.l.Infow("about to process new message", "msg", message)
 		var (
 			insertOrders []storage.TradeLog
 			deleteBlocks []uint64
@@ -91,6 +92,7 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 		for _, block := range message.RevertedBlocks {
 			deleteBlocks = append(deleteBlocks, block.Number.Uint64())
 			if err := w.s.DeleteErrorLogsWithBlock(block.Hash); err != nil {
+				w.l.Infow("error when revert block", "blocks", deleteBlocks, "err", err)
 				return err
 			}
 		}

@@ -90,6 +90,7 @@ func (s *Server) getTradeLogs(c *gin.Context) {
 		responseErr(c, http.StatusBadRequest, errors.New("max time range"))
 		return
 	}
+	s.l.Infow("get trade log query", "query", query)
 	data, err := s.s.Get(query)
 	if err != nil {
 		responseErr(c, http.StatusBadRequest, err)

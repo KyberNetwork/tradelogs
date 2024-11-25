@@ -40,6 +40,8 @@ func (w *LogParser) Publish(ctx context.Context, topic string, data interface{})
 func (w *LogParser) processMessage(msg types.Message) error {
 	var deleteBlocks []uint64
 
+	w.l.Infow("process message", "msg", msg)
+
 	for _, block := range msg.RevertedBlocks {
 		deleteBlocks = append(deleteBlocks, block.Number.Uint64())
 	}
