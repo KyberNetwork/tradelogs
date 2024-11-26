@@ -318,17 +318,8 @@ func (p *Parser) parseMultiSwap(order storageTypes.TradeLog,
 		break
 	}
 
-	originMakerAmounts := make([]string, len(rfqOrder.MakerAmounts))
-	for i, amount := range rfqOrder.MakerAmounts {
-		originMakerAmounts[i] = amount.String()
-	}
-	order.MakerTokenOriginAmount = strings.Join(originMakerAmounts, ",")
-
-	originTakerAmounts := make([]string, len(rfqOrder.TakerAmounts))
-	for i, amount := range rfqOrder.TakerAmounts {
-		originTakerAmounts[i] = amount.String()
-	}
-	order.TakerTokenOriginAmount = strings.Join(originTakerAmounts, ",")
+	order.MakerTokenOriginAmount = joinAmounts(rfqOrder.MakerAmounts)
+	order.TakerTokenOriginAmount = joinAmounts(rfqOrder.TakerAmounts)
 
 	if len(rfqOrder.TakerTokens) == 1 { // many to one don't support partial, just handle one - many
 		if fillTakerAmount.Cmp(big.NewInt(0)) > 0 && fillTakerAmount.Cmp(rfqOrder.TakerAmounts[0]) < 0 {
@@ -345,17 +336,8 @@ func (p *Parser) parseMultiSwap(order storageTypes.TradeLog,
 	order.Maker = rfqOrder.MakerAddress
 	order.Taker = rfqOrder.TakerAddress
 
-	makerAmounts := make([]string, len(rfqOrder.MakerAmounts))
-	for i, amount := range rfqOrder.MakerAmounts {
-		makerAmounts[i] = amount.String()
-	}
-	order.MakerTokenAmount = strings.Join(makerAmounts, ",")
-
-	takerAmounts := make([]string, len(rfqOrder.TakerAmounts))
-	for i, amount := range rfqOrder.TakerAmounts {
-		takerAmounts[i] = amount.String()
-	}
-	order.TakerTokenAmount = strings.Join(takerAmounts, ",")
+	order.MakerTokenAmount = joinAmounts(rfqOrder.MakerAmounts)
+	order.TakerTokenAmount = joinAmounts(rfqOrder.TakerAmounts)
 
 	if rfqOrder.Expiry != nil {
 		order.Expiry = rfqOrder.Expiry.Uint64()
@@ -386,61 +368,63 @@ func (p *Parser) parseAggregateSwap(order storageTypes.TradeLog,
 	}
 	quoteTakerAmount := getAggregateOrderInfo(rfqOrder)
 
-	originalMakerAmounts := make([][]string, len(rfqOrder.MakerAmounts))
-	originalTakerAmounts := make([][]string, len(rfqOrder.TakerAmounts))
-	for i := range rfqOrder.TakerAmounts {
-		originalMakerAmounts[i] = make([]string, len(rfqOrder.MakerAmounts[i]))
-		originalTakerAmounts[i] = make([]string, len(rfqOrder.TakerAmounts[i]))
-		for j := range rfqOrder.TakerAmounts[i] {
-			originalMakerAmounts[i][j] = rfqOrder.MakerAmounts[i][j].String()
-			originalTakerAmounts[i][j] = rfqOrder.TakerAmounts[i][j].String()
-		}
-	}
+	var orders []storageTypes.TradeLog
 
-	if filledTakerAmount.Cmp(big.NewInt(0)) > 0 && filledTakerAmount.Cmp(quoteTakerAmount) < 0 {
-		for i := range rfqOrder.MakerAmounts {
+	// parse each trade
+	for i := range rfqOrder.MakerAddresses {
+		newOrder := storageTypes.TradeLog{
+			Exchange:               p.Exchange(),
+			OrderHash:              order.OrderHash,
+			Maker:                  rfqOrder.MakerAddresses[i],
+			Taker:                  rfqOrder.TakerAddress,
+			MakerToken:             strings.Join(rfqOrder.MakerTokens[i], ","),
+			TakerToken:             strings.Join(rfqOrder.TakerTokens[i], ","),
+			MakerTokenAmount:       joinAmounts(rfqOrder.MakerAmounts[i]),
+			TakerTokenAmount:       joinAmounts(rfqOrder.TakerAmounts[i]),
+			MakerTokenOriginAmount: joinAmounts(rfqOrder.MakerAmounts[i]),
+			TakerTokenOriginAmount: joinAmounts(rfqOrder.TakerAmounts[i]),
+			ContractAddress:        order.ContractAddress,
+			BlockNumber:            order.BlockNumber,
+			TxHash:                 order.TxHash,
+			LogIndex:               order.LogIndex,
+			TradeIndex:             uint64(i),
+			Timestamp:              order.Timestamp,
+			EventHash:              order.EventHash,
+			Expiry:                 rfqOrder.Expiry.Uint64(),
+		}
+
+		if len(rfqOrder.TakerTokens[i]) > 1 { // many-to-one not support partial fill
+			orders = append(orders, newOrder)
+			continue
+		}
+
+		// partial fill
+		if filledTakerAmount.Cmp(big.NewInt(0)) > 0 && filledTakerAmount.Cmp(quoteTakerAmount) < 0 {
 			for j := range rfqOrder.MakerAmounts[i] {
 				tmp := big.NewInt(0).Mul(rfqOrder.MakerAmounts[i][j], filledTakerAmount)
 				rfqOrder.MakerAmounts[i][j] = tmp.Div(tmp, quoteTakerAmount)
-
-				tmp = big.NewInt(0).Mul(rfqOrder.TakerAmounts[i][j], filledTakerAmount)
+			}
+			for j := range rfqOrder.TakerAmounts[i] {
+				tmp := big.NewInt(0).Mul(rfqOrder.TakerAmounts[i][j], filledTakerAmount)
 				rfqOrder.TakerAmounts[i][j] = tmp.Div(tmp, quoteTakerAmount)
 			}
 		}
-	}
 
-	var (
-		orders []storageTypes.TradeLog
-		count  int
-	)
+		newOrder.MakerTokenAmount = joinAmounts(rfqOrder.MakerAmounts[i])
+		newOrder.TakerTokenAmount = joinAmounts(rfqOrder.TakerAmounts[i])
 
-	for i := range rfqOrder.MakerAmounts {
-		for j := range rfqOrder.MakerAmounts[i] {
-			orders = append(orders, storageTypes.TradeLog{
-				Exchange:               p.Exchange(),
-				OrderHash:              order.OrderHash,
-				Maker:                  rfqOrder.MakerAddresses[i],
-				Taker:                  rfqOrder.TakerAddress,
-				MakerToken:             rfqOrder.MakerTokens[i][j],
-				TakerToken:             rfqOrder.TakerTokens[i][j],
-				MakerTokenAmount:       rfqOrder.MakerAmounts[i][j].String(),
-				TakerTokenAmount:       rfqOrder.TakerAmounts[i][j].String(),
-				MakerTokenOriginAmount: originalMakerAmounts[i][j],
-				TakerTokenOriginAmount: originalTakerAmounts[i][j],
-				ContractAddress:        order.ContractAddress,
-				BlockNumber:            order.BlockNumber,
-				TxHash:                 order.TxHash,
-				LogIndex:               order.LogIndex,
-				TradeIndex:             uint64(count),
-				Timestamp:              order.Timestamp,
-				EventHash:              order.EventHash,
-				Expiry:                 rfqOrder.Expiry.Uint64(),
-			})
-			count++
-		}
+		orders = append(orders, newOrder)
 	}
 
 	return orders, nil
+}
+
+func joinAmounts(input []*big.Int) string {
+	amounts := make([]string, len(input))
+	for i, amount := range input {
+		amounts[i] = amount.String()
+	}
+	return strings.Join(amounts, ",")
 }
 
 func getAggregateOrderInfo(order AggregateOrder) *big.Int {

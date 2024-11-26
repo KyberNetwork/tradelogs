@@ -423,12 +423,13 @@ func (p *Parser) parseAggregateSwap(order storage.TradeLog,
 	}
 	quoteTakerAmount := getAggregateOrderInfo(rfqOrder)
 	if filledTakerAmount.Cmp(big.NewInt(0)) > 0 && filledTakerAmount.Cmp(quoteTakerAmount) < 0 {
-		for i := range rfqOrder.MakerAmounts {
+		for i := range rfqOrder.MakerAddresses {
 			for j := range rfqOrder.MakerAmounts[i] {
 				tmp := big.NewInt(0).Mul(rfqOrder.MakerAmounts[i][j], filledTakerAmount)
 				rfqOrder.MakerAmounts[i][j] = tmp.Div(tmp, quoteTakerAmount)
-
-				tmp = big.NewInt(0).Mul(rfqOrder.TakerAmounts[i][j], filledTakerAmount)
+			}
+			for j := range rfqOrder.TakerAmounts[i] {
+				tmp := big.NewInt(0).Mul(rfqOrder.TakerAmounts[i][j], filledTakerAmount)
 				rfqOrder.TakerAmounts[i][j] = tmp.Div(tmp, quoteTakerAmount)
 			}
 		}
