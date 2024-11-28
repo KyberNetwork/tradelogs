@@ -11,9 +11,8 @@ import (
 )
 
 const (
-	tokenTable    = "token"
-	contractTable = "contract"
-	eventTable    = "event"
+	tokenTable     = "token"
+	makerNameTable = "maker_name"
 )
 
 type Storage struct {
@@ -58,22 +57,22 @@ func (s *Storage) InsertTokens(tokens []types.Token) error {
 	return nil
 }
 
-func (s *Storage) InsertContract(contracts []types.Contract) error {
-	if len(contracts) == 0 {
+func (s *Storage) InsertMakerName(makerName []types.MakerName) error {
+	if len(makerName) == 0 {
 		return nil
 	}
 
-	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(contractTable).Columns(
-		types.ContractColumns()...,
+	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(makerNameTable).Columns(
+		types.MakerNameColumns()...,
 	)
-	for _, contract := range contracts {
+	for _, maker := range makerName {
 		b = b.Values(
-			contract.SerializeContract()...,
+			maker.SerializeMakerName()...,
 		)
 	}
-	q, p, err := b.Suffix(`ON CONFLICT (contract) DO UPDATE 
+	q, p, err := b.Suffix(`ON CONFLICT (address) DO UPDATE 
 		SET 
-			contract_name=excluded.contract_name
+			tag=excluded.tag
 	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
@@ -119,20 +118,20 @@ func (s *Storage) GetTokens(query types.TokenQuery) ([]types.Token, error) {
 	return tokens, nil
 }
 
-func (s *Storage) GetContracts() ([]types.Contract, error) {
+func (s *Storage) GetMakerName() ([]types.MakerName, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(types.ContractColumns()...).
-		From(contractTable)
+		Select(types.MakerNameColumns()...).
+		From(makerNameTable)
 
 	q, p, err := builder.ToSql()
 	if err != nil {
 		return nil, err
 	}
 
-	var contracts []types.Contract
-	if err := s.db.Select(&contracts, q, p...); err != nil {
+	var makerName []types.MakerName
+	if err := s.db.Select(&makerName, q, p...); err != nil {
 		return nil, err
 	}
 
-	return contracts, nil
+	return makerName, nil
 }

@@ -25,15 +25,21 @@ type TradeLogs struct {
 	dashStorage *dashboardStorage.Storage
 }
 
-func NewTradeLogs(l *zap.SugaredLogger, s []storageTypes.Storage, bindAddr string) *TradeLogs {
+func NewTradeLogs(
+	l *zap.SugaredLogger,
+	s []storageTypes.Storage,
+	dashStorage *dashboardStorage.Storage,
+	bindAddr string,
+) *TradeLogs {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 
 	server := &TradeLogs{
-		r:        engine,
-		bindAddr: bindAddr,
-		l:        l,
-		storage:  s,
+		r:           engine,
+		bindAddr:    bindAddr,
+		l:           l,
+		storage:     s,
+		dashStorage: dashStorage,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -55,8 +61,8 @@ func (s *TradeLogs) register() {
 	pprof.Register(s.r, "/debug")
 	s.r.GET("/tradelogs", s.getTradeLogs)
 	s.r.GET("/tokens", s.getTokens)
-	// s.r.GET("/contracts", s.getContracts)
-	// s.r.POST("/add_contracts", s.addContracts)
+	s.r.GET("/makers", s.getMakerName)
+	s.r.POST("/add_makers", s.addMakerName)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -100,7 +106,7 @@ func (s *TradeLogs) getTradeLogs(c *gin.Context) {
 
 func (s *TradeLogs) getTokens(c *gin.Context) {
 	var queries dashboardTypes.TokenQuery
-	if err := c.ShouldBindJSON(&queries); err != nil {
+	if err := c.ShouldBind(&queries); err != nil {
 		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
@@ -116,33 +122,33 @@ func (s *TradeLogs) getTokens(c *gin.Context) {
 	})
 }
 
-// func (s *TradeLogs) getContracts(c *gin.Context) {
-// 	data, err := s.dashStorage.GetContracts()
-// 	if err != nil {
-// 		responseErr(c, http.StatusBadRequest, err)
-// 		return
-// 	}
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"success": true,
-// 		"data":    data,
-// 	})
-// }
+func (s *TradeLogs) getMakerName(c *gin.Context) {
+	data, err := s.dashStorage.GetMakerName()
+	if err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
 
-// func (s *TradeLogs) addContracts(c *gin.Context) {
-// 	var queries []dashboardTypes.Contract
+func (s *TradeLogs) addMakerName(c *gin.Context) {
+	var queries []dashboardTypes.MakerName
 
-// 	if err := c.ShouldBindJSON(&queries); err != nil {
-// 		responseErr(c, http.StatusBadRequest, err)
-// 		return
-// 	}
+	if err := c.ShouldBindJSON(&queries); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
 
-// 	if err := s.dashStorage.InsertContract(queries); err != nil {
-// 		responseErr(c, http.StatusInternalServerError, err)
-// 		return
-// 	}
+	if err := s.dashStorage.InsertMakerName(queries); err != nil {
+		responseErr(c, http.StatusInternalServerError, err)
+		return
+	}
 
-// 	c.JSON(http.StatusOK, gin.H{
-// 		"success": true,
-// 		"data":    queries,
-// 	})
-// }
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    queries,
+	})
+}
