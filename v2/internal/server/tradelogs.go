@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
+	dashboardTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard/types"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
@@ -16,10 +18,11 @@ var (
 )
 
 type TradeLogs struct {
-	r        *gin.Engine
-	bindAddr string
-	l        *zap.SugaredLogger
-	storage  []storageTypes.Storage
+	r           *gin.Engine
+	bindAddr    string
+	l           *zap.SugaredLogger
+	storage     []storageTypes.Storage
+	dashStorage *dashboardStorage.Storage
 }
 
 func NewTradeLogs(l *zap.SugaredLogger, s []storageTypes.Storage, bindAddr string) *TradeLogs {
@@ -51,6 +54,9 @@ func (s *TradeLogs) Run() error {
 func (s *TradeLogs) register() {
 	pprof.Register(s.r, "/debug")
 	s.r.GET("/tradelogs", s.getTradeLogs)
+	s.r.GET("/tokens", s.getTokens)
+	// s.r.GET("/contracts", s.getContracts)
+	// s.r.POST("/add_contracts", s.addContracts)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -91,3 +97,52 @@ func (s *TradeLogs) getTradeLogs(c *gin.Context) {
 		"data":    data,
 	})
 }
+
+func (s *TradeLogs) getTokens(c *gin.Context) {
+	var queries dashboardTypes.TokenQuery
+	if err := c.ShouldBindJSON(&queries); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+
+	data, err := s.dashStorage.GetTokens(queries)
+	if err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
+
+// func (s *TradeLogs) getContracts(c *gin.Context) {
+// 	data, err := s.dashStorage.GetContracts()
+// 	if err != nil {
+// 		responseErr(c, http.StatusBadRequest, err)
+// 		return
+// 	}
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"success": true,
+// 		"data":    data,
+// 	})
+// }
+
+// func (s *TradeLogs) addContracts(c *gin.Context) {
+// 	var queries []dashboardTypes.Contract
+
+// 	if err := c.ShouldBindJSON(&queries); err != nil {
+// 		responseErr(c, http.StatusBadRequest, err)
+// 		return
+// 	}
+
+// 	if err := s.dashStorage.InsertContract(queries); err != nil {
+// 		responseErr(c, http.StatusInternalServerError, err)
+// 		return
+// 	}
+
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"success": true,
+// 		"data":    queries,
+// 	})
+// }
