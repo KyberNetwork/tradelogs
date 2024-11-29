@@ -18,7 +18,6 @@ const (
 	paramName            = "order"
 	takerTraitsParamName = "takerTraits"
 	argsParamName        = "args"
-	rfqType              = "RFQ"
 )
 
 var fillContractOrderNameSet = sets.NewString("fillContractOrder", "fillContractOrderArgs")
@@ -28,7 +27,7 @@ func ToTradeLog(tradeLog storageTypes.TradeLog, contractCall *tradingTypes.Contr
 		return tradeLog, errors.New("contract call is empty")
 	}
 	if fillContractOrderNameSet.Has(contractCall.Name) {
-		tradeLog.Type = rfqType
+		tradeLog.Type = storageTypes.RFQType
 	}
 	for _, param := range contractCall.Params {
 		if param.Name != paramName {
@@ -51,13 +50,17 @@ func ToTradeLog(tradeLog storageTypes.TradeLog, contractCall *tradingTypes.Contr
 		tradeLog.MakerTokenOriginAmount = rfqOrder.MakingAmount.String()
 		tradeLog.TakerTokenOriginAmount = rfqOrder.TakingAmount.String()
 
-		tradeLog.MakerTraits = rfqOrder.MakerTraits.String()
 		makerTraitsOption, err := DecodeMarkerTraits(math.PaddedBigBytes(rfqOrder.MakerTraits, 32))
 		if err != nil {
 			return tradeLog, err
 		}
+		tradeLog.MakerTraits, err = json.Marshal(makerTraitsOption)
+		if err != nil {
+			return tradeLog, err
+		}
+
 		if !makerTraitsOption.NoPartialFills && !makerTraitsOption.MultipleFills {
-			tradeLog.Type = rfqType
+			tradeLog.Type = storageTypes.RFQType
 		}
 		tradeLog.Expiry = uint64(makerTraitsOption.Expiration)
 
