@@ -29,6 +29,7 @@ type TradeLog struct {
 	TakerTokenPrice        *float64 `db:"taker_token_price" json:"taker_token_price"`
 	MakerUsdAmount         *float64 `db:"maker_usd_amount" json:"maker_usd_amount"`
 	TakerUsdAmount         *float64 `db:"taker_usd_amount" json:"taker_usd_amount"`
+	Type                   string   `db:"type" json:"type"`
 }
 
 // CommonTradeLogSerialize used for exchanges only storing fields in common trade logs,

@@ -1,0 +1,1 @@
+alter table tradelogs_oneinch_v6 add column type text default ''::text not null;

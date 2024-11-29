@@ -11,17 +11,24 @@ import (
 	tradingTypes "github.com/KyberNetwork/tradinglib/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 const (
 	paramName            = "order"
 	takerTraitsParamName = "takerTraits"
 	argsParamName        = "args"
+	rfqType              = "RFQ"
 )
+
+var fillContractOrderNameSet = sets.NewString("fillContractOrder", "fillContractOrderArgs")
 
 func ToTradeLog(tradeLog storageTypes.TradeLog, contractCall *tradingTypes.ContractCall) (storageTypes.TradeLog, error) {
 	if contractCall == nil {
 		return tradeLog, errors.New("contract call is empty")
+	}
+	if fillContractOrderNameSet.Has(contractCall.Name) {
+		tradeLog.Type = rfqType
 	}
 	for _, param := range contractCall.Params {
 		if param.Name != paramName {
@@ -48,6 +55,9 @@ func ToTradeLog(tradeLog storageTypes.TradeLog, contractCall *tradingTypes.Contr
 		makerTraitsOption, err := DecodeMarkerTraits(math.PaddedBigBytes(rfqOrder.MakerTraits, 32))
 		if err != nil {
 			return tradeLog, err
+		}
+		if !makerTraitsOption.NoPartialFills && !makerTraitsOption.MultipleFills {
+			tradeLog.Type = rfqType
 		}
 		tradeLog.Expiry = uint64(makerTraitsOption.Expiration)
 
