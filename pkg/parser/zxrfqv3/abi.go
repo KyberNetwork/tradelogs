@@ -2,12 +2,13 @@ package zxrfqv3
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/dev"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/gasless"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/swap"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"sync"
 )
 
 type ContractType int
@@ -77,4 +78,14 @@ func (contractABIs *ContractABIs) containAddress(address common.Address) bool {
 	defer contractABIs.m.Unlock()
 	_, ok := contractABIs.mAddressABIs[address]
 	return ok
+}
+
+func (contractABIs *ContractABIs) getAddresses() []string {
+	contractABIs.m.Lock()
+	defer contractABIs.m.Unlock()
+	res := make([]string, 0, len(contractABIs.mAddressABIs))
+	for addr := range contractABIs.mAddressABIs {
+		res = append(res, addr.String())
+	}
+	return res
 }

@@ -380,11 +380,7 @@ func (p *Parser) Address() string {
 }
 
 func (p *Parser) ExecutorAddresses() []string {
-	res := make([]string, 0, len(p.contractABIs.mAddressABIs))
-	for addr := range p.contractABIs.mAddressABIs {
-		res = append(res, addr.String())
-	}
-	return res
+	return p.contractABIs.getAddresses()
 }
 
 func (p *Parser) DecodeExecuteInput(input string) ([][]byte, bool, error) {
