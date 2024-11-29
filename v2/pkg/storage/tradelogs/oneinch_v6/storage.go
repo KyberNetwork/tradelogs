@@ -156,6 +156,9 @@ func (s *Storage) Delete(blocks []uint64) error {
 }
 
 func tradeLogSerialize(o *storageTypes.TradeLog) []interface{} {
+	if o.MakerTraits == nil {
+		o.MakerTraits = []byte(`{}`)
+	}
 	return []interface{}{
 		o.OrderHash,
 		strings.ToLower(o.Maker),
