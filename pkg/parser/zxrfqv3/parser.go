@@ -379,6 +379,14 @@ func (p *Parser) Address() string {
 	return ""
 }
 
+func (p *Parser) ExecutorAddresses() []string {
+	res := make([]string, 0, len(p.contractABIs.mAddressABIs))
+	for addr := range p.contractABIs.mAddressABIs {
+		res = append(res, addr.String())
+	}
+	return res
+}
+
 func (p *Parser) DecodeExecuteInput(input string) ([][]byte, bool, error) {
 	if len(input) < 10 {
 		return nil, false, ErrorInputDataIsNotEnough
