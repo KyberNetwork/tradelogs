@@ -214,7 +214,7 @@ func TestExtractLogData(t *testing.T) {
 }
 
 func TestDeployParser_HandleDeployLog(t *testing.T) {
-	//t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
+	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
 	ethClient, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
 
