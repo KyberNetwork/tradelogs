@@ -17,5 +17,30 @@
     ],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "Feature",
+        "name": "",
+        "type": "uint128"
+      },
+      {
+        "indexed": true,
+        "internalType": "Nonce",
+        "name": "",
+        "type": "uint32"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "Deployed",
+    "type": "event"
   }
 ]

@@ -1,22 +1,20 @@
 package zxrfqv3
 
 import (
-	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
 	"math/big"
 	"strings"
-	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/deployer"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zerox_deployment"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -25,11 +23,10 @@ import (
 )
 
 type Parser struct {
-	contractABIs    *ContractABIs
-	deployerAddress common.Address
-	selectorAction  map[decoder.Bytes4]FunctionName
-	rfqArguments    rfqArguments
-	l               *zap.SugaredLogger
+	contractABIs   *ContractABIs
+	deployParser   *DeployParser
+	selectorAction map[decoder.Bytes4]FunctionName
+	rfqArguments   rfqArguments
 }
 
 const (
@@ -39,21 +36,20 @@ const (
 	fillAmountLen   = 16
 )
 
-func MustNewParserWithDeployer(ethClient *ethclient.Client, deployerAddress common.Address, contractAbiSupported ...ContractABI) *Parser {
+func MustNewParserWithDeployer(l *zap.SugaredLogger, storage zerox_deployment.IStorage, ethClient *ethclient.Client, deployerAddress common.Address, contractAbiSupported ...ContractABI) *Parser {
 	if isZeroAddress(deployerAddress) {
 		log.Fatalf("deployer Address is zero Address")
 	}
-
 	p := MustNewParser(contractAbiSupported...)
-	p.deployerAddress = deployerAddress
-
-	deployer, err := deployer.NewDeployer(deployerAddress, ethClient)
+	d, err := deployer.NewDeployer(deployerAddress, ethClient)
 	if err != nil {
 		log.Fatalf("failed to create deployer %v", err)
 	}
-
-	p.getAndUpdateSupportedContractAddress(deployer)
-	go p.monitorContractAddresses(deployer)
+	deployParser, err := NewDeployParser(l, p.contractABIs, d, storage)
+	if err != nil {
+		log.Fatalf("failed to create deploy parser %v", err)
+	}
+	p.deployParser = deployParser
 	return p
 }
 
@@ -79,45 +75,8 @@ func MustNewParser(contractAbiSupported ...ContractABI) *Parser {
 		selectorAction: getSettlerAction(),
 		contractABIs:   contractABIs,
 		rfqArguments:   arguments,
-		l:              zap.S(),
 	}
 	return p
-}
-
-func (p *Parser) monitorContractAddresses(deployer *deployer.Deployer) {
-	cronTime := time.NewTicker(1 * time.Minute)
-
-	for range cronTime.C {
-		p.getAndUpdateSupportedContractAddress(deployer)
-	}
-}
-
-func (p *Parser) getAndUpdateSupportedContractAddress(deployer *deployer.Deployer) {
-	contractTypeSupported := []ContractType{SwapContract, GaslessContract}
-	for _, contractType := range contractTypeSupported {
-		err := p.getAndUpdateContractAddress(deployer, contractType)
-		if err != nil {
-			p.l.Errorw("error to get contract address", "error", err)
-		}
-	}
-}
-
-func (p *Parser) getAndUpdateContractAddress(deployer *deployer.Deployer, contractType ContractType) error {
-	callOpts := &bind.CallOpts{Context: context.Background()}
-	contractAddress, err := deployer.OwnerOf(callOpts, big.NewInt(int64(contractType)))
-	if err != nil {
-		return fmt.Errorf("contract type %v, failed to get contract address %v", contractType, err)
-	}
-
-	abi, err := NewABI(ContractABI{Address: contractAddress, ContractType: contractType})
-	if err != nil {
-		return err
-	}
-	if !p.contractABIs.containAddress(contractAddress) && !isZeroAddress(contractAddress) {
-		p.l.Infow("add contract abi", "contractAddress", contractAddress)
-		p.contractABIs.addContractABI(contractAddress, abi)
-	}
-	return nil
 }
 
 func isZeroAddress(address common.Address) bool {
@@ -170,6 +129,12 @@ func (p *Parser) buildOrderByLog(log ethereumTypes.Log, blockTime uint64) (stora
 }
 
 func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) ([]storageTypes.TradeLog, error) {
+	// deploy log
+	if p.deployParser.isDeployLog(log) {
+		p.deployParser.handlerDeployLog(log)
+		return nil, nil
+	}
+	// trade log
 	order, err := p.buildOrderByLog(log, blockTime)
 	if err != nil {
 		return nil, err
@@ -358,8 +323,8 @@ func calculateTakerTokenAmount(makerTokenAmount *big.Int, maxTakerTokenAmount *b
 }
 
 func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
-	return p.contractABIs.containAddress(log.Address) &&
-		len(log.Topics) == 0
+	return (p.contractABIs.containAddress(log.Address) && len(log.Topics) == 0) ||
+		p.deployParser.isDeployLog(log)
 }
 
 func (p *Parser) Address() string {

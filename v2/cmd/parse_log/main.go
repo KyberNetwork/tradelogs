@@ -41,6 +41,7 @@ import (
 	uniswapxStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/uniswapx"
 	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
 	zxrfqv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxrfqv3"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zerox_deployment"
 	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -102,6 +103,9 @@ func run(c *cli.Context) error {
 	// state storage
 	s := state.New(l, db)
 
+	// zerox deployment storage
+	zxv3DeployStorage := zerox_deployment.NewStorage(l, db)
+
 	// rpc node to query trace call
 	rpcURL := c.StringSlice(libapp.RPCUrlFlagName)
 	if len(rpcURL) == 0 {
@@ -127,7 +131,7 @@ func run(c *cli.Context) error {
 		oneinchv6.MustNewParser(),
 		uniswapx.MustNewParser(),
 		bebop.MustNewParser(),
-		zxrfqv3.MustNewParserWithDeployer(ethClients[0], common.HexToAddress(constant.Deployer0xV3)),
+		zxrfqv3.MustNewParserWithDeployer(l, zxv3DeployStorage, ethClients[0], common.HexToAddress(constant.Deployer0xV3)),
 		pancakeswap.MustNewParser(),
 	}
 
