@@ -65,7 +65,7 @@ func (p *DeployParser) loadDeployments() error {
 		p.contractABIs.addContractABI(address, abi)
 	}
 
-	p.syncContractAddress()
+	go p.syncContractAddress()
 	return nil
 }
 
@@ -73,39 +73,37 @@ func (p *DeployParser) syncContractAddress() {
 	contractTypeSupported := []ContractType{SwapContract, GaslessContract}
 	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
-	go func() {
-		for ; ; <-ticker.C {
-			callOpts := &bind.CallOpts{Context: context.Background()}
-			for _, contractType := range contractTypeSupported {
-				contractAddress, err := p.deployer.OwnerOf(callOpts, big.NewInt(int64(contractType)))
-				if err != nil {
-					p.l.Errorw("error to get contract address", "err", err, "contractType", contractType)
-					continue
-				}
+	for ; ; <-ticker.C {
+		callOpts := &bind.CallOpts{Context: context.Background()}
+		for _, contractType := range contractTypeSupported {
+			contractAddress, err := p.deployer.OwnerOf(callOpts, big.NewInt(int64(contractType)))
+			if err != nil {
+				p.l.Errorw("error to get contract address", "err", err, "contractType", contractType)
+				continue
+			}
 
-				if p.contractABIs.containAddress(contractAddress) || isZeroAddress(contractAddress) {
-					continue
-				}
+			if p.contractABIs.containAddress(contractAddress) || isZeroAddress(contractAddress) {
+				continue
+			}
 
-				abi, err := NewABI(ContractABI{Address: contractAddress, ContractType: contractType})
-				if err != nil {
-					p.l.Errorw("error to create abi", "err", err, "contractAddress", contractAddress, "contractType", contractType)
-					continue
-				}
+			abi, err := NewABI(ContractABI{Address: contractAddress, ContractType: contractType})
+			if err != nil {
+				p.l.Errorw("error to create abi", "err", err, "contractAddress", contractAddress, "contractType", contractType)
+				continue
+			}
 
-				p.l.Infow("add contract abi", "contractAddress", contractAddress)
-				p.contractABIs.addContractABI(contractAddress, abi)
+			p.l.Infow("add contract abi", "contractAddress", contractAddress)
+			p.contractABIs.addContractABI(contractAddress, abi)
 
-				err = p.storage.Insert(zerox_deployment.Deployment{
-					Address:      contractAddress.String(),
-					ContractType: int(contractType),
-				})
-				if err != nil {
-					p.l.Errorw("failed to insert deployment", "err", err)
-				}
+			err = p.storage.Insert(zerox_deployment.Deployment{
+				Address:      contractAddress.String(),
+				ContractType: int(contractType),
+			})
+			if err != nil {
+				p.l.Errorw("failed to insert deployment", "err", err)
 			}
 		}
-	}()
+	}
 }
 
 func (p *DeployParser) isDeployLog(log ethereumTypes.Log) bool {
