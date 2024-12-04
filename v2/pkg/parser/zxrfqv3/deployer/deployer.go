@@ -31,7 +31,7 @@ var (
 
 // DeployerMetaData contains all meta data concerning the Deployer contract.
 var DeployerMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"ownerOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"Feature\",\"name\":\"\",\"type\":\"uint128\"},{\"indexed\":true,\"internalType\":\"Nonce\",\"name\":\"\",\"type\":\"uint32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"Deployed\",\"type\":\"event\"}]",
 }
 
 // DeployerABI is the input ABI used to generate the binding from.
@@ -209,4 +209,166 @@ func (_Deployer *DeployerSession) OwnerOf(tokenId *big.Int) (common.Address, err
 // Solidity: function ownerOf(uint256 tokenId) view returns(address)
 func (_Deployer *DeployerCallerSession) OwnerOf(tokenId *big.Int) (common.Address, error) {
 	return _Deployer.Contract.OwnerOf(&_Deployer.CallOpts, tokenId)
+}
+
+// DeployerDeployedIterator is returned from FilterDeployed and is used to iterate over the raw logs and unpacked data for Deployed events raised by the Deployer contract.
+type DeployerDeployedIterator struct {
+	Event *DeployerDeployed // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *DeployerDeployedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(DeployerDeployed)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(DeployerDeployed)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *DeployerDeployedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *DeployerDeployedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// DeployerDeployed represents a Deployed event raised by the Deployer contract.
+type DeployerDeployed struct {
+	Arg0 *big.Int
+	Arg1 uint32
+	Arg2 common.Address
+	Raw  types.Log // Blockchain specific contextual infos
+}
+
+// FilterDeployed is a free log retrieval operation binding the contract event 0xaa94c583a45742b26ac5274d230aea34ab334ed5722264aa5673010e612bc0b2.
+//
+// Solidity: event Deployed(uint128 indexed arg0, uint32 indexed arg1, address indexed arg2)
+func (_Deployer *DeployerFilterer) FilterDeployed(opts *bind.FilterOpts, arg0 []*big.Int, arg1 []uint32, arg2 []common.Address) (*DeployerDeployedIterator, error) {
+
+	var arg0Rule []interface{}
+	for _, arg0Item := range arg0 {
+		arg0Rule = append(arg0Rule, arg0Item)
+	}
+	var arg1Rule []interface{}
+	for _, arg1Item := range arg1 {
+		arg1Rule = append(arg1Rule, arg1Item)
+	}
+	var arg2Rule []interface{}
+	for _, arg2Item := range arg2 {
+		arg2Rule = append(arg2Rule, arg2Item)
+	}
+
+	logs, sub, err := _Deployer.contract.FilterLogs(opts, "Deployed", arg0Rule, arg1Rule, arg2Rule)
+	if err != nil {
+		return nil, err
+	}
+	return &DeployerDeployedIterator{contract: _Deployer.contract, event: "Deployed", logs: logs, sub: sub}, nil
+}
+
+// WatchDeployed is a free log subscription operation binding the contract event 0xaa94c583a45742b26ac5274d230aea34ab334ed5722264aa5673010e612bc0b2.
+//
+// Solidity: event Deployed(uint128 indexed arg0, uint32 indexed arg1, address indexed arg2)
+func (_Deployer *DeployerFilterer) WatchDeployed(opts *bind.WatchOpts, sink chan<- *DeployerDeployed, arg0 []*big.Int, arg1 []uint32, arg2 []common.Address) (event.Subscription, error) {
+
+	var arg0Rule []interface{}
+	for _, arg0Item := range arg0 {
+		arg0Rule = append(arg0Rule, arg0Item)
+	}
+	var arg1Rule []interface{}
+	for _, arg1Item := range arg1 {
+		arg1Rule = append(arg1Rule, arg1Item)
+	}
+	var arg2Rule []interface{}
+	for _, arg2Item := range arg2 {
+		arg2Rule = append(arg2Rule, arg2Item)
+	}
+
+	logs, sub, err := _Deployer.contract.WatchLogs(opts, "Deployed", arg0Rule, arg1Rule, arg2Rule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(DeployerDeployed)
+				if err := _Deployer.contract.UnpackLog(event, "Deployed", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseDeployed is a log parse operation binding the contract event 0xaa94c583a45742b26ac5274d230aea34ab334ed5722264aa5673010e612bc0b2.
+//
+// Solidity: event Deployed(uint128 indexed arg0, uint32 indexed arg1, address indexed arg2)
+func (_Deployer *DeployerFilterer) ParseDeployed(log types.Log) (*DeployerDeployed, error) {
+	event := new(DeployerDeployed)
+	if err := _Deployer.contract.UnpackLog(event, "Deployed", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }

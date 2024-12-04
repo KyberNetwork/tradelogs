@@ -6,16 +6,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
+	"github.com/KyberNetwork/tradelogs/v2/mocks"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/deployer"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 var rpcURL = os.Getenv("TEST_RPC_URL")
@@ -99,7 +106,11 @@ func TestMustNewParserWithDeployer(t *testing.T) {
 	contractAddress := common.HexToAddress("0x00000000000004533Fe15556B1E086BB1A72cEae")
 	ethClient, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err, "failed to dial to rpc url: %s, err: %s", rpcURL, err)
-	parser := MustNewParserWithDeployer(ethClient, contractAddress)
+
+	mockStorage := &mocks.MockDeployStorage{}
+	mockStorage.On("Get").Return(nil, nil)
+
+	parser := MustNewParserWithDeployer(zap.S(), mockStorage, ethClient, contractAddress)
 	assert.NotNil(t, parser, "failed to create parser")
 }
 
@@ -200,4 +211,50 @@ func TestExtractLogData(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(orderHash, amount)
 	require.Equal(t, "0x0fe145508fd6aa299e55f8b299284d6fef19bfaffe235a22120caee307bc582e", orderHash)
+}
+
+func TestDeployParser_HandleDeployLog(t *testing.T) {
+	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
+	ethClient, err := ethclient.Dial(rpcURL)
+	require.NoError(t, err)
+
+	d, err := deployer.NewDeployer(common.HexToAddress(constant.Deployer0xV3), ethClient)
+	require.NoError(t, err)
+
+	contractABIs := &ContractABIs{
+		mAddressABIs: make(map[common.Address]*abi.ABI),
+	}
+
+	mockStorage := &mocks.MockDeployStorage{}
+	mockStorage.On("Get").Return(nil, nil)
+
+	parser, err := NewDeployParser(zap.S(), contractABIs, d, mockStorage)
+	require.NoError(t, err)
+
+	eventRaw := `{
+		"address": "0x00000000000004533fe15556b1e086bb1a72ceae",
+		"topics": [
+			"0xaa94c583a45742b26ac5274d230aea34ab334ed5722264aa5673010e612bc0b2",
+			"0x0000000000000000000000000000000000000000000000000000000000000002",
+			"0x0000000000000000000000000000000000000000000000000000000000000006",
+			"0x00000000000000000000000070bf6634ee8cb27d04478f184b9b8bb13e5f4710"
+		],
+		"data": "0x",
+		"blockNumber": "0x13a94ee",
+		"transactionHash": "0xb840085e3cef27e03fd5b93e2ded7f04ac3196a0306edd28e38a1c3c08dd5776",
+		"transactionIndex": "0xe",
+		"blockHash": "0xe07a46dc5eafdbab54f944559374c80329de880cc91dc56498f3af6c25993db6",
+		"logIndex": "0x67",
+		"removed": false
+	}`
+	event := ethereumTypes.Log{}
+	err = json.Unmarshal([]byte(eventRaw), &event)
+	require.NoError(t, err)
+
+	deployment, err := parser.parseDeployLog(event)
+	require.NoError(t, err)
+
+	require.Equal(t, uint64(0x13a94ee), deployment.BlockNumber)
+	require.Equal(t, 2, deployment.ContractType)
+	require.Equal(t, "0x70bf6634ee8cb27d04478f184b9b8bb13e5f4710", strings.ToLower(deployment.Address))
 }

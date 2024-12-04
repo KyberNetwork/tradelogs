@@ -24,9 +24,9 @@ type TradeLogHandler struct {
 	l                *zap.SugaredLogger
 	rpcClient        rpcnode.IClient
 	storage          *tradelogs.Manager
-	promoteestorage  *promoteeTypes.Storage
+	promoteeStorage  *promoteeTypes.Storage
 	parsers          []parser.Parser
-	promotionparsers []promotionparser.Parser
+	promotionParsers []promotionparser.Parser
 	kafkaTopic       string
 	publisher        kafka.Publisher
 }
@@ -47,9 +47,9 @@ func NewTradeLogHandler(l *zap.SugaredLogger, rpc rpcnode.IClient,
 		l:                l,
 		rpcClient:        rpc,
 		storage:          storage,
-		promoteestorage:  promoteeStorage,
+		promoteeStorage:  promoteeStorage,
 		parsers:          parsers,
-		promotionparsers: promotionParsers,
+		promotionParsers: promotionParsers,
 		kafkaTopic:       kafkaTopic,
 		publisher:        publisher,
 	}
@@ -155,7 +155,7 @@ func (h *TradeLogHandler) processForPromotion(calls []types.TransactionCallFrame
 			continue
 		}
 
-		err := h.promoteestorage.Insert(promotees)
+		err := h.promoteeStorage.Insert(promotees)
 		if err != nil {
 			return fmt.Errorf("write to storage error: %w", err)
 		}
@@ -258,7 +258,7 @@ func (h *TradeLogHandler) findMatchingParser(log ethereumTypes.Log) parser.Parse
 }
 
 func (h *TradeLogHandler) findMatchingPromotionParser(log ethereumTypes.Log) promotionparser.Parser {
-	for _, p := range h.promotionparsers {
+	for _, p := range h.promotionParsers {
 		if p.LogFromContract(log) {
 			return p
 		}
@@ -276,7 +276,7 @@ func (h *TradeLogHandler) RevertBlock(blocks []uint64) error {
 		return fmt.Errorf("delete blocks error: %w", err)
 	}
 
-	err = h.promoteestorage.Delete((blocks))
+	err = h.promoteeStorage.Delete(blocks)
 	if err != nil {
 		return fmt.Errorf("delete blocks error: %w", err)
 	}
