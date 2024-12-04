@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
+	dashboardTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard/types"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
@@ -16,21 +18,28 @@ var (
 )
 
 type TradeLogs struct {
-	r        *gin.Engine
-	bindAddr string
-	l        *zap.SugaredLogger
-	storage  []storageTypes.Storage
+	r           *gin.Engine
+	bindAddr    string
+	l           *zap.SugaredLogger
+	storage     []storageTypes.Storage
+	dashStorage *dashboardStorage.Storage
 }
 
-func NewTradeLogs(l *zap.SugaredLogger, s []storageTypes.Storage, bindAddr string) *TradeLogs {
+func NewTradeLogs(
+	l *zap.SugaredLogger,
+	s []storageTypes.Storage,
+	dashStorage *dashboardStorage.Storage,
+	bindAddr string,
+) *TradeLogs {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 
 	server := &TradeLogs{
-		r:        engine,
-		bindAddr: bindAddr,
-		l:        l,
-		storage:  s,
+		r:           engine,
+		bindAddr:    bindAddr,
+		l:           l,
+		storage:     s,
+		dashStorage: dashStorage,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -51,6 +60,9 @@ func (s *TradeLogs) Run() error {
 func (s *TradeLogs) register() {
 	pprof.Register(s.r, "/debug")
 	s.r.GET("/tradelogs", s.getTradeLogs)
+	s.r.GET("/tokens", s.getTokens)
+	s.r.GET("/makers", s.getMakerName)
+	s.r.POST("/add_makers", s.addMakerName)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -89,5 +101,54 @@ func (s *TradeLogs) getTradeLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    data,
+	})
+}
+
+func (s *TradeLogs) getTokens(c *gin.Context) {
+	var queries dashboardTypes.TokenQuery
+	if err := c.ShouldBind(&queries); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+
+	data, err := s.dashStorage.GetTokens(queries)
+	if err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
+
+func (s *TradeLogs) getMakerName(c *gin.Context) {
+	data, err := s.dashStorage.GetMakerName()
+	if err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
+
+func (s *TradeLogs) addMakerName(c *gin.Context) {
+	var queries []dashboardTypes.MakerName
+
+	if err := c.ShouldBindJSON(&queries); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := s.dashStorage.InsertMakerName(queries); err != nil {
+		responseErr(c, http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    queries,
 	})
 }

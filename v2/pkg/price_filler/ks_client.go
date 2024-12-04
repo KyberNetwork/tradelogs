@@ -85,7 +85,9 @@ type TokenCatalogResp struct {
 }
 
 type TokenCatalog struct {
-	Decimals int64 `json:"decimals"`
+	Decimals int64  `json:"decimals"`
+	Symbol   string `json:"symbol"`
+	ChainId  int16  `json:"chainId"`
 }
 
 func (c *KsClient) GetTokenCatalog(address string) (TokenCatalogResp, error) {
@@ -113,12 +115,19 @@ type ImportTokenParam struct {
 	Tokens []ImportedToken `json:"tokens"`
 }
 
+type TokenCatalogImportResp struct {
+	Decimals int64  `json:"decimals"`
+	ChainId  string `json:"chainId"`
+	Address  string `json:"address"`
+	Symbol   string `json:"symbol"`
+}
+
 type ImportTokenResp struct {
 	Code    int64  `json:"code"`
 	Message string `json:"message"`
 	Data    struct {
 		Tokens []struct {
-			Data TokenCatalog `json:"data"`
+			Data TokenCatalogImportResp `json:"data"`
 		} `json:"tokens"`
 	} `json:"data"`
 }

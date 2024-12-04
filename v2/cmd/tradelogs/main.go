@@ -7,6 +7,7 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/v2/internal/server"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
+	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
 	hashflowv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/hashflow_v3"
 	kyberswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap"
@@ -67,8 +68,8 @@ func run(c *cli.Context) error {
 		zxrfqv3Storage.New(l, db),
 		pancakeswapStorage.New(l, db),
 	}
-
-	s := server.NewTradeLogs(l, storage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
+	dashStorage := dashboardStorage.New(l, db)
+	s := server.NewTradeLogs(l, storage, dashStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
 	return s.Run()
 }
 

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/KyberNetwork/go-binance/v2"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/mtm"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/test-go/testify/require"
 	"go.uber.org/zap"
@@ -12,9 +12,9 @@ import (
 
 // go test -v -timeout 30s -run ^TestFillPrice$ github.com/KyberNetwork/tradelogs/pkg/pricefiller
 func TestFillPrice(t *testing.T) {
-	t.Skip("Need to add Binance credentials")
-	bClient := binance.NewClient("", "")
-	filler, err := NewPriceFiller(zap.S(), bClient, nil)
+	t.Skip("Need to add mtm url")
+	mtmClient := mtm.NewMtmClient("")
+	filler, err := NewPriceFiller(zap.S(), nil, mtmClient, nil)
 	if err != nil {
 		require.NoError(t, err)
 	}
@@ -67,9 +67,9 @@ func TestFillPrice(t *testing.T) {
 }
 
 func TestFillBebopPrice(t *testing.T) {
-	//t.Skip("Need to add Binance credentials")
-	bClient := binance.NewClient("", "")
-	filler, err := NewPriceFiller(zap.S(), bClient, nil)
+	t.Skip("Need to add mtm url")
+	mtmClient := mtm.NewMtmClient("")
+	filler, err := NewPriceFiller(zap.S(), nil, mtmClient, nil)
 	if err != nil {
 		require.NoError(t, err)
 	}

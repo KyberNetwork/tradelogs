@@ -5,9 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/KyberNetwork/go-binance/v2"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/price_filler"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/mtm"
+	pricefiller "github.com/KyberNetwork/tradelogs/v2/pkg/price_filler"
+	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
 	hashflowv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/hashflow_v3"
 	kyberswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap"
@@ -21,11 +22,15 @@ import (
 	zxrfqv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxrfqv3"
 	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
 	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 )
 
 func main() {
+	if err := godotenv.Load("tradelogs.env"); err != nil {
+		log.Println("load env error", err)
+	}
 	app := libapp.NewApp()
 	app.Name = "trade logs crawler service"
 	app.Action = run
@@ -68,9 +73,9 @@ func run(c *cli.Context) error {
 		zxrfqv3Storage.New(l, db),
 		pancakeswapStorage.New(l, db),
 	}
-
-	binanceClient := binance.NewClient(c.String(libapp.BinanceAPIKeyFlag.Name), c.String(libapp.BinanceSecretKeyFlag.Name))
-	priceFiller, err := pricefiller.NewPriceFiller(l, binanceClient, s)
+	mtmClient := mtm.NewMtmClient(c.String(libapp.MarkToMarketURLFlag.Name))
+	dashboardStorage := dashboardStorage.New(l, db)
+	priceFiller, err := pricefiller.NewPriceFiller(l, s, mtmClient, dashboardStorage)
 	if err != nil {
 		l.Errorw("Error while init price filler")
 		return err
