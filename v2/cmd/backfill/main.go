@@ -9,10 +9,20 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/internal/service"
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/bebop"
+	hashflowv3 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/hashflow_v3"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap"
+	kyberswaprfq "github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap_rfq"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/oneinchv6"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/pancakeswap"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/paraswap"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/uniswapx"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
 	promotion1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser/oneinchv2"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
@@ -22,7 +32,9 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zerox_deployment"
 	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/jmoiron/sqlx"
 	"github.com/urfave/cli"
@@ -77,6 +89,9 @@ func run(c *cli.Context) error {
 	// state storage
 	stateStorage := state.New(l, db)
 
+	// zerox deployment storage
+	zxv3DeployStorage := zerox_deployment.NewStorage(l, db)
+
 	// rpc node to query trace call
 	rpcURL := c.StringSlice(libapp.RPCUrlFlagName)
 	if len(rpcURL) == 0 {
@@ -94,16 +109,16 @@ func run(c *cli.Context) error {
 	rpcNode := rpcnode.NewClient(l, ethClients...)
 
 	parsers := []parser.Parser{
-		//kyberswap.MustNewParser(),
+		kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
-		//paraswap.MustNewParser(),
-		//kyberswaprfq.MustNewParser(),
-		//hashflowv3.MustNewParser(),
-		//oneinchv6.MustNewParser(traceCalls),
-		//uniswapxv1.MustNewParser(traceCalls),
-		//uniswapx.MustNewParser(traceCalls),
-		//bebop.MustNewParser(traceCalls),
-		//zxrfqv3.MustNewParserWithDeployer(traceCalls, ethClient, common.HexToAddress(parser.Deployer0xV3)),
+		paraswap.MustNewParser(),
+		kyberswaprfq.MustNewParser(),
+		hashflowv3.MustNewParser(),
+		oneinchv6.MustNewParser(),
+		uniswapx.MustNewParser(),
+		bebop.MustNewParser(),
+		zxrfqv3.MustNewParserWithDeployer(l, zxv3DeployStorage, ethClients[0], common.HexToAddress(constant.Deployer0xV3)),
+		pancakeswap.MustNewParser(),
 	}
 
 	promotionParsers := []promotionparser.Parser{promotion1inchv2.MustNewParser()}
@@ -127,11 +142,7 @@ func run(c *cli.Context) error {
 	// parse log worker
 	w := worker.NewBackFiller(tradeLogHandler, backfillStorage, stateStorage, l, rpcNode, parsers)
 
-	go func() {
-		if err = w.Run(); err != nil {
-			panic(err)
-		}
-	}()
+	w.Run()
 
 	srv, err := service.NewBackfillService(backfillStorage, l, w)
 	if err != nil {

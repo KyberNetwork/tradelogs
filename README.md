@@ -125,7 +125,7 @@ This server serve the endpoints to manage backfill task: list, create, cancel, r
 
 - **URL**: `/backfill/cancel/:id`
 - **Method**: `GET`
-- **Description**: Cancels a specific backfill task by its ID.
+- **Description**: Cancels a specific backfill task by its ID. Pass id -1 to stop system backfill task (backfill all exchanges).
 - **URL Parameters**:
     - `id` (int, required): The task ID.
 - **Response**:
@@ -154,7 +154,7 @@ This server serve the endpoints to manage backfill task: list, create, cancel, r
 
 - **URL**: `/backfill/restart/:id`
 - **Method**: `GET`
-- **Description**: Restarts a specific backfill task by its ID.
+- **Description**: Restarts a specific backfill task by its ID. Pass id -1 to run system backfill task (backfill all exchanges).
 - **URL Parameters**:
     - `id` (int, required): The task ID.
 - **Response**:
