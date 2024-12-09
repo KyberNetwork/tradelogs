@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
@@ -49,7 +50,9 @@ func (w *BackFiller) Run() {
 
 func (w *BackFiller) run() error {
 	// run only one process at a time
-	w.mu.Lock()
+	if !w.mu.TryLock() {
+		return nil
+	}
 	defer w.mu.Unlock()
 
 	for {
@@ -75,6 +78,8 @@ func (w *BackFiller) run() error {
 			w.l.Errorw("error when update backfill table", "block", last-1, "err", err)
 			return fmt.Errorf("cannot update backfill table with %d: %w", last-1, err)
 		}
+
+		time.Sleep(time.Second)
 	}
 }
 
