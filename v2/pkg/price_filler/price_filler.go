@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	NetworkETHChanID               = 1
-	NetworkETHChanIDString         = "1"
+	NetworkETHChainID              = 1
+	NetworkETHChainIDString        = "1"
 	NetworkETH                     = "ETH"
 	updateAllCoinInfoInterval      = 12 * time.Hour
 	backfillTradeLogsPriceInterval = 10 * time.Minute
@@ -25,7 +25,7 @@ const (
 	addressETH1                    = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 	addressETH2                    = "0x0000000000000000000000000000000000000000"
 	coinUSDT                       = "USDT"
-	USDTAddress                    = "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7"
+	USDTAddress                    = "0xdac17f958d2ee523a2206206994597c13d831ec7"
 	invalidSymbolErrString         = "<APIError> code=-1121, msg=Invalid symbol."
 )
 
@@ -63,13 +63,13 @@ func NewPriceFiller(l *zap.SugaredLogger,
 		mappedCoinInfo: map[string]CoinInfo{
 			addressETH1: {
 				Coin:            "ETH",
-				ChainId:         1,
+				ChainId:         NetworkETHChainID,
 				ContractAddress: addressETH1,
 				Decimals:        18,
 			},
 			addressETH2: {
 				Coin:            "ETH",
-				ChainId:         1,
+				ChainId:         NetworkETHChainID,
 				ContractAddress: addressETH2,
 				Decimals:        18,
 			},
@@ -94,8 +94,8 @@ func (p *PriceFiller) getPrice(token string, timestamp int64) (float64, error) {
 		context.Background(),
 		token,
 		USDTAddress,
-		NetworkETHChanIDString,
-		timestamp/1000,
+		NetworkETHChainID,
+		time.UnixMilli(timestamp),
 	)
 	if err != nil {
 		return 0, err
@@ -113,7 +113,7 @@ func (p *PriceFiller) updateAllCoinInfo() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for _, info := range tokens {
-		if info.ChainId != NetworkETHChanID {
+		if info.ChainId != NetworkETHChainID {
 			continue
 		}
 		p.mappedCoinInfo[info.Address] = CoinInfo{
@@ -307,7 +307,7 @@ func (p *PriceFiller) getDecimalsAndSymbol(address string) (int64, string, error
 	}
 
 	// try to import token if token is not found.
-	newResp, err := p.ksClient.ImportToken(NetworkETHChanIDString, address)
+	newResp, err := p.ksClient.ImportToken(NetworkETHChainIDString, address)
 	if err != nil {
 		p.l.Errorw("Failed to ImportToken", "err", err)
 		return 0, "", err
@@ -328,7 +328,7 @@ func (p *PriceFiller) insertTokens() error {
 			Address:  address,
 			Symbol:   token.Coin,
 			Decimals: token.Decimals,
-			ChainId:  NetworkETHChanID,
+			ChainId:  NetworkETHChainID,
 		})
 	}
 	err := p.dashboardStorage.InsertTokens(tokenList)

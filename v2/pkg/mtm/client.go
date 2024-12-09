@@ -2,107 +2,64 @@ package mtm
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
-	tokenStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard/types"
+	"github.com/KyberNetwork/tradinglib/pkg/httpclient"
 )
 
 type MtmClient struct {
-	host string
+	baseURL    string
+	httpClient *http.Client
 }
 
-func NewMtmClient(host string) *MtmClient {
+func NewMtmClient(baseURL string, httpClient *http.Client) (*MtmClient, error) {
 	return &MtmClient{
-		host: host,
-	}
+		baseURL:    strings.TrimRight(baseURL, "/"),
+		httpClient: httpClient,
+	}, nil
 }
 
-func (m *MtmClient) GetListTokens(ctx context.Context) ([]tokenStorage.Token, error) {
+type Token struct {
+	Address  string `json:"address"`
+	ChainId  int64  `json:"chain_id"`
+	Symbol   string `json:"symbol"`
+	Decimals int64  `json:"decimals"`
+}
+type TokenResponse struct {
+	Success bool    `json:"success"`
+	Data    []Token `json:"data"`
+}
+
+func (m *MtmClient) GetListTokens(ctx context.Context) ([]Token, error) {
 	const path = "/tokens"
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, m.host+path, nil)
-	if err != nil {
-		return nil, fmt.Errorf("unable to create request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-	var tokens TokenResponse
 
-	if err := json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
-		return nil, fmt.Errorf("failed to decode JSON: %w", err)
+	httpReq, err := httpclient.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		m.baseURL,
+		path,
+		nil,
+		nil)
+	if err != nil {
+		return nil, fmt.Errorf("new request error: %w", err)
 	}
 
-	return tokens.Data, nil
+	var resp TokenResponse
+	if _, err := httpclient.DoHTTPRequest(
+		m.httpClient,
+		httpReq,
+		&resp,
+		httpclient.WithStatusCode(http.StatusOK)); err != nil {
+		return nil, fmt.Errorf("do http request error: %w", err)
+	}
+
+	return resp.Data, nil
 }
 
-func (m *MtmClient) GetHistoricalRate(
-	ctx context.Context,
-	base, quote, chainId string,
-	timestamp int64,
-) (float64, error) {
-	const path = "/v3/historical"
-	queryParam := fmt.Sprintf("?base=%s&quote=%s&time=%d&chainid=%s",
-		base,
-		quote,
-		timestamp,
-		chainId,
-	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, m.host+path+queryParam, nil)
-	if err != nil {
-		return 0, fmt.Errorf("unable to create request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return 0, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	var rate RateResponse
-
-	if err := json.NewDecoder(resp.Body).Decode(&rate); err != nil {
-		return 0, fmt.Errorf("failed to decode JSON: %w", err)
-	}
-
-	return rate.Data.Price, nil
-}
-
-func (m *MtmClient) GetCurrentRate(ctx context.Context, base, quote, chainId string) (float64, error) {
-	const path = "/v3/rate"
-	queryParam := fmt.Sprintf("?base=%s&quote=%s&chainid=%s",
-		base,
-		quote,
-		chainId,
-	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, m.host+path+queryParam, nil)
-	if err != nil {
-		return 0, fmt.Errorf("unable to create request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return 0, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	var rate RateResponse
-
-	if err := json.NewDecoder(resp.Body).Decode(&rate); err != nil {
-		return 0, fmt.Errorf("failed to decode JSON: %w", err)
-	}
-
-	return rate.Data.Price, nil
-}
-
-type RateResponse struct {
+type RateV3Response struct {
 	Success bool `json:"success"`
 	Data    struct {
 		Price    float64 `json:"price"`
@@ -110,7 +67,33 @@ type RateResponse struct {
 	} `json:"data"`
 }
 
-type TokenResponse struct {
-	Success bool                 `json:"success"`
-	Data    []tokenStorage.Token `json:"data"`
+func (m *MtmClient) GetHistoricalRate(
+	ctx context.Context, base, quote string, chainId int64, ts time.Time,
+) (float64, error) {
+	const path = "/v3/historical"
+	httpReq, err := httpclient.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		m.baseURL,
+		path,
+		httpclient.NewQuery().
+			SetString("base", base).
+			SetString("quote", quote).
+			Int64("chain_id", chainId).
+			Int64("time", ts.Unix()),
+		nil)
+	if err != nil {
+		return 0, fmt.Errorf("new request error: %w", err)
+	}
+
+	var rate RateV3Response
+	if _, err := httpclient.DoHTTPRequest(
+		m.httpClient,
+		httpReq,
+		&rate,
+		httpclient.WithStatusCode(http.StatusOK)); err != nil {
+		return 0, fmt.Errorf("do http request error: %w", err)
+	}
+
+	return rate.Data.Price, nil
 }

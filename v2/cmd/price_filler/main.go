@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
@@ -22,15 +23,11 @@ import (
 	zxrfqv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxrfqv3"
 	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
 	"github.com/jmoiron/sqlx"
-	"github.com/joho/godotenv"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
 )
 
 func main() {
-	if err := godotenv.Load("tradelogs.env"); err != nil {
-		log.Println("load env error", err)
-	}
 	app := libapp.NewApp()
 	app.Name = "trade logs crawler service"
 	app.Action = run
@@ -73,7 +70,12 @@ func run(c *cli.Context) error {
 		zxrfqv3Storage.New(l, db),
 		pancakeswapStorage.New(l, db),
 	}
-	mtmClient := mtm.NewMtmClient(c.String(libapp.MarkToMarketURLFlag.Name))
+	httpClient := &http.Client{}
+	mtmClient, err := mtm.NewMtmClient(c.String(libapp.MarkToMarketURLFlag.Name), httpClient)
+	if err != nil {
+		l.Errorw("Error init new mtmClient")
+		return err
+	}
 	dashboardStorage := dashboardStorage.New(l, db)
 	priceFiller, err := pricefiller.NewPriceFiller(l, s, mtmClient, dashboardStorage)
 	if err != nil {

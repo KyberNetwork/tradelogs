@@ -7,3 +7,4 @@ cmd/*/*
 .idea
 .env.example
 .env
+.DS_Store

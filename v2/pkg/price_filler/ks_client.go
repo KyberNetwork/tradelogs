@@ -93,7 +93,7 @@ type TokenCatalog struct {
 func (c *KsClient) GetTokenCatalog(address string) (TokenCatalogResp, error) {
 	var resp TokenCatalogResp
 	err := c.DoRequest(context.Background(), http.MethodGet,
-		fmt.Sprintf("%s/tokens?chainIds=%d&query=%s", c.baseURL, NetworkETHChanID, address),
+		fmt.Sprintf("%s/tokens?chainIds=%d&query=%s", c.baseURL, NetworkETHChainID, address),
 		nil, &resp)
 	if err != nil {
 		return TokenCatalogResp{}, err
