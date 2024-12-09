@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
@@ -17,6 +18,7 @@ import (
 )
 
 type BackFiller struct {
+	mu              sync.Mutex
 	handler         *handler.TradeLogHandler
 	backfillStorage backfill.IStorage
 	stateStorage    state.Storage
@@ -37,8 +39,23 @@ func NewBackFiller(handler *handler.TradeLogHandler, backfillStorage backfill.IS
 	}
 }
 
-func (w *BackFiller) Run() error {
+func (w *BackFiller) Run() {
+	go func() {
+		if err := w.run(); err != nil {
+			w.l.Panicw("run system backfill failed", "err", err)
+		}
+	}()
+}
+
+func (w *BackFiller) run() error {
+	// run only one process at a time
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	for {
+		if !w.enableBackfill() {
+			return nil
+		}
 		first, last, exclusions, err := w.GetBlockRanges()
 		if err != nil {
 			return fmt.Errorf("cannot get block ranges: %w", err)
@@ -61,6 +78,37 @@ func (w *BackFiller) Run() error {
 	}
 }
 
+// enableBackfill check the state of enabling system backfill task
+func (w *BackFiller) enableBackfill() bool {
+	v, err := w.stateStorage.GetState(state.EnableSystemBackfillKey)
+	if err != nil {
+		return false
+	}
+	enable, err := strconv.ParseBool(v)
+	if err != nil {
+		return false
+	}
+	return enable
+}
+
+// CancelSystemBackfill stop the running system backfill task
+func (w *BackFiller) CancelSystemBackfill() error {
+	return w.stateStorage.SetState(state.EnableSystemBackfillKey, strconv.FormatBool(false))
+}
+
+// RunSystemBackfill run the system backfill task, if there is another running system backfill task, this task need to wait
+func (w *BackFiller) RunSystemBackfill() error {
+	if w.enableBackfill() {
+		return nil
+	}
+	err := w.stateStorage.SetState(state.EnableSystemBackfillKey, strconv.FormatBool(true))
+	if err != nil {
+		return err
+	}
+	w.Run()
+	return nil
+}
+
 func (w *BackFiller) IsValidExchange(exchange string) bool {
 	for _, p := range w.parsers {
 		if p.Exchange() == exchange {
@@ -70,7 +118,7 @@ func (w *BackFiller) IsValidExchange(exchange string) bool {
 	return false
 }
 
-// GetBlockRanges return separated and non-overlapping ranges that cover all backfill ranges
+// GetBlockRanges return the first and last block that cover all backfill ranges and the exclusive exchange that finishing backfill
 func (w *BackFiller) GetBlockRanges() (uint64, uint64, sets.Set[string], error) {
 	states, err := w.backfillStorage.Get()
 	if err != nil {

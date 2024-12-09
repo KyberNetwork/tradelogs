@@ -14,7 +14,10 @@ type Backfill struct {
 	worker  *worker.BackFiller
 }
 
-const MaxBackfillTaskNumber = 10
+const (
+	MaxBackfillTaskNumber = 10
+	SystemBackfillTaskID  = -1
+)
 
 func NewBackfillService(storage backfill.IStorage, l *zap.SugaredLogger, w *worker.BackFiller) (*Backfill, error) {
 	srv := &Backfill{
@@ -96,6 +99,9 @@ func (s *Backfill) NewBackfillTask(from, to uint64, exchange string) (int, strin
 }
 
 func (s *Backfill) CancelBackfillTask(id int) error {
+	if id == SystemBackfillTaskID {
+		return s.worker.CancelSystemBackfill()
+	}
 	task, err := s.storage.GetTaskByID(id)
 	if err != nil {
 		return fmt.Errorf("cannot get backfill task with id %d: %w", id, err)
@@ -111,6 +117,9 @@ func (s *Backfill) CancelBackfillTask(id int) error {
 }
 
 func (s *Backfill) RestartBackfillTask(id int) error {
+	if id == SystemBackfillTaskID {
+		return s.worker.RunSystemBackfill()
+	}
 	task, err := s.storage.GetTaskByID(id)
 	if err != nil {
 		return fmt.Errorf("cannot get backfill task with id %d: %w", id, err)
@@ -138,6 +147,7 @@ func (s *Backfill) ListTask() ([]backfill.Task, error) {
 	if err != nil {
 		return nil, err
 	}
+	// system backfill task
 	first, last, _, err := s.worker.GetBlockRanges()
 	if err != nil {
 		return tasks, nil
@@ -147,7 +157,7 @@ func (s *Backfill) ListTask() ([]backfill.Task, error) {
 		status = backfill.StatusTypeDone
 	}
 	task := backfill.Task{
-		ID:             -1,
+		ID:             SystemBackfillTaskID,
 		FromBlock:      first,
 		ToBlock:        last,
 		ProcessedBlock: last,
