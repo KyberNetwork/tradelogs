@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
-	"github.com/KyberNetwork/go-binance/v2"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/price_filler"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/mtm"
+	pricefiller "github.com/KyberNetwork/tradelogs/v2/pkg/price_filler"
+	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
 	hashflowv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/hashflow_v3"
 	kyberswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap"
@@ -25,6 +27,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// This week I will deploy the new price filler of tradelog v2, which calls my new mark to market.
+// After deploying, I will have data to continue creating competition dashboard.
 func main() {
 	app := libapp.NewApp()
 	app.Name = "trade logs crawler service"
@@ -68,9 +72,10 @@ func run(c *cli.Context) error {
 		zxrfqv3Storage.New(l, db),
 		pancakeswapStorage.New(l, db),
 	}
-
-	binanceClient := binance.NewClient(c.String(libapp.BinanceAPIKeyFlag.Name), c.String(libapp.BinanceSecretKeyFlag.Name))
-	priceFiller, err := pricefiller.NewPriceFiller(l, binanceClient, s)
+	httpClient := &http.Client{}
+	mtmClient := mtm.NewMtmClient(c.String(libapp.MarkToMarketURLFlag.Name), httpClient)
+	dashboardStorage := dashboardStorage.New(l, db)
+	priceFiller, err := pricefiller.NewPriceFiller(l, s, mtmClient, dashboardStorage)
 	if err != nil {
 		l.Errorw("Error while init price filler")
 		return err

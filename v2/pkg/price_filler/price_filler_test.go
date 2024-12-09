@@ -2,9 +2,10 @@ package pricefiller
 
 import (
 	"encoding/json"
+	"net/http"
 	"testing"
 
-	"github.com/KyberNetwork/go-binance/v2"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/mtm"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/test-go/testify/require"
 	"go.uber.org/zap"
@@ -12,12 +13,11 @@ import (
 
 // go test -v -timeout 30s -run ^TestFillPrice$ github.com/KyberNetwork/tradelogs/pkg/pricefiller
 func TestFillPrice(t *testing.T) {
-	t.Skip("Need to add Binance credentials")
-	bClient := binance.NewClient("", "")
-	filler, err := NewPriceFiller(zap.S(), bClient, nil)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	t.Skip("Need to add mtm url")
+	httpClient := &http.Client{}
+	mtmClient := mtm.NewMtmClient("", httpClient)
+	filler, err := NewPriceFiller(zap.S(), nil, mtmClient, nil)
+	require.NoError(t, err)
 
 	tradeLogs := []types.TradeLog{
 		{
@@ -67,12 +67,11 @@ func TestFillPrice(t *testing.T) {
 }
 
 func TestFillBebopPrice(t *testing.T) {
-	//t.Skip("Need to add Binance credentials")
-	bClient := binance.NewClient("", "")
-	filler, err := NewPriceFiller(zap.S(), bClient, nil)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	t.Skip("Need to add mtm url")
+	httpClient := &http.Client{}
+	mtmClient := mtm.NewMtmClient("", httpClient)
+	filler, err := NewPriceFiller(zap.S(), nil, mtmClient, nil)
+	require.NoError(t, err)
 
 	rawTradelogs := []byte(`[{"exchange":"","order_hash":"52344126666663492359326433927181107201","maker":"0x51c72848c68a965f66fa7a88855f9f7784502a7f","taker":"0x589c86cc1f6043f99222843d397ea4e770841cae","maker_token":"0xba100000625a3754423978a60c9317c58a424e3d","taker_token":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","maker_token_amount":"418270652861628178","taker_token_amount":"3500000000000000","contract_address":"0xbbbbbBB520d69a9775E85b458C58c648259FAD5F","block_number":20153388,"tx_hash":"0xff46ac555ec7da7aa484864dc0df90217b7f46dfa51627c20ef6e25451c64b15","log_index":133,"timestamp":1730258461000,"event_hash":"0xadd7095becdaa725f0f33243630938c861b0bba83dfd217d4055701aa768ec2e","expiration_date":1719133686,"maker_token_price":0,"taker_token_price":0,"maker_usd_amount":0,"taker_usd_amount":0,"state":""},{"exchange":"","order_hash":"52344126666663492359326433927181107201","maker":"0x51c72848c68a965f66fa7a88855f9f7784502a7f","taker":"0x589c86cc1f6043f99222843d397ea4e770841cae","maker_token":"0x6b175474e89094c44da98b954eedeac495271d0f","taker_token":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","maker_token_amount":"1320463992019695220","taker_token_amount":"3500000000000000","contract_address":"0xbbbbbBB520d69a9775E85b458C58c648259FAD5F","block_number":20153388,"tx_hash":"0xff46ac555ec7da7aa484864dc0df90217b7f46dfa51627c20ef6e25451c64b15","log_index":133,"trade_index":1,"timestamp":1730258461000,"event_hash":"0xadd7095becdaa725f0f33243630938c861b0bba83dfd217d4055701aa768ec2e","expiration_date":1719133686,"maker_token_price":0,"taker_token_price":0,"maker_usd_amount":0,"taker_usd_amount":0,"state":""},{"exchange":"","order_hash":"52344126666663492359326433927181107201","maker":"0x51c72848c68a965f66fa7a88855f9f7784502a7f","taker":"0x589c86cc1f6043f99222843d397ea4e770841cae","maker_token":"0xc00e94cb662c3520282e6f5717214004a7f26888","taker_token":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","maker_token_amount":"26747477356835299","taker_token_amount":"3500000000000000","contract_address":"0xbbbbbBB520d69a9775E85b458C58c648259FAD5F","block_number":20153388,"tx_hash":"0xff46ac555ec7da7aa484864dc0df90217b7f46dfa51627c20ef6e25451c64b15","log_index":133,"trade_index":2,"timestamp":1730258461000,"event_hash":"0xadd7095becdaa725f0f33243630938c861b0bba83dfd217d4055701aa768ec2e","expiration_date":1719133686,"maker_token_price":0,"taker_token_price":0,"maker_usd_amount":0,"taker_usd_amount":0,"state":""},{"exchange":"","order_hash":"52344126666663492359326433927181107201","maker":"0x51c72848c68a965f66fa7a88855f9f7784502a7f","taker":"0x589c86cc1f6043f99222843d397ea4e770841cae","maker_token":"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48","taker_token":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","maker_token_amount":"1320537","taker_token_amount":"3500000000000000","contract_address":"0xbbbbbBB520d69a9775E85b458C58c648259FAD5F","block_number":20153388,"tx_hash":"0xff46ac555ec7da7aa484864dc0df90217b7f46dfa51627c20ef6e25451c64b15","log_index":133,"trade_index":3,"timestamp":1730258461000,"event_hash":"0xadd7095becdaa725f0f33243630938c861b0bba83dfd217d4055701aa768ec2e","expiration_date":1719133686,"maker_token_price":0,"taker_token_price":0,"maker_usd_amount":0,"taker_usd_amount":0,"state":""},{"exchange":"","order_hash":"52344126666663492359326433927181107201","maker":"0x51c72848c68a965f66fa7a88855f9f7784502a7f","taker":"0x589c86cc1f6043f99222843d397ea4e770841cae","maker_token":"0x6b3595068778dd592e39a122f4f5a5cf09c90fe2","taker_token":"0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2","maker_token_amount":"1614402915976888452","taker_token_amount":"3500000000000000","contract_address":"0xbbbbbBB520d69a9775E85b458C58c648259FAD5F","block_number":20153388,"tx_hash":"0xff46ac555ec7da7aa484864dc0df90217b7f46dfa51627c20ef6e25451c64b15","log_index":133,"trade_index":4,"timestamp":1730258461000,"event_hash":"0xadd7095becdaa725f0f33243630938c861b0bba83dfd217d4055701aa768ec2e","expiration_date":1719133686,"maker_token_price":0,"taker_token_price":0,"maker_usd_amount":0,"taker_usd_amount":0,"state":""}]`)
 
