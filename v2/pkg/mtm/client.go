@@ -15,11 +15,11 @@ type MtmClient struct {
 	httpClient *http.Client
 }
 
-func NewMtmClient(baseURL string, httpClient *http.Client) (*MtmClient, error) {
+func NewMtmClient(baseURL string, httpClient *http.Client) *MtmClient {
 	return &MtmClient{
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		httpClient: httpClient,
-	}, nil
+	}
 }
 
 type Token struct {

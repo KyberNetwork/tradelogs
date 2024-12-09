@@ -15,8 +15,7 @@ import (
 func TestFillPrice(t *testing.T) {
 	t.Skip("Need to add mtm url")
 	httpClient := &http.Client{}
-	mtmClient, err := mtm.NewMtmClient("", httpClient)
-	require.NoError(t, err)
+	mtmClient := mtm.NewMtmClient("", httpClient)
 	filler, err := NewPriceFiller(zap.S(), nil, mtmClient, nil)
 	require.NoError(t, err)
 
@@ -70,8 +69,7 @@ func TestFillPrice(t *testing.T) {
 func TestFillBebopPrice(t *testing.T) {
 	t.Skip("Need to add mtm url")
 	httpClient := &http.Client{}
-	mtmClient, err := mtm.NewMtmClient("", httpClient)
-	require.NoError(t, err)
+	mtmClient := mtm.NewMtmClient("", httpClient)
 	filler, err := NewPriceFiller(zap.S(), nil, mtmClient, nil)
 	require.NoError(t, err)
 

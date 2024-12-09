@@ -27,6 +27,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// This week I will deploy the new price filler of tradelog v2, which calls my new mark to market.
+// After deploying, I will have data to continue creating competition dashboard.
 func main() {
 	app := libapp.NewApp()
 	app.Name = "trade logs crawler service"
@@ -71,11 +73,7 @@ func run(c *cli.Context) error {
 		pancakeswapStorage.New(l, db),
 	}
 	httpClient := &http.Client{}
-	mtmClient, err := mtm.NewMtmClient(c.String(libapp.MarkToMarketURLFlag.Name), httpClient)
-	if err != nil {
-		l.Errorw("Error init new mtmClient")
-		return err
-	}
+	mtmClient := mtm.NewMtmClient(c.String(libapp.MarkToMarketURLFlag.Name), httpClient)
 	dashboardStorage := dashboardStorage.New(l, db)
 	priceFiller, err := pricefiller.NewPriceFiller(l, s, mtmClient, dashboardStorage)
 	if err != nil {
