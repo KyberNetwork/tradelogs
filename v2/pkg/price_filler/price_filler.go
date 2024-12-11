@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -171,16 +172,20 @@ func (p *PriceFiller) runBackFillTradelogPriceRoutine() {
 func (p *PriceFiller) fullFillTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
 	makerPrice, makerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.MakerToken),
 		tradeLog.MakerTokenAmount, int64(tradeLog.Timestamp))
-	if err != nil && strings.Contains(err.Error(), "connection refuse") {
-		p.l.Errorw("Failed to getPriceAndAmountUsd for maker", "err", err)
-		return tradeLog, err
+	if err != nil {
+		if isConnectionRefusedError(err) {
+			p.l.Errorw("Failed to getPriceAndAmountUsd for maker", "err", err)
+			return tradeLog, err
+		}
 	}
 
 	takerPrice, takerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.TakerToken),
 		tradeLog.TakerTokenAmount, int64(tradeLog.Timestamp))
-	if err != nil && strings.Contains(err.Error(), "connection refuse") {
-		p.l.Errorw("Failed to getPriceAndAmountUsd for taker", "err", err)
-		return tradeLog, err
+	if err != nil {
+		if isConnectionRefusedError(err) {
+			p.l.Errorw("Failed to getPriceAndAmountUsd for taker", "err", err)
+			return tradeLog, err
+		}
 	}
 
 	tradeLog.MakerTokenPrice = &makerPrice
@@ -222,9 +227,11 @@ func (p *PriceFiller) getSumAmountUsd(address, rawAmt []string, at int64) (float
 	var sumAmount, price float64
 	for i := range address {
 		pr, usdAmount, err := p.getPriceAndAmountUsd(address[i], rawAmt[i], at)
-		if err != nil && strings.Contains(err.Error(), "connection refuse") {
-			p.l.Errorw("Failed to getPriceAndAmountUsd for address", "err", err)
-			return 0, 0, err
+		if err != nil {
+			if isConnectionRefusedError(err) {
+				p.l.Errorw("Failed to getPriceAndAmountUsd for address", "err", err)
+				return 0, 0, err
+			}
 		}
 		sumAmount += usdAmount
 		price = pr
@@ -243,9 +250,6 @@ func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (fl
 		if coin.Decimals == 0 {
 			decimals, symbol, err := p.getDecimalsAndSymbol(address)
 			if err != nil {
-				if errors.Is(err, ErrWeirdTokenCatalogResp) {
-					return 0, 0, nil
-				}
 				return 0, 0, fmt.Errorf("failed to get decimals: %w", err)
 			}
 			coin.Decimals = decimals
@@ -329,4 +333,14 @@ func (p *PriceFiller) insertTokens() error {
 		return err
 	}
 	return nil
+}
+
+func isConnectionRefusedError(err error) bool {
+	var netErr *net.OpError
+	if errors.As(err, &netErr) {
+		if strings.Contains(netErr.Err.Error(), "connection refused") {
+			return true
+		}
+	}
+	return false
 }
