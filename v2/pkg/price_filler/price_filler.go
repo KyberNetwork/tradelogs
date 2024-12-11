@@ -3,6 +3,7 @@ package pricefiller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -170,24 +171,20 @@ func (p *PriceFiller) runBackFillTradelogPriceRoutine() {
 func (p *PriceFiller) fullFillTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
 	makerPrice, makerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.MakerToken),
 		tradeLog.MakerTokenAmount, int64(tradeLog.Timestamp))
-	if err != nil {
-		if err.Error() != invalidSymbolErrString {
-			p.l.Errorw("Failed to getPriceAndAmountUsd for maker", "err", err)
-			return tradeLog, err
-		}
+	if err != nil && strings.Contains(err.Error(), "connection refuse") {
+		p.l.Errorw("Failed to getPriceAndAmountUsd for maker", "err", err)
+		return tradeLog, err
+	}
+
+	takerPrice, takerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.TakerToken),
+		tradeLog.TakerTokenAmount, int64(tradeLog.Timestamp))
+	if err != nil && strings.Contains(err.Error(), "connection refuse") {
+		p.l.Errorw("Failed to getPriceAndAmountUsd for maker", "err", err)
+		return tradeLog, err
 	}
 
 	tradeLog.MakerTokenPrice = &makerPrice
 	tradeLog.MakerUsdAmount = &makerUsdAmount
-
-	takerPrice, takerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.TakerToken),
-		tradeLog.TakerTokenAmount, int64(tradeLog.Timestamp))
-	if err != nil {
-		if err.Error() != invalidSymbolErrString {
-			p.l.Errorw("Failed to getPriceAndAmountUsd for taker", "err", err)
-			return tradeLog, err
-		}
-	}
 
 	tradeLog.TakerTokenPrice = &takerPrice
 	tradeLog.TakerUsdAmount = &takerUsdAmount
@@ -225,11 +222,9 @@ func (p *PriceFiller) getSumAmountUsd(address, rawAmt []string, at int64) (float
 	var sumAmount, price float64
 	for i := range address {
 		pr, usdAmount, err := p.getPriceAndAmountUsd(address[i], rawAmt[i], at)
-		if err != nil {
-			if err.Error() != invalidSymbolErrString {
-				p.l.Errorw("Failed to getPriceAndAmountUsd for address", "err", err)
-				return 0, 0, err
-			}
+		if err != nil && strings.Contains(err.Error(), "connection refuse") {
+			p.l.Errorw("Failed to getPriceAndAmountUsd for address", "err", err)
+			return 0, 0, err
 		}
 		sumAmount += usdAmount
 		price = pr
@@ -251,8 +246,7 @@ func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (fl
 				if errors.Is(err, ErrWeirdTokenCatalogResp) {
 					return 0, 0, nil
 				}
-				p.l.Errorw("Failed to getDecimals", "err", err, "address", address)
-				return 0, 0, err
+				return 0, 0, fmt.Errorf("failed to get decimals: %w", err)
 			}
 			coin.Decimals = decimals
 			coin.Coin = symbol
@@ -266,8 +260,7 @@ func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (fl
 		}
 		price, err := p.getPrice(address, at)
 		if err != nil {
-			p.l.Errorw("Failed to getPrice", "err", err, "coin", coin.Coin, "at", at)
-			return 0, 0, err
+			return 0, 0, fmt.Errorf("failed to get price mtm: %w", err)
 		}
 
 		return price, calculateAmountUsd(rawAmt, coin.Decimals, price), nil
