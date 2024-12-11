@@ -179,7 +179,7 @@ func (p *PriceFiller) fullFillTradeLog(tradeLog storageTypes.TradeLog) (storageT
 	takerPrice, takerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.TakerToken),
 		tradeLog.TakerTokenAmount, int64(tradeLog.Timestamp))
 	if err != nil && strings.Contains(err.Error(), "connection refuse") {
-		p.l.Errorw("Failed to getPriceAndAmountUsd for maker", "err", err)
+		p.l.Errorw("Failed to getPriceAndAmountUsd for taker", "err", err)
 		return tradeLog, err
 	}
 
