@@ -41,6 +41,114 @@
     ],
     "name": "Swapped",
     "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "callTarget",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "approveTarget",
+            "type": "address"
+          },
+          {
+            "internalType": "bytes",
+            "name": "targetData",
+            "type": "bytes"
+          },
+          {
+            "components": [
+              {
+                "internalType": "contract IERC20",
+                "name": "srcToken",
+                "type": "address"
+              },
+              {
+                "internalType": "contract IERC20",
+                "name": "dstToken",
+                "type": "address"
+              },
+              {
+                "internalType": "address[]",
+                "name": "srcReceivers",
+                "type": "address[]"
+              },
+              {
+                "internalType": "uint256[]",
+                "name": "srcAmounts",
+                "type": "uint256[]"
+              },
+              {
+                "internalType": "address[]",
+                "name": "feeReceivers",
+                "type": "address[]"
+              },
+              {
+                "internalType": "uint256[]",
+                "name": "feeAmounts",
+                "type": "uint256[]"
+              },
+              {
+                "internalType": "address",
+                "name": "dstReceiver",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "minReturnAmount",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "flags",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bytes",
+                "name": "permit",
+                "type": "bytes"
+              }
+            ],
+            "internalType": "struct MetaAggregationRouterV2.SwapDescriptionV2",
+            "name": "desc",
+            "type": "tuple"
+          },
+          {
+            "internalType": "bytes",
+            "name": "clientData",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct MetaAggregationRouterV2.SwapExecutionParams",
+        "name": "execution",
+        "type": "tuple"
+      }
+    ],
+    "name": "swap",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "returnAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "gasUsed",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "payable",
+    "type": "function"
   }
 ]
 
