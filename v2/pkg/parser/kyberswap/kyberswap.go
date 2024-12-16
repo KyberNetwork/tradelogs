@@ -26,11 +26,36 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
+
+// MetaAggregationRouterV2SwapDescriptionV2 is an auto generated low-level Go binding around an user-defined struct.
+type MetaAggregationRouterV2SwapDescriptionV2 struct {
+	SrcToken        common.Address
+	DstToken        common.Address
+	SrcReceivers    []common.Address
+	SrcAmounts      []*big.Int
+	FeeReceivers    []common.Address
+	FeeAmounts      []*big.Int
+	DstReceiver     common.Address
+	Amount          *big.Int
+	MinReturnAmount *big.Int
+	Flags           *big.Int
+	Permit          []byte
+}
+
+// MetaAggregationRouterV2SwapExecutionParams is an auto generated low-level Go binding around an user-defined struct.
+type MetaAggregationRouterV2SwapExecutionParams struct {
+	CallTarget    common.Address
+	ApproveTarget common.Address
+	TargetData    []byte
+	Desc          MetaAggregationRouterV2SwapDescriptionV2
+	ClientData    []byte
+}
 
 // SwappedMetaData contains all meta data concerning the Swapped contract.
 var SwappedMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"contractIERC20\",\"name\":\"srcToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"contractIERC20\",\"name\":\"dstToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"dstReceiver\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"spentAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"returnAmount\",\"type\":\"uint256\"}],\"name\":\"Swapped\",\"type\":\"event\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"contractIERC20\",\"name\":\"srcToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"contractIERC20\",\"name\":\"dstToken\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"dstReceiver\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"spentAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"returnAmount\",\"type\":\"uint256\"}],\"name\":\"Swapped\",\"type\":\"event\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"callTarget\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"approveTarget\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"targetData\",\"type\":\"bytes\"},{\"components\":[{\"internalType\":\"contractIERC20\",\"name\":\"srcToken\",\"type\":\"address\"},{\"internalType\":\"contractIERC20\",\"name\":\"dstToken\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"srcReceivers\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"srcAmounts\",\"type\":\"uint256[]\"},{\"internalType\":\"address[]\",\"name\":\"feeReceivers\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"feeAmounts\",\"type\":\"uint256[]\"},{\"internalType\":\"address\",\"name\":\"dstReceiver\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"minReturnAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"flags\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"permit\",\"type\":\"bytes\"}],\"internalType\":\"structMetaAggregationRouterV2.SwapDescriptionV2\",\"name\":\"desc\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"clientData\",\"type\":\"bytes\"}],\"internalType\":\"structMetaAggregationRouterV2.SwapExecutionParams\",\"name\":\"execution\",\"type\":\"tuple\"}],\"name\":\"swap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"returnAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasUsed\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
 }
 
 // SwappedABI is the input ABI used to generate the binding from.
@@ -134,11 +159,11 @@ func NewSwappedFilterer(address common.Address, filterer bind.ContractFilterer) 
 
 // bindSwapped binds a generic wrapper to an already deployed contract.
 func bindSwapped(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(SwappedABI))
+	parsed, err := SwappedMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -177,6 +202,27 @@ func (_Swapped *SwappedTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.
 // Transact invokes the (paid) contract method with params as input values.
 func (_Swapped *SwappedTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _Swapped.Contract.contract.Transact(opts, method, params...)
+}
+
+// Swap is a paid mutator transaction binding the contract method 0xe21fd0e9.
+//
+// Solidity: function swap((address,address,bytes,(address,address,address[],uint256[],address[],uint256[],address,uint256,uint256,uint256,bytes),bytes) execution) payable returns(uint256 returnAmount, uint256 gasUsed)
+func (_Swapped *SwappedTransactor) Swap(opts *bind.TransactOpts, execution MetaAggregationRouterV2SwapExecutionParams) (*types.Transaction, error) {
+	return _Swapped.contract.Transact(opts, "swap", execution)
+}
+
+// Swap is a paid mutator transaction binding the contract method 0xe21fd0e9.
+//
+// Solidity: function swap((address,address,bytes,(address,address,address[],uint256[],address[],uint256[],address,uint256,uint256,uint256,bytes),bytes) execution) payable returns(uint256 returnAmount, uint256 gasUsed)
+func (_Swapped *SwappedSession) Swap(execution MetaAggregationRouterV2SwapExecutionParams) (*types.Transaction, error) {
+	return _Swapped.Contract.Swap(&_Swapped.TransactOpts, execution)
+}
+
+// Swap is a paid mutator transaction binding the contract method 0xe21fd0e9.
+//
+// Solidity: function swap((address,address,bytes,(address,address,address[],uint256[],address[],uint256[],address,uint256,uint256,uint256,bytes),bytes) execution) payable returns(uint256 returnAmount, uint256 gasUsed)
+func (_Swapped *SwappedTransactorSession) Swap(execution MetaAggregationRouterV2SwapExecutionParams) (*types.Transaction, error) {
+	return _Swapped.Contract.Swap(&_Swapped.TransactOpts, execution)
 }
 
 // SwappedSwappedIterator is returned from FilterSwapped and is used to iterate over the raw logs and unpacked data for Swapped events raised by the Swapped contract.
