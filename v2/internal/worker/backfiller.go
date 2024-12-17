@@ -14,9 +14,12 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
+	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
+
+const maxQueryBlockRange = 10000
 
 type BackFiller struct {
 	mu              sync.Mutex
@@ -215,17 +218,15 @@ func (w *BackFiller) BackfillByExchange(task backfill.Task) {
 		return
 	}
 
-	blocks, exclusions, err := w.getBlockByExchange(from, to, task.Exchange)
-	if err != nil {
-		w.l.Errorw("cannot get block", "task", task, "err", err)
-		err = w.backfillStorage.UpdateTask(task.ID, nil, backfill.StatusTypeFailed)
-		if err != nil {
-			w.l.Errorw("cannot update task status", "task", task, "err", err)
-		}
-		return
+	// error can occur while filtering blocks, we handle partial result and
+	// mark the status as `failed` after processing received blocks.
+	// else if there are no error, mark the status as `done` after processing all blocks
+	blocks, exclusions, getBlockErr := w.getBlockByExchange(from, to, task.Exchange)
+	if getBlockErr != nil {
+		w.l.Errorw("error when get block by exchange", "task", task, "err", getBlockErr)
 	}
 
-	w.l.Infow("start to backfill blocks", "task_id", task.ID, "blocks", blocks)
+	w.l.Infow("start to backfill blocks", "task_id", task.ID, "num_block", len(blocks))
 
 	// backfill from the newest blocks, if error occurs we can continue backfill from error block
 	for _, b := range blocks {
@@ -258,6 +259,16 @@ func (w *BackFiller) BackfillByExchange(task backfill.Task) {
 		}
 	}
 
+	// mark the status = `failed`
+	if getBlockErr != nil {
+		err = w.backfillStorage.UpdateTask(task.ID, nil, backfill.StatusTypeFailed)
+		if err != nil {
+			w.l.Errorw("cannot update task status", "task", task, "err", err)
+		}
+		return
+	}
+
+	// else mark the status = `done`
 	err = w.backfillStorage.UpdateTask(task.ID, &task.FromBlock, backfill.StatusTypeDone)
 	if err != nil {
 		w.l.Errorw("cannot update task status", "task_id", task.ID, "err", err)
@@ -267,9 +278,12 @@ func (w *BackFiller) BackfillByExchange(task backfill.Task) {
 // getBlockByExchange get the blocks having logs of specific exchange, the block number sorted descending
 func (w *BackFiller) getBlockByExchange(from, to uint64, exchange string) ([]uint64, sets.Set[string], error) {
 	var (
-		address    string
-		topics     []string
-		exclusions = sets.New[string]()
+		address      string
+		topics       []string
+		exclusions   = sets.New[string]()
+		blocksNumber = sets.New[uint64]()
+		logs         []ethereumTypes.Log
+		err          error
 	)
 	// get exchange address and topics to filter logs
 	for _, p := range w.parsers {
@@ -281,16 +295,22 @@ func (w *BackFiller) getBlockByExchange(from, to uint64, exchange string) ([]uin
 		exclusions.Insert(p.Exchange())
 	}
 
-	// get logs
-	logs, err := w.rpc.FetchLogs(context.Background(), from, to, address, topics)
-	if err != nil {
-		return nil, nil, err
-	}
+	for currentTo := to; currentTo >= from; {
+		currentFrom := max(currentTo-maxQueryBlockRange, from)
 
-	// get blocks need to backfill
-	blocksNumber := sets.New[uint64]()
-	for _, l := range logs {
-		blocksNumber.Insert(l.BlockNumber)
+		// get logs
+		logs, err = w.rpc.FetchLogs(context.Background(), currentFrom, currentTo, address, topics)
+		if err != nil {
+			break
+		}
+
+		// get blocks need to backfill
+		for _, l := range logs {
+			blocksNumber.Insert(l.BlockNumber)
+		}
+
+		// update new block range
+		currentTo = currentFrom - 1
 	}
 
 	// sort the blocks descending
@@ -299,5 +319,5 @@ func (w *BackFiller) getBlockByExchange(from, to uint64, exchange string) ([]uin
 		return blocks[i] > blocks[j]
 	})
 
-	return blocks, exclusions, nil
+	return blocks, exclusions, err
 }
