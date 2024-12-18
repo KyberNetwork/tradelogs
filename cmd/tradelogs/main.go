@@ -104,6 +104,7 @@ func run(c *cli.Context) error {
 		if err != nil {
 			panic(err)
 		}
+		l.Infow("dial rpc node successfully", "node", url[:10]+"***"+url[len(url)-10:])
 		ethClients[i] = client
 	}
 
