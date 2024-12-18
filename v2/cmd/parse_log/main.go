@@ -27,7 +27,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
 	promotion1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser/oneinchv2"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
-	promoteeStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
+	promotee_storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
@@ -98,10 +98,10 @@ func run(c *cli.Context) error {
 	})
 
 	//promotee storage
-	promotee_storage := promoteeStorage.New(l, db)
+	promoteeStorage := promotee_storage.New(l, db)
 
 	// mark fusion for oneinchv6
-	markFusion, err := oneinchv6.NewMarkFusion(promotee_storage, l)
+	markFusion, err := oneinchv6.NewMarkFusion(promoteeStorage, l)
 	if err != nil {
 		return fmt.Errorf("cannot init mark fusion: %w", err)
 	}
@@ -157,7 +157,7 @@ func run(c *cli.Context) error {
 	}
 
 	// trade log handler
-	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, promotee_storage, parsers, promotionParsers, broadcastTopic, kafkaPublisher)
+	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, promoteeStorage, parsers, promotionParsers, broadcastTopic, kafkaPublisher)
 
 	// parse log worker
 	w := worker.NewParseLog(tradeLogHandler, s, l)
