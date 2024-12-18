@@ -59,9 +59,9 @@ func (s *Storage) Insert(promotees []Promotee) error {
 
 func (s *Storage) Get(query PromoteesQuery) ([]Promotee, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(fmt.Sprintf("%s.promoter, promotee, chain_id, tx_hash, timestamp, name", promoteesTable)).
+		Select(fmt.Sprintf("%s.promoter, promotee, chain_id, tx_hash, timestamp, COALESCE(%s.name, '') AS name", promoteesTable, nameTable)).
 		From(promoteesTable).
-		Join(fmt.Sprintf("%s ON %s.promoter = %s.promoter", nameTable, promoteesTable, nameTable))
+		LeftJoin(fmt.Sprintf("%s ON %s.promoter = %s.promoter", nameTable, promoteesTable, nameTable))
 
 	v := reflect.ValueOf(query)
 	types := v.Type()

@@ -36,12 +36,13 @@ func init() {
 }
 
 type Parser struct {
-	abi       *abi.ABI
-	ps        *Oneinchv6Filterer
-	eventHash string
+	abi        *abi.ABI
+	ps         *Oneinchv6Filterer
+	eventHash  string
+	markFusion *MarkFusion
 }
 
-func MustNewParser() *Parser {
+func MustNewParser(markFusion *MarkFusion) *Parser {
 	ps, err := NewOneinchv6Filterer(common.Address{}, nil)
 	if err != nil {
 		panic(err)
@@ -56,9 +57,10 @@ func MustNewParser() *Parser {
 	}
 
 	return &Parser{
-		ps:        ps,
-		abi:       ab,
-		eventHash: event.ID.String(),
+		ps:         ps,
+		abi:        ab,
+		eventHash:  event.ID.String(),
+		markFusion: markFusion,
 	}
 }
 
@@ -116,8 +118,16 @@ func (p *Parser) ParseFromInternalCall(order storageTypes.TradeLog, internalCall
 	if err != nil {
 		return order, fmt.Errorf("error when parse contract call to order %w", err)
 	}
-
 	order.Taker = internalCall.From
+
+	if order.Type == storageTypes.RFQType {
+		return order, nil
+	}
+
+	fusion := p.markFusion.CheckPromoteeExist(strings.ToLower(order.Taker))
+	if fusion {
+		order.Type = storageTypes.FusionType
+	}
 	return order, nil
 }
 

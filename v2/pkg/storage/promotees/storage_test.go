@@ -27,16 +27,13 @@ func TestInsert(t *testing.T) {
 		t.Log(promotee)
 	}
 
-	// byteValue2, err := os.Open("test2.json")
+	byteValue2, err := os.Open("test2.json")
 
-	// assert.NoError(t, err)
-	// assert.NoError(t, json.NewDecoder(byteValue2).Decode(&promotees), "failed to parse promotees")
-	// assert.NoError(t, s.Insert(promotees), "failed to insert promotees")
-	// t.Log(promotees)
-	var query PromoteesQuery
-	query.Promoter = ""
-	query.Promotee = ""
-	query.ChainId = ""
+	assert.NoError(t, err)
+	assert.NoError(t, json.NewDecoder(byteValue2).Decode(&promotees), "failed to parse promotees")
+	assert.NoError(t, s.Insert(promotees), "failed to insert promotees")
+	t.Log(promotees)
+	query := PromoteesQuery{}
 	pwithname, err := s.Get(query)
 
 	assert.NoError(t, err, "Failed to get promotees")
