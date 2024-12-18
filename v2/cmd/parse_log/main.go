@@ -100,12 +100,6 @@ func run(c *cli.Context) error {
 	//promotee storage
 	promoteeStorage := promotee_storage.New(l, db)
 
-	// mark fusion for oneinchv6
-	markFusion, err := oneinchv6.NewMarkFusion(promoteeStorage, l)
-	if err != nil {
-		return fmt.Errorf("cannot init mark fusion: %w", err)
-	}
-
 	// state storage
 	s := state.New(l, db)
 
@@ -134,7 +128,7 @@ func run(c *cli.Context) error {
 		paraswap.MustNewParser(),
 		kyberswaprfq.MustNewParser(),
 		hashflowv3.MustNewParser(),
-		oneinchv6.MustNewParser(markFusion),
+		oneinchv6.MustNewParser(promoteeStorage),
 		uniswapx.MustNewParser(),
 		bebop.MustNewParser(),
 		zxrfqv3.MustNewParserWithDeployer(l, zxv3DeployStorage, ethClients[0], common.HexToAddress(constant.Deployer0xV3)),

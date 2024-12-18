@@ -48,10 +48,7 @@ func TestFetchEvent(t *testing.T) {
 		t.Log(promotee)
 	}
 
-	// mark fusion
-	markFusion, err := NewMarkFusion(promoteeS, l)
-	require.NoError(t, err)
-	p := MustNewParser(markFusion)
+	p := MustNewParser(promoteeS)
 	require.Equal(t, p.abi.Events[FilledEvent].ID, common.HexToHash("0xfec331350fce78ba658e082a71da20ac9f8d798a99b3c79681c8440cbfe77e07"))
 	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
@@ -105,10 +102,7 @@ func TestParseEvent(t *testing.T) {
 		t.Log(promotee)
 	}
 
-	// mark fusion
-	markFusion, err := NewMarkFusion(promoteeS, l)
-	assert.NoError(t, err)
-	p := MustNewParser(markFusion)
+	p := MustNewParser(promoteeS)
 	for _, event := range events {
 		logs, err := p.ParseWithCallFrame(callFrame, event, uint64(time.Now().Unix()))
 		require.NoError(t, err)

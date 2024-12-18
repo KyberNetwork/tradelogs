@@ -10,6 +10,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+	promotee_storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -36,13 +37,13 @@ func init() {
 }
 
 type Parser struct {
-	abi        *abi.ABI
-	ps         *Oneinchv6Filterer
-	eventHash  string
-	markFusion *MarkFusion
+	abi             *abi.ABI
+	ps              *Oneinchv6Filterer
+	eventHash       string
+	promoteeStorage *promotee_storage.Storage
 }
 
-func MustNewParser(markFusion *MarkFusion) *Parser {
+func MustNewParser(promoteeStorage *promotee_storage.Storage) *Parser {
 	ps, err := NewOneinchv6Filterer(common.Address{}, nil)
 	if err != nil {
 		panic(err)
@@ -57,10 +58,10 @@ func MustNewParser(markFusion *MarkFusion) *Parser {
 	}
 
 	return &Parser{
-		ps:         ps,
-		abi:        ab,
-		eventHash:  event.ID.String(),
-		markFusion: markFusion,
+		ps:              ps,
+		abi:             ab,
+		eventHash:       event.ID.String(),
+		promoteeStorage: promoteeStorage,
 	}
 }
 
@@ -124,7 +125,10 @@ func (p *Parser) ParseFromInternalCall(order storageTypes.TradeLog, internalCall
 		return order, nil
 	}
 
-	fusion := p.markFusion.CheckPromoteeExist(strings.ToLower(order.Taker))
+	fusion, err := p.promoteeStorage.CheckPromoteeExist(strings.ToLower(order.Taker))
+	if err != nil {
+		return order, nil
+	}
 	if fusion {
 		order.Type = storageTypes.FusionType
 	}

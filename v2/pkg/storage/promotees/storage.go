@@ -128,3 +128,24 @@ func (s *Storage) InsertPromoterName(promotees []Promotee) error {
 	}
 	return nil
 }
+
+func (s *Storage) CheckPromoteeExist(promotee string) (bool, error) {
+	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Select(promoteesColumns()...).
+		From(promoteesTable).
+		Where(squirrel.Eq{"promotee": promotee})
+
+	q, p, err := builder.ToSql()
+	if err != nil {
+		return false, err
+	}
+
+	var promotees []Promotee
+	if err := s.db.Select(&promotees, q, p...); err != nil {
+		return false, err
+	}
+	if len(promotees) >= 1 {
+		return true, nil
+	}
+	return false, nil
+}
