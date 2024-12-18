@@ -17,7 +17,10 @@ import (
 )
 
 const (
-	SwappedEvent = "Swapped"
+	SwappedEvent               = "Swapped"
+	swapSimpleModeFunctionName = "swapSimpleMode"
+	swapFunctionName           = "swap"
+	swapGenericFunctionName    = "swapGeneric"
 )
 
 type Parser struct {
@@ -95,31 +98,67 @@ func (p *Parser) ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes
 	if err != nil {
 		return nil, err
 	}
+	srcAmount, _ := p.decodeSourceAmounts(callFrame.Input)
+	if srcAmount != nil {
+		res.TakerTokenAmount = srcAmount.String()
+	}
+	return []storageTypes.TradeLog{res}, nil
+}
 
-	contractCall, err := decoder.Decode(p.abi, callFrame.Input)
+func (p *Parser) decodeSourceAmounts(input string) (*big.Int, error) {
+	total := new(big.Int)
+	contractCall, err := decoder.Decode(p.abi, input)
 	if err != nil {
 		return nil, fmt.Errorf("cannot decode contract call frame: %w", err)
 	}
-	for _, param := range contractCall.Params {
-		if param.Name != "execution" {
-			continue
+	switch contractCall.Name {
+	case swapFunctionName, swapGenericFunctionName:
+		for _, param := range contractCall.Params {
+			if param.Name != "execution" {
+				continue
+			}
+			executionBytes, err := json.Marshal(param.Value)
+			if err != nil {
+				return nil, fmt.Errorf("cannot marshal execution param: %w", err)
+			}
+			var execution *MetaAggregationRouterV2SwapExecutionParams
+			if err = json.Unmarshal(executionBytes, &execution); err != nil {
+				return nil, fmt.Errorf("cannot unmarshal execution param: %w", err)
+			}
+			srcAmounts := execution.Desc.SrcAmounts
+			if len(srcAmounts) == 0 {
+				return nil, fmt.Errorf("srcAmounts is empty")
+			}
+			for _, srcAmount := range srcAmounts {
+				total = total.Add(total, srcAmount)
+			}
 		}
-		executionBytes, err := json.Marshal(param.Value)
-		if err != nil {
-			return nil, fmt.Errorf("cannot marshal execution param: %w", err)
+	case swapSimpleModeFunctionName:
+		for _, param := range contractCall.Params {
+			if param.Name != "desc" {
+				continue
+			}
+			executionBytes, err := json.Marshal(param.Value)
+			if err != nil {
+				return nil, fmt.Errorf("cannot marshal execution param: %w", err)
+			}
+			var desc *MetaAggregationRouterV2SwapDescriptionV2
+			if err = json.Unmarshal(executionBytes, &desc); err != nil {
+				return nil, fmt.Errorf("cannot unmarshal execution param: %w", err)
+			}
+			srcAmounts := desc.SrcAmounts
+			if len(srcAmounts) == 0 {
+				return nil, fmt.Errorf("srcAmounts is empty")
+			}
+			for _, srcAmount := range srcAmounts {
+				total = total.Add(total, srcAmount)
+			}
 		}
-		var execution *MetaAggregationRouterV2SwapExecutionParams
-		if err = json.Unmarshal(executionBytes, &execution); err != nil {
-			return nil, fmt.Errorf("cannot unmarshal execution param: %w", err)
-		}
-		srcAmounts := execution.Desc.SrcAmounts
-		total := new(big.Int)
-		for _, srcAmount := range srcAmounts {
-			total = total.Add(total, srcAmount)
-		}
-		res.TakerTokenAmount = total.String()
+	default:
+		return nil, fmt.Errorf("unknown function name")
 	}
-	return []storageTypes.TradeLog{res}, nil
+
+	return total, nil
 }
 
 func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
