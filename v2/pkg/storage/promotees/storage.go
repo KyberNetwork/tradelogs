@@ -59,9 +59,9 @@ func (s *Storage) Insert(promotees []Promotee) error {
 
 func (s *Storage) Get(query PromoteesQuery) ([]Promotee, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(fmt.Sprintf("%s.promoter, promotee, chain_id, tx_hash, timestamp, name", promoteesTable)).
+		Select(fmt.Sprintf("%s.promoter, promotee, chain_id, tx_hash, timestamp, COALESCE(%s.name, '') AS name", promoteesTable, nameTable)).
 		From(promoteesTable).
-		Join(fmt.Sprintf("%s ON %s.promoter = %s.promoter", nameTable, promoteesTable, nameTable))
+		LeftJoin(fmt.Sprintf("%s ON %s.promoter = %s.promoter", nameTable, promoteesTable, nameTable))
 
 	v := reflect.ValueOf(query)
 	types := v.Type()
@@ -127,4 +127,26 @@ func (s *Storage) InsertPromoterName(promotees []Promotee) error {
 		return err
 	}
 	return nil
+}
+
+func (s *Storage) CheckPromoteeExist(promotee string) (bool, error) {
+	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Select("COUNT(*)").
+		From(promoteesTable).
+		Where(squirrel.Eq{"promotee": promotee}).
+		Where(squirrel.Eq{"chain_id": "1"})
+
+	q, p, err := builder.ToSql()
+	if err != nil {
+		return false, err
+	}
+
+	var count int
+	if err := s.db.Get(&count, q, p...); err != nil {
+		return false, err
+	}
+	if count >= 1 {
+		return true, nil
+	}
+	return false, nil
 }

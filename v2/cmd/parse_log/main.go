@@ -27,7 +27,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
 	promotion1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser/oneinchv2"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
-	promoteeTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
+	promotee_storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
@@ -98,7 +98,7 @@ func run(c *cli.Context) error {
 	})
 
 	//promotee storage
-	promoteeStorage := promoteeTypes.New(l, db)
+	promoteeStorage := promotee_storage.New(l, db)
 
 	// state storage
 	s := state.New(l, db)
@@ -128,7 +128,7 @@ func run(c *cli.Context) error {
 		paraswap.MustNewParser(),
 		kyberswaprfq.MustNewParser(),
 		hashflowv3.MustNewParser(),
-		oneinchv6.MustNewParser(),
+		oneinchv6.MustNewParser(promoteeStorage),
 		uniswapx.MustNewParser(),
 		bebop.MustNewParser(),
 		zxrfqv3.MustNewParserWithDeployer(l, zxv3DeployStorage, ethClients[0], common.HexToAddress(constant.Deployer0xV3)),

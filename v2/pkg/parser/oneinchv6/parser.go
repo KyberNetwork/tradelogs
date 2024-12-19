@@ -10,6 +10,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+	promotee_storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -36,12 +37,13 @@ func init() {
 }
 
 type Parser struct {
-	abi       *abi.ABI
-	ps        *Oneinchv6Filterer
-	eventHash string
+	abi             *abi.ABI
+	ps              *Oneinchv6Filterer
+	eventHash       string
+	promoteeStorage *promotee_storage.Storage
 }
 
-func MustNewParser() *Parser {
+func MustNewParser(promoteeStorage *promotee_storage.Storage) *Parser {
 	ps, err := NewOneinchv6Filterer(common.Address{}, nil)
 	if err != nil {
 		panic(err)
@@ -56,9 +58,10 @@ func MustNewParser() *Parser {
 	}
 
 	return &Parser{
-		ps:        ps,
-		abi:       ab,
-		eventHash: event.ID.String(),
+		ps:              ps,
+		abi:             ab,
+		eventHash:       event.ID.String(),
+		promoteeStorage: promoteeStorage,
 	}
 }
 
@@ -116,8 +119,19 @@ func (p *Parser) ParseFromInternalCall(order storageTypes.TradeLog, internalCall
 	if err != nil {
 		return order, fmt.Errorf("error when parse contract call to order %w", err)
 	}
-
 	order.Taker = internalCall.From
+
+	if order.Type == storageTypes.RFQType {
+		return order, nil
+	}
+
+	fusion, err := p.promoteeStorage.CheckPromoteeExist(strings.ToLower(order.Taker))
+	if err != nil {
+		return order, nil
+	}
+	if fusion {
+		order.Type = storageTypes.FusionType
+	}
 	return order, nil
 }
 

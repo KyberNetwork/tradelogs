@@ -73,12 +73,12 @@ func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumbe
 		return fmt.Errorf("delete blocks error: %w", err)
 	}
 
-	err = h.processForTradelog(calls, blockHash, blockNumber, timestamp, exclusions)
+	err = h.processForPromotion(calls, blockHash, blockNumber, timestamp)
 	if err != nil {
 		return fmt.Errorf("error when process block: %d", blockNumber)
 	}
 
-	err = h.processForPromotion(calls, blockHash, blockNumber, timestamp)
+	err = h.processForTradelog(calls, blockHash, blockNumber, timestamp, exclusions)
 	if err != nil {
 		return fmt.Errorf("error when process block: %d", blockNumber)
 	}
