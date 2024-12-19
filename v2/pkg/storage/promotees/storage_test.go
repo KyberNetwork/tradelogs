@@ -61,5 +61,5 @@ func TestInsert(t *testing.T) {
 		}
 
 	}
-	t.Log(s.CheckPromoteeExist("0xd1742b3c4fbb096990c8950fa635aec75b30781a"))
+	t.Log(s.CheckPromoteeExist("0x0b8a49d816cc709b6eadb09498030ae3416b66dc"))
 }

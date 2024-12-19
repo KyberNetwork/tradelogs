@@ -86,9 +86,9 @@ func NewPriceFiller(l *zap.SugaredLogger,
 	return p, nil
 }
 
-func (p *PriceFiller) Run() {
+func (p *PriceFiller) Run(fillPriceInterval int) {
 	go p.runUpdateAllCoinInfoRoutine()
-	p.runBackFillTradelogPriceRoutine()
+	p.runBackFillTradelogPriceRoutine(fillPriceInterval)
 }
 
 func (p *PriceFiller) getPrice(token string, timestamp int64) (float64, error) {
@@ -141,8 +141,8 @@ func (p *PriceFiller) runUpdateAllCoinInfoRoutine() {
 	}
 }
 
-func (p *PriceFiller) runBackFillTradelogPriceRoutine() {
-	ticker := time.NewTicker(backfillTradeLogsPriceInterval)
+func (p *PriceFiller) runBackFillTradelogPriceRoutine(fillPriceInterval int) {
+	ticker := time.NewTicker(time.Duration(fillPriceInterval) * time.Minute)
 	defer ticker.Stop()
 
 	for ; ; <-ticker.C {

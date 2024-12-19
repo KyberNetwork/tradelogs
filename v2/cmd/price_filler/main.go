@@ -80,7 +80,7 @@ func run(c *cli.Context) error {
 		l.Errorw("Error while init price filler")
 		return err
 	}
-	priceFiller.Run()
+	priceFiller.Run(c.Int(libapp.FillPriceTimeIntervalFlag.Name))
 	return nil
 }
 
