@@ -85,7 +85,7 @@ func NewPriceFiller(l *zap.SugaredLogger,
 	return p, nil
 }
 
-func (p *PriceFiller) Run(fillPriceInterval int) {
+func (p *PriceFiller) Run(fillPriceInterval time.Duration) {
 	go p.runUpdateAllCoinInfoRoutine()
 	p.runBackFillTradelogPriceRoutine(fillPriceInterval)
 }
@@ -140,8 +140,8 @@ func (p *PriceFiller) runUpdateAllCoinInfoRoutine() {
 	}
 }
 
-func (p *PriceFiller) runBackFillTradelogPriceRoutine(fillPriceInterval int) {
-	ticker := time.NewTicker(time.Duration(fillPriceInterval) * time.Minute)
+func (p *PriceFiller) runBackFillTradelogPriceRoutine(fillPriceInterval time.Duration) {
+	ticker := time.NewTicker(fillPriceInterval)
 	defer ticker.Stop()
 
 	for ; ; <-ticker.C {
@@ -199,18 +199,19 @@ func (p *PriceFiller) fullFillBebopTradeLog(tradeLog storageTypes.TradeLog) (sto
 	takerAmounts := strings.Split(tradeLog.TakerTokenAmount, ",")
 
 	makerPrice, makerSumUsdAmount, err := p.getSumAmountUsd(makerTokens, makerAmounts, int64(tradeLog.Timestamp))
+	if isConnectionRefusedError(err) {
+		p.l.Errorw("Failed to getSumAndAmountUsd for maker", "err", err)
+		return tradeLog, err
+	}
 
-	if err != nil {
+	takerPrice, takerUsdAmount, err := p.getSumAmountUsd(takerTokens, takerAmounts, int64(tradeLog.Timestamp))
+	if isConnectionRefusedError(err) {
+		p.l.Errorw("Failed to getSumAmountUsd for taker", "err", err)
 		return tradeLog, err
 	}
 
 	tradeLog.MakerTokenPrice = &makerPrice // set zero price for multi-maker trade
 	tradeLog.MakerUsdAmount = &makerSumUsdAmount
-
-	takerPrice, takerUsdAmount, err := p.getSumAmountUsd(takerTokens, takerAmounts, int64(tradeLog.Timestamp))
-	if err != nil {
-		return tradeLog, err
-	}
 
 	tradeLog.TakerTokenPrice = &takerPrice
 	tradeLog.TakerUsdAmount = &takerUsdAmount
@@ -331,6 +332,9 @@ func (p *PriceFiller) insertTokens() error {
 func isConnectionRefusedError(err error) bool {
 	if err == nil {
 		return false
+	}
+	if errors.Is(err, mtm.ErrRateLimit) {
+		return true
 	}
 	var netErr *net.OpError
 	if errors.As(err, &netErr) {

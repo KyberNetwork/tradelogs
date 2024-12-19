@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	"github.com/urfave/cli"
 )
 
@@ -19,9 +21,10 @@ var MarkToMarketURLFlag = cli.StringFlag{
 	EnvVar: "MARK_TO_MARKET_URL",
 }
 
-var FillPriceTimeIntervalFlag = cli.StringFlag{
+var FillPriceTimeIntervalFlag = cli.DurationFlag{
 	Name:   "fill-price-time-interval",
 	EnvVar: "FILL_PRICE_TIME_INTERVAL",
+	Value:  time.Minute,
 }
 
 func PriceFillerFlags() []cli.Flag {

@@ -2,6 +2,7 @@ package mtm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/KyberNetwork/tradinglib/pkg/httpclient"
 )
+
+var ErrRateLimit = errors.New("rate limit exceeded")
 
 type MtmClient struct {
 	baseURL    string
@@ -87,11 +90,16 @@ func (m *MtmClient) GetHistoricalRate(
 	}
 
 	var rate RateV3Response
-	if _, err := httpclient.DoHTTPRequest(
+	resp, err := httpclient.DoHTTPRequest(
 		m.httpClient,
 		httpReq,
 		&rate,
-		httpclient.WithStatusCode(http.StatusOK)); err != nil {
+		httpclient.WithStatusCode(http.StatusOK),
+	)
+	if resp.StatusCode == http.StatusTooManyRequests { // 429
+		return 0, ErrRateLimit
+	}
+	if err != nil {
 		return 0, fmt.Errorf("do http request error: %w", err)
 	}
 
