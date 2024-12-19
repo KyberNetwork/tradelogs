@@ -18,17 +18,16 @@ import (
 )
 
 const (
-	NetworkETHChainID              = 1
-	NetworkETHChainIDString        = "1"
-	NetworkETH                     = "ETH"
-	updateAllCoinInfoInterval      = 12 * time.Hour
-	backfillTradeLogsPriceInterval = 10 * time.Minute
-	backfillTradeLogsLimit         = 60
-	addressETH1                    = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-	addressETH2                    = "0x0000000000000000000000000000000000000000"
-	coinUSDT                       = "USDT"
-	USDTAddress                    = "0xdac17f958d2ee523a2206206994597c13d831ec7"
-	invalidSymbolErrString         = "<APIError> code=-1121, msg=Invalid symbol."
+	NetworkETHChainID         = 1
+	NetworkETHChainIDString   = "1"
+	NetworkETH                = "ETH"
+	updateAllCoinInfoInterval = 12 * time.Hour
+	backfillTradeLogsLimit    = 60
+	addressETH1               = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+	addressETH2               = "0x0000000000000000000000000000000000000000"
+	coinUSDT                  = "USDT"
+	USDTAddress               = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+	invalidSymbolErrString    = "<APIError> code=-1121, msg=Invalid symbol."
 )
 
 var (
