@@ -18,17 +18,16 @@ import (
 )
 
 const (
-	NetworkETHChainID              = 1
-	NetworkETHChainIDString        = "1"
-	NetworkETH                     = "ETH"
-	updateAllCoinInfoInterval      = 12 * time.Hour
-	backfillTradeLogsPriceInterval = 10 * time.Minute
-	backfillTradeLogsLimit         = 60
-	addressETH1                    = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-	addressETH2                    = "0x0000000000000000000000000000000000000000"
-	coinUSDT                       = "USDT"
-	USDTAddress                    = "0xdac17f958d2ee523a2206206994597c13d831ec7"
-	invalidSymbolErrString         = "<APIError> code=-1121, msg=Invalid symbol."
+	NetworkETHChainID         = 1
+	NetworkETHChainIDString   = "1"
+	NetworkETH                = "ETH"
+	updateAllCoinInfoInterval = 12 * time.Hour
+	backfillTradeLogsLimit    = 60
+	addressETH1               = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+	addressETH2               = "0x0000000000000000000000000000000000000000"
+	coinUSDT                  = "USDT"
+	USDTAddress               = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+	invalidSymbolErrString    = "<APIError> code=-1121, msg=Invalid symbol."
 )
 
 var (
@@ -86,9 +85,9 @@ func NewPriceFiller(l *zap.SugaredLogger,
 	return p, nil
 }
 
-func (p *PriceFiller) Run() {
+func (p *PriceFiller) Run(fillPriceInterval time.Duration) {
 	go p.runUpdateAllCoinInfoRoutine()
-	p.runBackFillTradelogPriceRoutine()
+	p.runBackFillTradelogPriceRoutine(fillPriceInterval)
 }
 
 func (p *PriceFiller) getPrice(token string, timestamp int64) (float64, error) {
@@ -141,8 +140,8 @@ func (p *PriceFiller) runUpdateAllCoinInfoRoutine() {
 	}
 }
 
-func (p *PriceFiller) runBackFillTradelogPriceRoutine() {
-	ticker := time.NewTicker(backfillTradeLogsPriceInterval)
+func (p *PriceFiller) runBackFillTradelogPriceRoutine(fillPriceInterval time.Duration) {
+	ticker := time.NewTicker(fillPriceInterval)
 	defer ticker.Stop()
 
 	for ; ; <-ticker.C {
@@ -200,18 +199,19 @@ func (p *PriceFiller) fullFillBebopTradeLog(tradeLog storageTypes.TradeLog) (sto
 	takerAmounts := strings.Split(tradeLog.TakerTokenAmount, ",")
 
 	makerPrice, makerSumUsdAmount, err := p.getSumAmountUsd(makerTokens, makerAmounts, int64(tradeLog.Timestamp))
+	if isConnectionRefusedError(err) {
+		p.l.Errorw("Failed to getSumAndAmountUsd for maker", "err", err)
+		return tradeLog, err
+	}
 
-	if err != nil {
+	takerPrice, takerUsdAmount, err := p.getSumAmountUsd(takerTokens, takerAmounts, int64(tradeLog.Timestamp))
+	if isConnectionRefusedError(err) {
+		p.l.Errorw("Failed to getSumAmountUsd for taker", "err", err)
 		return tradeLog, err
 	}
 
 	tradeLog.MakerTokenPrice = &makerPrice // set zero price for multi-maker trade
 	tradeLog.MakerUsdAmount = &makerSumUsdAmount
-
-	takerPrice, takerUsdAmount, err := p.getSumAmountUsd(takerTokens, takerAmounts, int64(tradeLog.Timestamp))
-	if err != nil {
-		return tradeLog, err
-	}
 
 	tradeLog.TakerTokenPrice = &takerPrice
 	tradeLog.TakerUsdAmount = &takerUsdAmount
@@ -332,6 +332,9 @@ func (p *PriceFiller) insertTokens() error {
 func isConnectionRefusedError(err error) bool {
 	if err == nil {
 		return false
+	}
+	if errors.Is(err, mtm.ErrRateLimit) {
+		return true
 	}
 	var netErr *net.OpError
 	if errors.As(err, &netErr) {

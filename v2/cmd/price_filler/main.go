@@ -27,8 +27,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// This week I will deploy the new price filler of tradelog v2, which calls my new mark to market.
-// After deploying, I will have data to continue creating competition dashboard.
 func main() {
 	app := libapp.NewApp()
 	app.Name = "trade logs crawler service"
@@ -80,7 +78,12 @@ func run(c *cli.Context) error {
 		l.Errorw("Error while init price filler")
 		return err
 	}
-	priceFiller.Run()
+	fillPriceInterval := c.Duration(libapp.FillPriceTimeIntervalFlag.Name)
+	if fillPriceInterval <= 0 {
+		l.Errorw("invalid value of fill-price-time-interval-flag")
+		return fmt.Errorf("invalid value of fill-price-time-interval-flag")
+	}
+	priceFiller.Run(fillPriceInterval)
 	return nil
 }
 
