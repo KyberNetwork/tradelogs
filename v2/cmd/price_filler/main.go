@@ -78,7 +78,12 @@ func run(c *cli.Context) error {
 		l.Errorw("Error while init price filler")
 		return err
 	}
-	priceFiller.Run(c.Duration(libapp.FillPriceTimeIntervalFlag.Name))
+	fillPriceInterval := c.Duration(libapp.FillPriceTimeIntervalFlag.Name)
+	if fillPriceInterval <= 0 {
+		l.Errorw("invalid value of fill-price-time-interval-flag")
+		return fmt.Errorf("invalid value of fill-price-time-interval-flag")
+	}
+	priceFiller.Run(fillPriceInterval)
 	return nil
 }
 
