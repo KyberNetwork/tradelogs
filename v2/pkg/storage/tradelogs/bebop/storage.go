@@ -68,7 +68,8 @@ func (s *Storage) Insert(orders []storageTypes.TradeLog) error {
 			maker_token_price=excluded.maker_token_price,
 			taker_token_price=excluded.taker_token_price,
 			maker_usd_amount=excluded.maker_usd_amount,
-			taker_usd_amount=excluded.taker_usd_amount
+			taker_usd_amount=excluded.taker_usd_amount,
+			expiration=excluded.expiration
 	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
@@ -179,6 +180,7 @@ func tradeLogSerialize(o *storageTypes.TradeLog) []interface{} {
 		o.TakerTokenPrice,
 		o.MakerUsdAmount,
 		o.TakerUsdAmount,
+		o.Expiry,
 	}
 }
 
@@ -207,5 +209,6 @@ func tradeLogColumns() []string {
 		"taker_token_price",
 		"maker_usd_amount",
 		"taker_usd_amount",
+		"expiration",
 	}
 }
