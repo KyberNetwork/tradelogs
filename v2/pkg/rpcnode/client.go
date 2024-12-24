@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum"
@@ -35,21 +36,31 @@ func NewClient(l *zap.SugaredLogger, ethClient ...*ethclient.Client) *Client {
 
 func (c *Client) FetchTraceCalls(ctx context.Context, blockHash string) ([]types.TransactionCallFrame, error) {
 	var (
-		result []types.TransactionCallFrame
-		err    error
+		result  []types.TransactionCallFrame
+		err     error
+		retries = 5
+		delay   = 5 * time.Second
 	)
-	for i, client := range c.ethClient {
-		err = client.Client().CallContext(ctx, &result, "debug_traceBlockByHash", blockHash, map[string]interface{}{
-			"tracer": "callTracer",
-			"tracerConfig": map[string]interface{}{
-				"withLog": true,
-			},
-		})
-		if err != nil {
-			c.l.Errorw("fetch trace call failed", "error", err, "blockHash", blockHash, "clientID", i)
-			continue
+	for attempt := 0; attempt < retries; attempt++ {
+		for i, client := range c.ethClient {
+			err = client.Client().CallContext(ctx, &result, "debug_traceBlockByHash", blockHash, map[string]interface{}{
+				"tracer": "callTracer",
+				"tracerConfig": map[string]interface{}{
+					"withLog": true,
+				},
+			})
+			if err != nil {
+				c.l.Errorw("fetch trace call failed", "error", err, "blockHash", blockHash, "clientID", i)
+				continue
+			}
+			// success case
+			return result, nil
 		}
-		return result, nil
+		// retry if having error
+		if attempt < retries-1 {
+			c.l.Warnw("retrying fetching trace call", "attempt", attempt+1, "blockHash", blockHash)
+			time.Sleep(delay)
+		}
 	}
 
 	return result, err
