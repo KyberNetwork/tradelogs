@@ -43,8 +43,8 @@ func (m *MtmClient) GetListTokens(ctx context.Context) ([]Token, error) {
 		return nil, fmt.Errorf("new request error: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+
+	resp, err := m.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("do request error: %w", err)
 	}
@@ -74,18 +74,18 @@ func (m *MtmClient) GetHistoricalRate(
 		"&quote=" + quote +
 		"&chain_id=" + strconv.FormatInt(chainId, 10) +
 		"&time=" + strconv.FormatInt(ts.Unix(), 10)
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, m.baseURL+path+params, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, m.baseURL+path+params, nil)
 	if err != nil {
 		return 0, fmt.Errorf("new request error: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if resp.StatusCode == http.StatusTooManyRequests { // 429
-		return 0, ErrRateLimit
-	}
+
+	resp, err := m.httpClient.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("do request error: %w", err)
+	}
+	if resp.StatusCode == http.StatusTooManyRequests { // 429
+		return 0, ErrRateLimit
 	}
 	defer resp.Body.Close()
 

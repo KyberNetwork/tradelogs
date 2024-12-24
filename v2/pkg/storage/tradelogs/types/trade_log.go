@@ -27,7 +27,7 @@ type TradeLog struct {
 	TxOrigin               string          `db:"tx_origin" json:"tx_origin,omitempty"`
 	InteractContract       string          `db:"interact_contract" json:"interact_contract,omitempty"`
 	MakerTraits            json.RawMessage `db:"maker_traits" json:"maker_traits,omitempty"`
-	Expiry                 uint64          `db:"expiration_date" json:"expiration_date"`
+	Expiry                 uint64          `db:"expiration" json:"expiration,omitempty"`
 	MakerTokenPrice        *float64        `db:"maker_token_price" json:"maker_token_price"`
 	TakerTokenPrice        *float64        `db:"taker_token_price" json:"taker_token_price"`
 	MakerUsdAmount         *float64        `db:"maker_usd_amount" json:"maker_usd_amount"`
@@ -88,6 +88,31 @@ func CommonTradeLogColumns() []string {
 	}
 }
 
+func CommonTradeLogSuffix() string {
+	return `ON CONFLICT(block_number, log_index) DO UPDATE 
+		SET 
+			order_hash=excluded.order_hash,
+			maker=excluded.maker,
+			taker=excluded.taker,
+			maker_token=excluded.maker_token,
+			taker_token=excluded.taker_token,
+			maker_token_amount=excluded.maker_token_amount,
+			taker_token_amount=excluded.taker_token_amount,
+			contract_address=excluded.contract_address,
+			block_number=excluded.block_number,
+			tx_hash=excluded.tx_hash,
+			log_index=excluded.log_index,
+			timestamp=excluded.timestamp,
+			event_hash=excluded.event_hash,
+			tx_origin=excluded.tx_origin,
+			message_sender=excluded.message_sender,
+			interact_contract=excluded.interact_contract,
+			maker_token_price=excluded.maker_token_price,
+			taker_token_price=excluded.taker_token_price,
+			maker_usd_amount=excluded.maker_usd_amount,
+			taker_usd_amount=excluded.taker_usd_amount`
+}
+
 // RFQTradeLogSerialize used for exchanges supporting RFQ trades and partial fill
 func RFQTradeLogSerialize(o *TradeLog) []interface{} {
 	return []interface{}{
@@ -113,6 +138,7 @@ func RFQTradeLogSerialize(o *TradeLog) []interface{} {
 		o.TakerTokenPrice,
 		o.MakerUsdAmount,
 		o.TakerUsdAmount,
+		o.Expiry,
 	}
 }
 
@@ -141,5 +167,34 @@ func RFQTradeLogColumns() []string {
 		"taker_token_price",
 		"maker_usd_amount",
 		"taker_usd_amount",
+		"expiration",
 	}
+}
+
+func RFQTradeLogSuffix() string {
+	return `ON CONFLICT(block_number, log_index) DO UPDATE 
+		SET 
+			order_hash=excluded.order_hash,
+			maker=excluded.maker,
+			taker=excluded.taker,
+			maker_token=excluded.maker_token,
+			taker_token=excluded.taker_token,
+			maker_token_amount=excluded.maker_token_amount,
+			taker_token_amount=excluded.taker_token_amount,
+			maker_token_origin_amount=excluded.maker_token_origin_amount,
+			taker_token_origin_amount=excluded.taker_token_origin_amount,
+			contract_address=excluded.contract_address,
+			block_number=excluded.block_number,
+			tx_hash=excluded.tx_hash,
+			log_index=excluded.log_index,
+			timestamp=excluded.timestamp,
+			event_hash=excluded.event_hash,
+			tx_origin=excluded.tx_origin,
+			message_sender=excluded.message_sender,
+			interact_contract=excluded.interact_contract,
+			maker_token_price=excluded.maker_token_price,
+			taker_token_price=excluded.taker_token_price,
+			maker_usd_amount=excluded.maker_usd_amount,
+			taker_usd_amount=excluded.taker_usd_amount,
+			expiration=excluded.expiration`
 }

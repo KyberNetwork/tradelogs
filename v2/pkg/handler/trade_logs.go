@@ -89,6 +89,8 @@ func (h *TradeLogHandler) ProcessBlockWithExclusion(blockHash string, blockNumbe
 
 func (h *TradeLogHandler) processForTradelog(calls []types.TransactionCallFrame, blockHash string, blockNumber uint64, timestamp uint64, exclusions sets.Set[string]) error {
 	logIndexStart := 0
+	var result []storageTypes.TradeLog
+
 	for i, call := range calls {
 		logIndexStart = assignLogIndexes(&call.CallFrame, logIndexStart)
 		metadata := logMetadata{
@@ -109,33 +111,39 @@ func (h *TradeLogHandler) processForTradelog(calls []types.TransactionCallFrame,
 			tradeLogs[j].InteractContract = call.CallFrame.To
 		}
 
-		err := h.storage.Insert(tradeLogs)
-		if err != nil {
-			return fmt.Errorf("write to storage error: %w", err)
-		}
-		h.l.Infow("successfully insert trade logs", "blockNumber", blockNumber, "number", len(tradeLogs))
-
-		passCount, failCount := 0, 0
-		for _, log := range tradeLogs {
-			msgBytes, err := json.Marshal(kafka.Message{
-				Type: kafka.MessageTypeTradeLog,
-				Data: log,
-			})
-			if err != nil {
-				h.l.Errorw(" error when marshal trade log to json", "blockNumber", blockNumber, "log", log, "err", err)
-				failCount++
-				continue
-			}
-			err = h.publisher.Publish(h.kafkaTopic, msgBytes)
-			if err != nil {
-				h.l.Errorw("error when publish trade log to kafka", "blockNumber", blockNumber, "log", log, "err", err)
-				failCount++
-				continue
-			}
-			passCount++
-		}
-		h.l.Infow("successfully publish trade logs", "blockNumber", blockNumber, "success", passCount, "fail", failCount)
+		result = append(result, tradeLogs...)
 	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	err := h.storage.Insert(result)
+	if err != nil {
+		return fmt.Errorf("write to storage error: %w", err)
+	}
+	h.l.Infow("successfully insert trade logs", "blockNumber", blockNumber, "number", len(result))
+
+	passCount, failCount := 0, 0
+	for _, log := range result {
+		msgBytes, err := json.Marshal(kafka.Message{
+			Type: kafka.MessageTypeTradeLog,
+			Data: log,
+		})
+		if err != nil {
+			h.l.Errorw(" error when marshal trade log to json", "blockNumber", blockNumber, "log", log, "err", err)
+			failCount++
+			continue
+		}
+		err = h.publisher.Publish(h.kafkaTopic, msgBytes)
+		if err != nil {
+			h.l.Errorw("error when publish trade log to kafka", "blockNumber", blockNumber, "log", log, "err", err)
+			failCount++
+			continue
+		}
+		passCount++
+	}
+	h.l.Infow("successfully publish trade logs", "blockNumber", blockNumber, "success", passCount, "fail", failCount)
 
 	return nil
 }
