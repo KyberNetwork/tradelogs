@@ -43,8 +43,8 @@ func (m *MtmClient) GetListTokens(ctx context.Context) ([]Token, error) {
 		return nil, fmt.Errorf("new request error: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+
+	resp, err := m.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("do request error: %w", err)
 	}
@@ -79,8 +79,8 @@ func (m *MtmClient) GetHistoricalRate(
 		return 0, fmt.Errorf("new request error: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
+
+	resp, err := m.httpClient.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("do request error: %w", err)
 	}
