@@ -50,7 +50,6 @@ func (c *Client) GetTxOriginByTxHash(ctx context.Context, txHash string) (common
 		if err != nil {
 			return common.Address{}, err
 		}
-		fmt.Println(tx.Type())
 		sender, err := ethereum_types.Sender(ethereum_types.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
 			return common.Address{}, err
