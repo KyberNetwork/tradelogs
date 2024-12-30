@@ -20,6 +20,7 @@ type TradeLog struct {
 	LogIndex         uint64        `db:"log_index" json:"log_index,omitempty"`
 	Timestamp        uint64        `db:"timestamp" json:"timestamp,omitempty"`
 	EventHash        string        `db:"event_hash" json:"event_hash,omitempty"`
+	TxOrigin         string        `db:"tx_origin" json:"tx_origin,omitempty"`
 	MakerTraits      string        `db:"maker_traits" json:"maker_traits,omitempty"`
 	Expiry           uint64        `db:"expiration_date" json:"expiration_date"`
 	MakerTokenPrice  float64       `db:"maker_token_price" json:"maker_token_price"`
@@ -69,6 +70,7 @@ func (o *TradeLog) Serialize() []interface{} {
 		o.LogIndex,
 		o.Timestamp,
 		o.EventHash,
+		o.TxOrigin,
 		o.MakerTraits,
 		o.MakerTokenPrice,
 		o.TakerTokenPrice,

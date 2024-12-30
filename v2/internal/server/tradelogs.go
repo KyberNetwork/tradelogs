@@ -62,7 +62,9 @@ func (s *TradeLogs) register() {
 	s.r.GET("/tradelogs", s.getTradeLogs)
 	s.r.GET("/tokens", s.getTokens)
 	s.r.GET("/makers", s.getMakerName)
-	s.r.POST("/add_makers", s.addMakerName)
+	s.r.POST("/makers", s.addMakerName)
+	s.r.GET("/solvers", s.getSolvers)
+	s.r.POST("/solvers", s.addSolvers)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -143,6 +145,37 @@ func (s *TradeLogs) addMakerName(c *gin.Context) {
 	}
 
 	if err := s.dashStorage.InsertMakerName(queries); err != nil {
+		responseErr(c, http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    queries,
+	})
+}
+
+func (s *TradeLogs) getSolvers(c *gin.Context) {
+	data, err := s.dashStorage.GetSolvers()
+	if err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
+
+func (s *TradeLogs) addSolvers(c *gin.Context) {
+	var queries []dashboardTypes.Solver
+
+	if err := c.ShouldBindJSON(&queries); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := s.dashStorage.InsertSolver(queries); err != nil {
 		responseErr(c, http.StatusInternalServerError, err)
 		return
 	}

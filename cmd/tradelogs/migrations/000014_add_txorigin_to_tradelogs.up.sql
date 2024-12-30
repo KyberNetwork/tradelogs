@@ -1,0 +1,2 @@
+ALTER TABLE tradelogs
+ADD COLUMN tx_origin TEXT DEFAULT NULL;

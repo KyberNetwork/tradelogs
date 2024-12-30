@@ -10,6 +10,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/pricefiller"
+	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradinglib/pkg/metrics"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
@@ -24,24 +25,26 @@ const (
 )
 
 type Worker struct {
-	listener     *evmlistenerclient.Client
-	l            *zap.SugaredLogger
-	s            *storage.Storage
-	p            []parser.Parser
-	priceFiller  *pricefiller.PriceFiller
-	tradeLogChan chan storage.TradeLog
+	listener      *evmlistenerclient.Client
+	l             *zap.SugaredLogger
+	s             *storage.Storage
+	p             []parser.Parser
+	priceFiller   *pricefiller.PriceFiller
+	tradeLogChan  chan storage.TradeLog
+	rpcNodeClient *rpcnode.Client
 }
 
 func New(l *zap.SugaredLogger, s *storage.Storage, listener *evmlistenerclient.Client,
 	priceFiller *pricefiller.PriceFiller, tradeLogChan chan storage.TradeLog,
-	parsers []parser.Parser) (*Worker, error) {
+	parsers []parser.Parser, rpcNodeClient *rpcnode.Client) (*Worker, error) {
 	return &Worker{
-		listener:     listener,
-		l:            l,
-		s:            s,
-		p:            parsers,
-		priceFiller:  priceFiller,
-		tradeLogChan: tradeLogChan,
+		listener:      listener,
+		l:             l,
+		s:             s,
+		p:             parsers,
+		priceFiller:   priceFiller,
+		tradeLogChan:  tradeLogChan,
+		rpcNodeClient: rpcNodeClient,
 	}, nil
 }
 
@@ -132,6 +135,12 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 					}
 					continue
 				}
+				txOrigin, err := w.rpcNodeClient.GetTxOriginByTxHash(context.Background(), order.TxHash)
+				if err != nil {
+					w.l.Errorw("error when get tx origin", "txHash", order.TxHash, "err", err)
+					continue
+				}
+				order.TxOrigin = strings.ToLower(txOrigin.Hex())
 				insertOrders = append(insertOrders, order)
 			}
 		}
