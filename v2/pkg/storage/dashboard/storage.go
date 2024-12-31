@@ -13,7 +13,7 @@ import (
 const (
 	tokenTable     = "token"
 	makerNameTable = "maker_name"
-	solverTable    = "solver"
+	txOriginTable  = "txorigin"
 )
 
 type Storage struct {
@@ -86,22 +86,22 @@ func (s *Storage) InsertMakerName(makerName []types.MakerName) error {
 	return nil
 }
 
-func (s *Storage) InsertSolver(solvers []types.Solver) error {
-	if len(solvers) == 0 {
+func (s *Storage) InsertTxOrigin(txOrigins []types.TxOrigin) error {
+	if len(txOrigins) == 0 {
 		return nil
 	}
 
-	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(solverTable).Columns(
-		types.SolverColumns()...,
+	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(txOriginTable).Columns(
+		types.TxOriginColumns()...,
 	)
-	for _, solver := range solvers {
+	for _, txOrigin := range txOrigins {
 		b = b.Values(
-			solver.SerializeSolver()...,
+			txOrigin.SerializeTxOrigin()...,
 		)
 	}
 	q, p, err := b.Suffix(`ON CONFLICT (address) DO UPDATE 
 		SET 
-			solver_name=excluded.solver_name
+			name=excluded.name
 	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
@@ -165,20 +165,20 @@ func (s *Storage) GetMakerName() ([]types.MakerName, error) {
 	return makerName, nil
 }
 
-func (s *Storage) GetSolvers() ([]types.Solver, error) {
+func (s *Storage) GetTxOrigin() ([]types.TxOrigin, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(types.SolverColumns()...).
-		From(solverTable)
+		Select(types.TxOriginColumns()...).
+		From(txOriginTable)
 
 	q, p, err := builder.ToSql()
 	if err != nil {
 		return nil, err
 	}
 
-	var solvers []types.Solver
-	if err := s.db.Select(&solvers, q, p...); err != nil {
+	var txOrigins []types.TxOrigin
+	if err := s.db.Select(&txOrigins, q, p...); err != nil {
 		return nil, err
 	}
 
-	return solvers, nil
+	return txOrigins, nil
 }

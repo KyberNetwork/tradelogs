@@ -63,8 +63,8 @@ func (s *TradeLogs) register() {
 	s.r.GET("/tokens", s.getTokens)
 	s.r.GET("/makers", s.getMakerName)
 	s.r.POST("/makers", s.addMakerName)
-	s.r.GET("/solvers", s.getSolvers)
-	s.r.POST("/solvers", s.addSolvers)
+	s.r.GET("/txorigin", s.getTxOrigin)
+	s.r.POST("/txorigin", s.addTxOrigin)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -155,8 +155,8 @@ func (s *TradeLogs) addMakerName(c *gin.Context) {
 	})
 }
 
-func (s *TradeLogs) getSolvers(c *gin.Context) {
-	data, err := s.dashStorage.GetSolvers()
+func (s *TradeLogs) getTxOrigin(c *gin.Context) {
+	data, err := s.dashStorage.GetTxOrigin()
 	if err != nil {
 		responseErr(c, http.StatusInternalServerError, err)
 		return
@@ -167,15 +167,15 @@ func (s *TradeLogs) getSolvers(c *gin.Context) {
 	})
 }
 
-func (s *TradeLogs) addSolvers(c *gin.Context) {
-	var queries []dashboardTypes.Solver
+func (s *TradeLogs) addTxOrigin(c *gin.Context) {
+	var queries []dashboardTypes.TxOrigin
 
 	if err := c.ShouldBindJSON(&queries); err != nil {
 		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
 
-	if err := s.dashStorage.InsertSolver(queries); err != nil {
+	if err := s.dashStorage.InsertTxOrigin(queries); err != nil {
 		responseErr(c, http.StatusInternalServerError, err)
 		return
 	}
