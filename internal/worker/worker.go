@@ -13,6 +13,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradinglib/pkg/metrics"
+	"github.com/ethereum/go-ethereum/common"
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
 )
@@ -138,9 +139,10 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 				txOrigin, err := w.rpcNodeClient.GetTxOriginByTxHash(context.Background(), order.TxHash)
 				if err != nil {
 					w.l.Errorw("error when get tx origin", "txHash", order.TxHash, "err", err)
-					continue
 				}
-				order.TxOrigin = strings.ToLower(txOrigin.Hex())
+				if txOrigin != (common.Address{}) {
+					order.TxOrigin = strings.ToLower(txOrigin.Hex())
+				}
 				insertOrders = append(insertOrders, order)
 			}
 		}

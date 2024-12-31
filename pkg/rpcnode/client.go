@@ -45,19 +45,20 @@ func (c *Client) FetchTraceCall(ctx context.Context, txHash string) (types.CallF
 }
 
 func (c *Client) GetTxOriginByTxHash(ctx context.Context, txHash string) (common.Address, error) {
-	for _, ethClient := range c.ethClient {
+	for i, ethClient := range c.ethClient {
 		tx, _, err := ethClient.TransactionByHash(ctx, common.HexToHash(txHash))
 		if err != nil {
-			return common.Address{}, err
+			c.l.Errorw("get transaction by hash failed", "error", err, "txHash", txHash, "clientID", i)
+			continue
 		}
 		sender, err := ethereum_types.Sender(ethereum_types.NewCancunSigner(tx.ChainId()), tx)
 		if err != nil {
-			return common.Address{}, err
+			c.l.Errorw("get sender failed", "error", err, "txHash", txHash, "clientID", i)
+			continue
 		}
 		if sender != (common.Address{}) {
 			return sender, nil
 		}
-
 	}
 	return common.Address{}, fmt.Errorf("failed to get sender")
 }
