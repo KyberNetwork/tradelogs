@@ -1,10 +1,10 @@
-CREATE TABLE IF NOT EXISTS txorigin (
-	address TEXT NOT NULL,
-    name    TEXT NOT NULL,
+CREATE TABLE IF NOT EXISTS solver (
+	address      TEXT NOT NULL,
+    solver_name  TEXT NOT NULL,
     PRIMARY KEY(address)
 );
 
-INSERT INTO txorigin (address, name) VALUES 
+INSERT INTO solver (address, solver_name) VALUES 
 ('0x9dfc9bb0fff2dc96728d2bb94eacee6ba3592351', 'cow-Rizzolver'),
 ('0x2854c9a92cd1dc65bddf45afe397d9d75d4718c8', 'cow-Rizzolver'),
 ('0x4fc4a61a3b99a1ad4a61b03f3752ca12b4a17646', 'cow-Rizzolver'),
