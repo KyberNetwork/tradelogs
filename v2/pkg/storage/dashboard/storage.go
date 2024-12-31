@@ -177,6 +177,10 @@ func (s *Storage) GetTxOrigin(query types.TxOriginQuery) ([]types.TxOrigin, erro
 		if v.Field(i).IsZero() {
 			continue
 		}
+		if tag == "type" {
+			builder = builder.Where(squirrel.Like{tag: "%" + strings.ToLower(v.Field(i).String()) + "%"})
+			continue
+		}
 		builder = builder.Where(squirrel.Eq{tag: strings.ToLower(v.Field(i).String())})
 	}
 
