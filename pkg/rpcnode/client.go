@@ -2,8 +2,11 @@ package rpcnode
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/KyberNetwork/tradelogs/pkg/types"
+	"github.com/ethereum/go-ethereum/common"
+	ethereum_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"go.uber.org/zap"
 )
@@ -39,4 +42,23 @@ func (c *Client) FetchTraceCall(ctx context.Context, txHash string) (types.CallF
 		return result, nil
 	}
 	return result, err
+}
+
+func (c *Client) GetTxOriginByTxHash(ctx context.Context, txHash string) (common.Address, error) {
+	for i, ethClient := range c.ethClient {
+		tx, _, err := ethClient.TransactionByHash(ctx, common.HexToHash(txHash))
+		if err != nil {
+			c.l.Errorw("get transaction by hash failed", "error", err, "txHash", txHash, "clientID", i)
+			continue
+		}
+		sender, err := ethereum_types.Sender(ethereum_types.NewCancunSigner(tx.ChainId()), tx)
+		if err != nil {
+			c.l.Errorw("get sender failed", "error", err, "txHash", txHash, "clientID", i)
+			continue
+		}
+		if sender != (common.Address{}) {
+			return sender, nil
+		}
+	}
+	return common.Address{}, fmt.Errorf("failed to get sender")
 }

@@ -13,6 +13,7 @@ import (
 const (
 	tokenTable     = "token"
 	makerNameTable = "maker_name"
+	solverTable    = "solver"
 )
 
 type Storage struct {
@@ -85,6 +86,34 @@ func (s *Storage) InsertMakerName(makerName []types.MakerName) error {
 	return nil
 }
 
+func (s *Storage) InsertSolver(solvers []types.Solver) error {
+	if len(solvers) == 0 {
+		return nil
+	}
+
+	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(solverTable).Columns(
+		types.SolverColumns()...,
+	)
+	for _, solver := range solvers {
+		b = b.Values(
+			solver.SerializeSolver()...,
+		)
+	}
+	q, p, err := b.Suffix(`ON CONFLICT (address) DO UPDATE 
+		SET 
+			solver_name=excluded.solver_name
+	`).ToSql()
+	if err != nil {
+		s.l.Errorw("Error build insert", "error", err)
+		return err
+	}
+	if _, err := s.db.Exec(q, p...); err != nil {
+		s.l.Errorw("Error exec insert", "sql", q, "arg", p, "error", err)
+		return err
+	}
+	return nil
+}
+
 // ----------------------------get----------------------------
 func (s *Storage) GetTokens(query types.TokenQuery) ([]types.Token, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
@@ -134,4 +163,22 @@ func (s *Storage) GetMakerName() ([]types.MakerName, error) {
 	}
 
 	return makerName, nil
+}
+
+func (s *Storage) GetSolvers() ([]types.Solver, error) {
+	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Select(types.SolverColumns()...).
+		From(solverTable)
+
+	q, p, err := builder.ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	var solvers []types.Solver
+	if err := s.db.Select(&solvers, q, p...); err != nil {
+		return nil, err
+	}
+
+	return solvers, nil
 }

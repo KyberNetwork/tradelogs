@@ -107,8 +107,8 @@ func run(c *cli.Context) error {
 		l.Infow("dial rpc node successfully", "node", url[:10]+"***"+url[len(url)-10:])
 		ethClients[i] = client
 	}
-
-	traceCalls := tracecall.NewCache(rpcnode.NewClient(l, ethClients...))
+	rpcNodeClient := rpcnode.NewClient(l, ethClients...)
+	traceCalls := tracecall.NewCache(rpcNodeClient)
 
 	parsers := []parser.Parser{kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
@@ -131,7 +131,7 @@ func run(c *cli.Context) error {
 	}
 
 	tradeLogChan := make(chan storage.TradeLog, 1000)
-	w, err := worker.New(l, s, listener, priceFiller, tradeLogChan, parsers)
+	w, err := worker.New(l, s, listener, priceFiller, tradeLogChan, parsers, rpcNodeClient)
 	if err != nil {
 		l.Errorw("Error while init worker")
 		return err
