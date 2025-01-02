@@ -15,3 +15,35 @@ INSERT INTO txorigin (address, name, type) VALUES
 ('0x86b1980c889ad981837a5e8b587ae82100fe8e04', 'ktt-operator-07', 'vt'),
 ('0x860d6604b813376645b996278464e9953f884705', 'ktt-operator-08', 'vt'),
 ('0x86e81996242d1dce7fc5f9b9d060bbd3410fc206', 'ktt-operator-09', 'vt');
+
+DROP INDEX zerox_timestamp_idx;
+DROP INDEX kyberswap_timestamp_idx;
+DROP INDEX kyberswap_rfq_timestamp_idx;
+DROP INDEX paraswap_timestamp_idx;
+DROP INDEX hashflow_v3_timestamp_idx;
+DROP INDEX oneinch_v6_timestamp_idx;
+DROP INDEX uniswapx_timestamp_idx;
+DROP INDEX bebop_timestamp_idx;
+DROP INDEX zerox_v3_timestamp_idx;
+DROP INDEX pancakeswap_timestamp_idx;
+
+create index zerox_timestamp_idx
+    on tradelogs_zerox (timestamp DESC);
+create index kyberswap_timestamp_idx
+    on tradelogs_kyberswap (timestamp DESC);
+create index kyberswap_rfq_timestamp_idx
+    on tradelogs_kyberswap_rfq (timestamp DESC);
+create index paraswap_timestamp_idx
+    on tradelogs_paraswap (timestamp DESC);
+create index hashflow_v3_timestamp_idx
+    on tradelogs_hashflow_v3 (timestamp DESC);
+create index oneinch_v6_timestamp_idx
+    on tradelogs_oneinch_v6 (timestamp DESC);
+create index uniswapx_timestamp_idx
+    on tradelogs_uniswapx (timestamp DESC);
+create index bebop_timestamp_idx
+    on tradelogs_bebop (timestamp DESC);
+create index zerox_v3_timestamp_idx
+    on tradelogs_zerox_v3 (timestamp DESC);
+create index pancakeswap_timestamp_idx
+    on tradelogs_pancakeswap (timestamp DESC);
