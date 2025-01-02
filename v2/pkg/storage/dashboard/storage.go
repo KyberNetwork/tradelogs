@@ -101,7 +101,8 @@ func (s *Storage) InsertTxOrigin(txOrigins []types.TxOrigin) error {
 	}
 	q, p, err := b.Suffix(`ON CONFLICT (address) DO UPDATE 
 		SET 
-			name=excluded.name
+			name=excluded.name,
+			type=excluded.type
 	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
@@ -165,10 +166,23 @@ func (s *Storage) GetMakerName() ([]types.MakerName, error) {
 	return makerName, nil
 }
 
-func (s *Storage) GetTxOrigin() ([]types.TxOrigin, error) {
+func (s *Storage) GetTxOrigin(query types.TxOriginQuery) ([]types.TxOrigin, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Select(types.TxOriginColumns()...).
 		From(txOriginTable)
+	v := reflect.ValueOf(query)
+	fields := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		tag := string(fields.Field(i).Tag.Get("form"))
+		if v.Field(i).IsZero() {
+			continue
+		}
+		if tag == "type" {
+			builder = builder.Where(squirrel.Like{tag: "%" + strings.ToLower(v.Field(i).String()) + "%"})
+			continue
+		}
+		builder = builder.Where(squirrel.Eq{tag: strings.ToLower(v.Field(i).String())})
+	}
 
 	q, p, err := builder.ToSql()
 	if err != nil {

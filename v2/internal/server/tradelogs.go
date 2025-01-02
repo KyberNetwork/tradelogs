@@ -156,7 +156,12 @@ func (s *TradeLogs) addMakerName(c *gin.Context) {
 }
 
 func (s *TradeLogs) getTxOrigin(c *gin.Context) {
-	data, err := s.dashStorage.GetTxOrigin()
+	var queries dashboardTypes.TxOriginQuery
+	if err := c.ShouldBind(&queries); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+	data, err := s.dashStorage.GetTxOrigin(queries)
 	if err != nil {
 		responseErr(c, http.StatusInternalServerError, err)
 		return
