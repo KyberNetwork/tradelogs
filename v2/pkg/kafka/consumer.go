@@ -32,9 +32,9 @@ func NewConsumer(config *Config, consumerGroup string) (*SaramaConsumer, error) 
 	}, nil
 }
 
-func (c *SaramaConsumer) Consume(ctx context.Context, l *zap.SugaredLogger, topic string, ch chan<- *sarama.ConsumerMessage) error {
-	messageHandler := newConsumerGroupHandler(ch)
-	defer close(ch)
+func (c *SaramaConsumer) Consume(ctx context.Context, l *zap.SugaredLogger, topic string, msgCh chan<- *sarama.ConsumerMessage, ackCh chan bool) error {
+	messageHandler := newConsumerGroupHandler(msgCh, ackCh)
+	defer close(msgCh)
 	for {
 		select {
 		case <-ctx.Done():
@@ -52,11 +52,13 @@ func (c *SaramaConsumer) Consume(ctx context.Context, l *zap.SugaredLogger, topi
 
 type consumerGroupHandler struct {
 	msgChan chan<- *sarama.ConsumerMessage
+	ackChan chan bool
 }
 
-func newConsumerGroupHandler(msgChan chan<- *sarama.ConsumerMessage) *consumerGroupHandler {
+func newConsumerGroupHandler(msgChan chan<- *sarama.ConsumerMessage, ackCh chan bool) *consumerGroupHandler {
 	return &consumerGroupHandler{
 		msgChan: msgChan,
+		ackChan: ackCh,
 	}
 }
 
@@ -70,8 +72,13 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 		// Push the message to the channel
 		h.msgChan <- msg
 
-		// Acknowledge the message by marking it as processed (commit the offset)
-		session.MarkMessage(msg, "")
+		ack := <-h.ackChan
+		if ack {
+			// Acknowledge the message by marking it as processed (commit the offset)
+			session.MarkMessage(msg, "")
+		} else {
+			break // stop consume when fail to broadcast message
+		}
 	}
 	return nil
 }
