@@ -65,11 +65,14 @@ func (b *Broadcaster) NewConn(req RegisterRequest, conn *websocket.Conn) error {
 
 	b.addClient(conn, req.ID, req)
 
-	err := b.clients[req.ID].run(ctx, b.config, b.topic)
-	if err != nil {
-		b.removeClient(cancel, conn, req.ID)
-		return fmt.Errorf("cannot run client: %w", err)
-	}
+	go func() {
+		err := b.clients[req.ID].run(ctx, b.config, b.topic)
+		if err != nil {
+			b.l.Errorw("error when run client", "id", req.ID, "err", err)
+			b.removeClient(cancel, conn, req.ID)
+		}
+	}()
+
 	return nil
 }
 

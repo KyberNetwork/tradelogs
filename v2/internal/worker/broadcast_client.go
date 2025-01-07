@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/IBM/sarama"
-	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
@@ -28,34 +29,48 @@ func (c *Client) run(ctx context.Context, cfg *kafka.Config, topic string) error
 	}
 
 	tradeLogsChan := make(chan *sarama.ConsumerMessage, 100)
+	ackChan := make(chan bool)
 
 	go func() {
-		err = consumer.Consume(ctx, c.l, topic, tradeLogsChan)
+		err = consumer.Consume(ctx, c.l, topic, tradeLogsChan, ackChan)
 		if err != nil {
 			panic(fmt.Errorf("failed to consume trade logs: %w", err))
 		}
 	}()
 
-	go func() {
-		for msg := range tradeLogsChan {
-			c.broadcast(msg)
-		}
-	}()
+	retry := 3
+	delay := time.Second * 5
+	i := 0
 
-	return nil
+	for msg := range tradeLogsChan {
+		for i = 0; i < retry; i++ {
+			err = c.broadcast(msg)
+			if err != nil {
+				time.Sleep(delay)
+				continue
+			}
+			ackChan <- true
+			break
+		}
+		if i == retry {
+			ackChan <- false
+			break
+		}
+	}
+	return fmt.Errorf("broadcast trade logs to client %s failed", c.id)
 }
 
-func (c *Client) broadcast(msg *sarama.ConsumerMessage) {
+func (c *Client) broadcast(msg *sarama.ConsumerMessage) error {
 	var newMsg kafka.Message
 	err := json.Unmarshal(msg.Value, &newMsg)
 	if err != nil {
 		c.l.Errorw("error when unmarshal message", "err", err, "msg", string(msg.Value))
-		return
+		return err
 	}
 	dataBytes, err := json.Marshal(newMsg.Data)
 	if err != nil {
 		c.l.Errorw("error when marshal message data", "err", err, "data", newMsg.Data)
-		return
+		return err
 	}
 
 	switch newMsg.Type {
@@ -64,32 +79,35 @@ func (c *Client) broadcast(msg *sarama.ConsumerMessage) {
 		err = json.Unmarshal(dataBytes, &blocks)
 		if err != nil {
 			c.l.Errorw("error when unmarshal reverted blocks", "err", err, "data", string(dataBytes))
-			return
+			return err
 		}
 		newMsg.Data = blocks
 		if err = c.ws.WriteJSON(newMsg); err != nil {
 			c.l.Errorw("error when send msg", "err", err)
+			return err
 		}
 		c.l.Infow("broadcast revert message", "message", newMsg)
 
 	case kafka.MessageTypeTradeLog:
-		var tradelog storage.TradeLog
-		err = json.Unmarshal(dataBytes, &tradelog)
+		var tradeLog types.TradeLog
+		err = json.Unmarshal(dataBytes, &tradeLog)
 		if err != nil {
 			c.l.Errorw("error when unmarshal trade log", "err", err, "data", string(dataBytes))
-			return
+			return err
 		}
-		newMsg.Data = tradelog
-		if c.match(tradelog) {
+		newMsg.Data = tradeLog
+		if c.match(tradeLog) {
 			if err = c.ws.WriteJSON(newMsg); err != nil {
 				c.l.Errorw("error when send msg", "err", err)
+				return err
 			}
+			c.l.Infow("broadcast trade log message", "message", newMsg)
 		}
-		c.l.Infow("broadcast trade log message", "message", newMsg)
 	}
+	return nil
 }
 
-func (c *Client) match(log storage.TradeLog) bool {
+func (c *Client) match(log types.TradeLog) bool {
 	params := c.params
 	if len(params.EventHash) != 0 && !strings.EqualFold(params.EventHash, log.EventHash) {
 		return false
