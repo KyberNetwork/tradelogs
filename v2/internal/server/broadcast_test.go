@@ -25,6 +25,10 @@ func TestSubscribe(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// local test
+	// request, err := http.NewRequest("GET", "ws://localhost:8082/eventlogws", nil)
+	// wsURL := "ws://localhost:8082/eventlogws"
+
 	// Establish a connection with the WebSocket server
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL+"?id=cscv9ubrk77vgbjftu5g", request.Header)
 	if err != nil {
