@@ -17,6 +17,9 @@ func TestSubscribe(t *testing.T) {
 	secret := os.Getenv("SECRET")
 
 	request, err := http.NewRequest(http.MethodGet, wsURL+"?id=cscv9ubrk77vgbjftu5g", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, err = httpsign.Sign(request, key, []byte(secret))
 	if err != nil {
 		t.Fatal(err)
@@ -25,20 +28,17 @@ func TestSubscribe(t *testing.T) {
 	// Establish a connection with the WebSocket server
 	conn, _, err := websocket.DefaultDialer.Dial(wsURL+"?id=cscv9ubrk77vgbjftu5g", request.Header)
 	if err != nil {
-		log.Fatal("Error connecting to WebSocket server:", err)
+		t.Fatal("Error connecting to WebSocket server:", err)
 	}
 	defer conn.Close()
 
 	go func() {
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-					log.Println("Ping error:", err)
-					return
-				}
+		for ; ; <-ticker.C {
+			if err = conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Println("Ping error:", err)
+				return
 			}
 		}
 	}()
@@ -47,8 +47,7 @@ func TestSubscribe(t *testing.T) {
 		// cscv9ubrk77vgbjftu5g
 		_, message, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("Error reading message:", err)
-			return
+			t.Fatal("Error reading from websocket:", err)
 		}
 		log.Printf("Received: %s", message)
 	}
