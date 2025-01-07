@@ -12,6 +12,7 @@ import (
 )
 
 func TestSubscribe(t *testing.T) {
+	t.Skip("set env to run test")
 	wsURL := os.Getenv("URL") // Replace with actual WebSocket URL
 	key := os.Getenv("KEY")
 	secret := os.Getenv("SECRET")
