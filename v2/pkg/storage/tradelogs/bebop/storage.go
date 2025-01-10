@@ -212,3 +212,29 @@ func tradeLogColumns() []string {
 		"expiration",
 	}
 }
+
+func (s *Storage) SetNullPrice(token string) (int64, error) {
+	q, p, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Update(s.tableName()).
+		Set("maker_token_price", nil).
+		Set("taker_token_price", nil).
+		Set("maker_usd_amount", nil).
+		Set("taker_usd_amount", nil).
+		Where(squirrel.Or{
+			squirrel.Eq{"maker_token": token},
+			squirrel.Eq{"taker_token": token},
+		}).
+		ToSql()
+	if err != nil {
+		return 0, fmt.Errorf("build query error: %w", err)
+	}
+	result, err := s.db.Exec(q, p...)
+	if err != nil {
+		return 0, fmt.Errorf("run query error: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("fetch rows affected error: %w", err)
+	}
+	return rowsAffected, nil
+}

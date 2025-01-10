@@ -6,4 +6,5 @@ type Storage interface {
 	GetEmptyPrice(limit uint64) ([]TradeLog, error)
 	Delete(blocks []uint64) error
 	Exchange() string
+	SetNullPrice(token string) (int64, error)
 }

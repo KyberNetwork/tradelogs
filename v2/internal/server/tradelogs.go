@@ -65,6 +65,7 @@ func (s *TradeLogs) register() {
 	s.r.POST("/makers", s.addMakerName)
 	s.r.GET("/txorigin", s.getTxOrigin)
 	s.r.POST("/txorigin", s.addTxOrigin)
+	s.r.POST("/tokens/nullify", s.setTokenPriceNull)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -189,4 +190,41 @@ func (s *TradeLogs) addTxOrigin(c *gin.Context) {
 		"success": true,
 		"data":    queries,
 	})
+}
+
+func (s *TradeLogs) setTokenPriceNull(c *gin.Context) {
+	var query struct {
+		Address  string `form:"address" json:"address"`
+		Exchange string `form:"exchange" json:"exchange"`
+	}
+
+	if err := c.ShouldBindJSON(&query); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+
+	for _, storage := range s.storage {
+		if storage.Exchange() != query.Exchange {
+			continue
+		}
+		rows, err := storage.SetNullPrice(query.Address)
+		if err != nil {
+			responseErr(c, http.StatusInternalServerError, err)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data": struct {
+				Token    string `json:"token"`
+				Exchange string `json:"exchange"`
+				Rows     int64  `json:"number of row updated"`
+			}{
+				Token:    query.Address,
+				Exchange: query.Exchange,
+				Rows:     rows,
+			},
+		})
+		return
+	}
+	responseErr(c, http.StatusBadRequest, fmt.Errorf("exchange not found"))
 }
