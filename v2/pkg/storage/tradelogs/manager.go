@@ -82,17 +82,3 @@ func (m *Manager) DeleteWithExclusions(blocks []uint64, exclusions sets.Set[stri
 	m.l.Infow("deleted trade logs", "blocks", blocks)
 	return nil
 }
-
-func (m *Manager) SetNullPrice(token string) (int64, error) {
-	sumRows := int64(0)
-	for _, storage := range m.storages {
-		rows, err := storage.SetNullPrice(token)
-		if err != nil {
-			return sumRows, fmt.Errorf("set null price failed: %v, exchange: %s",
-				err, storage.Exchange())
-		}
-		sumRows += rows
-	}
-	m.l.Infow("updated null price ", "token", token)
-	return sumRows, nil
-}

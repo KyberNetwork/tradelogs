@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
@@ -213,8 +214,8 @@ func tradeLogColumns() []string {
 	}
 }
 
-func (s *Storage) SetNullPrice(token string) (int64, error) {
-	q, p, err := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+func (s *Storage) ResetTokenPriceToRefetch(token string, from, to time.Time) (int64, error) {
+	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Update(s.tableName()).
 		Set("maker_token_price", nil).
 		Set("taker_token_price", nil).
@@ -223,8 +224,15 @@ func (s *Storage) SetNullPrice(token string) (int64, error) {
 		Where(squirrel.Or{
 			squirrel.Eq{"maker_token": token},
 			squirrel.Eq{"taker_token": token},
-		}).
-		ToSql()
+		})
+	if !from.IsZero() {
+		builder = builder.Where(squirrel.GtOrEq{"timestamp": from.UnixMilli()})
+	}
+	if !to.IsZero() {
+		builder = builder.Where(squirrel.LtOrEq{"timestamp": to.UnixMilli()})
+	}
+	q, p, err := builder.ToSql()
+
 	if err != nil {
 		return 0, fmt.Errorf("build query error: %w", err)
 	}

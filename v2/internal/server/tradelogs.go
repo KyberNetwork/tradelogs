@@ -65,7 +65,7 @@ func (s *TradeLogs) register() {
 	s.r.POST("/makers", s.addMakerName)
 	s.r.GET("/txorigin", s.getTxOrigin)
 	s.r.POST("/txorigin", s.addTxOrigin)
-	s.r.POST("/tokens/nullify", s.setTokenPriceNull)
+	s.r.POST("/price_filler/refetch", s.resetTokenPriceToRefetch)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -192,10 +192,12 @@ func (s *TradeLogs) addTxOrigin(c *gin.Context) {
 	})
 }
 
-func (s *TradeLogs) setTokenPriceNull(c *gin.Context) {
+func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 	var query struct {
 		Address  string `form:"address" json:"address"`
 		Exchange string `form:"exchange" json:"exchange"`
+		From     int64  `form:"from" json:"from"`
+		To       int64  `form:"to" json:"to"`
 	}
 
 	if err := c.ShouldBindJSON(&query); err != nil {
@@ -207,7 +209,15 @@ func (s *TradeLogs) setTokenPriceNull(c *gin.Context) {
 		if storage.Exchange() != query.Exchange {
 			continue
 		}
-		rows, err := storage.SetNullPrice(query.Address)
+		from := time.Time{}
+		to := time.Time{}
+		if query.From > 0 {
+			from = time.Unix(query.From, 0)
+		}
+		if query.To > 0 {
+			to = time.Unix(query.To, 0)
+		}
+		rows, err := storage.ResetTokenPriceToRefetch(query.Address, from, to)
 		if err != nil {
 			responseErr(c, http.StatusInternalServerError, err)
 			return
@@ -217,10 +227,14 @@ func (s *TradeLogs) setTokenPriceNull(c *gin.Context) {
 			"data": struct {
 				Token    string `json:"token"`
 				Exchange string `json:"exchange"`
+				From     int64  `json:"from"`
+				To       int64  `json:"to"`
 				Rows     int64  `json:"number of row updated"`
 			}{
 				Token:    query.Address,
 				Exchange: query.Exchange,
+				From:     query.From,
+				To:       query.To,
 				Rows:     rows,
 			},
 		})
