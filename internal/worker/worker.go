@@ -172,9 +172,6 @@ func (w *Worker) retryParseLog() error {
 
 	for _, l := range logs {
 		topics := strings.Split(l.Topics, ",")
-		if len(topics) == 0 {
-			continue
-		}
 		ethLog := convert.ToETHLog(types.Log{
 			Address:     l.Address,
 			Topics:      topics,
