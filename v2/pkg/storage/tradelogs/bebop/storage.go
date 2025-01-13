@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
@@ -214,23 +213,23 @@ func tradeLogColumns() []string {
 	}
 }
 
-func (s *Storage) ResetTokenPriceToRefetch(token string, from, to time.Time) (int64, error) {
+func (s *Storage) ResetTokenPriceToRefetch(token string, from, to int64) (int64, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Update(s.tableName()).
 		Set("maker_token_price", nil).
 		Set("taker_token_price", nil).
 		Set("maker_usd_amount", nil).
-		Set("taker_usd_amount", nil).
-		Where(squirrel.Or{
+		Set("taker_usd_amount", nil)
+	if token != "" {
+		builder = builder.Where(squirrel.Or{
 			squirrel.Eq{"maker_token": token},
 			squirrel.Eq{"taker_token": token},
 		})
-	if !from.IsZero() {
-		builder = builder.Where(squirrel.GtOrEq{"timestamp": from.UnixMilli()})
 	}
-	if !to.IsZero() {
-		builder = builder.Where(squirrel.LtOrEq{"timestamp": to.UnixMilli()})
-	}
+	builder = builder.Where(squirrel.And{
+		squirrel.GtOrEq{"timestamp": from},
+		squirrel.LtOrEq{"timestamp": to},
+	})
 	q, p, err := builder.ToSql()
 
 	if err != nil {

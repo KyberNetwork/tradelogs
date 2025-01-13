@@ -196,8 +196,8 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 	var query struct {
 		Address  string `form:"address" json:"address"`
 		Exchange string `form:"exchange" json:"exchange"`
-		From     int64  `form:"from" json:"from"`
-		To       int64  `form:"to" json:"to"`
+		From     int64  `form:"from_ts" json:"from_ts"`
+		To       int64  `form:"to_ts" json:"to_ts"`
 	}
 
 	if err := c.ShouldBindJSON(&query); err != nil {
@@ -205,17 +205,63 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 		return
 	}
 
+	now := time.Now().UnixMilli()
+
+	if query.Address == "" && query.From == 0 && query.To == 0 {
+		responseErr(c, http.StatusBadRequest,
+			fmt.Errorf("address is empty and no valid time range provided"))
+		return
+	}
+
+	if query.From > now || query.From < 0 {
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("from_ts is no valid"))
+		return
+	}
+	if query.To < 0 {
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("to_ts is no valid"))
+		return
+	}
+
+	var from, to int64
+	var duration time.Duration
+
+	if query.Address == "" {
+		duration = 7 * 24 * time.Hour
+	} else {
+		duration = 30 * 24 * time.Hour
+	}
+
+	if query.From == 0 && query.To == 0 {
+		from = now - int64(duration/time.Millisecond)
+		to = now
+	} else {
+		if query.From > 0 && query.To > 0 {
+			from = query.From
+			to = query.To
+			if from > to {
+				responseErr(c, http.StatusBadRequest,
+					fmt.Errorf("the to_ts should greater than from_ts"))
+				return
+			}
+			if to-from > int64(duration/time.Millisecond) {
+				responseErr(c, http.StatusBadRequest,
+					fmt.Errorf("the time range should not exceed %v", duration))
+				return
+			}
+		} else if query.To > 0 && query.From == 0 {
+			to = query.To
+			from = to - int64(duration/time.Millisecond)
+		} else if query.From > 0 && query.To == 0 {
+			from = query.From
+			to = from + int64(duration/time.Millisecond)
+		}
+	}
+	from = min(from, now)
+	to = min(to, now)
+
 	for _, storage := range s.storage {
 		if storage.Exchange() != query.Exchange {
 			continue
-		}
-		from := time.Time{}
-		to := time.Time{}
-		if query.From > 0 {
-			from = time.Unix(query.From, 0)
-		}
-		if query.To > 0 {
-			to = time.Unix(query.To, 0)
 		}
 		rows, err := storage.ResetTokenPriceToRefetch(query.Address, from, to)
 		if err != nil {
@@ -233,8 +279,8 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 			}{
 				Token:    query.Address,
 				Exchange: query.Exchange,
-				From:     query.From,
-				To:       query.To,
+				From:     from,
+				To:       to,
 				Rows:     rows,
 			},
 		})
