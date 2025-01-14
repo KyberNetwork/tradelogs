@@ -59,7 +59,11 @@ func (w *BackFiller) run() error {
 	defer w.mu.Unlock()
 
 	for {
-		if !w.enableBackfill() {
+		enable, err := w.enableBackfill()
+		if err != nil {
+			return err
+		}
+		if !enable {
 			return nil
 		}
 		first, last, exclusions, err := w.GetBlockRanges()
@@ -87,16 +91,16 @@ func (w *BackFiller) run() error {
 }
 
 // enableBackfill check the state of enabling system backfill task
-func (w *BackFiller) enableBackfill() bool {
+func (w *BackFiller) enableBackfill() (bool, error) {
 	v, err := w.stateStorage.GetState(state.EnableSystemBackfillKey)
 	if err != nil {
-		return false
+		return false, fmt.Errorf("cannot get system backfill status: %w", err)
 	}
 	enable, err := strconv.ParseBool(v)
 	if err != nil {
-		return false
+		return false, fmt.Errorf("cannot parse system backfill status: %w", err)
 	}
-	return enable
+	return enable, nil
 }
 
 // CancelSystemBackfill stop the running system backfill task
@@ -106,10 +110,14 @@ func (w *BackFiller) CancelSystemBackfill() error {
 
 // RunSystemBackfill run the system backfill task, if there is another running system backfill task, this task need to wait
 func (w *BackFiller) RunSystemBackfill() error {
-	if w.enableBackfill() {
+	enable, err := w.enableBackfill()
+	if err != nil {
+		return err
+	}
+	if !enable {
 		return nil
 	}
-	err := w.stateStorage.SetState(state.EnableSystemBackfillKey, strconv.FormatBool(true))
+	err = w.stateStorage.SetState(state.EnableSystemBackfillKey, strconv.FormatBool(true))
 	if err != nil {
 		return err
 	}
