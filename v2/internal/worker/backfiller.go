@@ -59,7 +59,7 @@ func (w *BackFiller) run() error {
 	defer w.mu.Unlock()
 
 	for {
-		enable, err := w.enableBackfill()
+		enable, err := w.isEnableBackfill()
 		if err != nil {
 			return err
 		}
@@ -90,8 +90,8 @@ func (w *BackFiller) run() error {
 	}
 }
 
-// enableBackfill check the state of enabling system backfill task
-func (w *BackFiller) enableBackfill() (bool, error) {
+// isEnableBackfill check the state of enabling system backfill task
+func (w *BackFiller) isEnableBackfill() (bool, error) {
 	v, err := w.stateStorage.GetState(state.EnableSystemBackfillKey)
 	if err != nil {
 		return false, fmt.Errorf("cannot get system backfill status: %w", err)
@@ -110,7 +110,7 @@ func (w *BackFiller) CancelSystemBackfill() error {
 
 // RunSystemBackfill run the system backfill task, if there is another running system backfill task, this task need to wait
 func (w *BackFiller) RunSystemBackfill() error {
-	enable, err := w.enableBackfill()
+	enable, err := w.isEnableBackfill()
 	if err != nil {
 		return err
 	}
