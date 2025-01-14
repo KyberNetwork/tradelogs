@@ -227,15 +227,10 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 			responseErr(c, http.StatusInternalServerError, err)
 			return
 		}
+		query.Rows = rows
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
-			"data": resetTokenPriceParams{
-				Address:  query.Address,
-				Exchange: query.Exchange,
-				From:     query.From,
-				To:       query.To,
-				Rows:     rows,
-			},
+			"data":    query,
 		})
 		return
 	}
