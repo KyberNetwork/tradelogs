@@ -114,7 +114,7 @@ func (w *BackFiller) RunSystemBackfill() error {
 	if err != nil {
 		return err
 	}
-	if !enable {
+	if enable {
 		return nil
 	}
 	err = w.stateStorage.SetState(state.EnableSystemBackfillKey, strconv.FormatBool(true))
