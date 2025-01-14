@@ -260,3 +260,43 @@ mockery --dir=v2/pkg/storage/state --name=Storage --output=v2/mocks/ --structnam
 ```
 
 For more information `mockery --help`
+
+## Price-filler
+### Refetch token price 
+
+- **URL**: `/price_filler/refetch`
+- **Method**: `POST`
+- **Description**: Reset taker_token_price, maker_token_price, taker_usd_amount, maker_usd_amount of trades with faulty token.
+- **URL Parameters**:
+    - `address` (string): The token address.
+    - `exchange` (string): The exchange name.
+    - `from_ts` (int): The starting timestamp (millisecond).
+    - `to_ts` (int): The ending timestamp (millisecond).
+- **Response**:
+    - **200 OK**: Success.
+      ```json
+      {
+        "data": {
+            "token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            "exchange": "bebop",
+            "from": 1734204504800,
+            "to": 1734809304800,
+            "number of row updated": 2000
+        },
+        "success": true
+      }
+      ```
+    - **400 Bad Request**: If the from_ts or to_ts is invalid.
+      ```json
+      {
+          "error": "<error_message>",
+          "success": false
+      }
+      ```
+    - **500 Internal Server Error**: If there is an error resetting token price.
+      ```json
+      {
+        "error": "<error_message>",
+        "success": false
+      }
+      ```

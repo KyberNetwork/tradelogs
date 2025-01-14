@@ -212,3 +212,36 @@ func tradeLogColumns() []string {
 		"expiration",
 	}
 }
+
+func (s *Storage) ResetTokenPriceToRefetch(token string, from, to int64) (int64, error) {
+	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
+		Update(s.tableName()).
+		Set("maker_token_price", nil).
+		Set("taker_token_price", nil).
+		Set("maker_usd_amount", nil).
+		Set("taker_usd_amount", nil)
+	if token != "" {
+		builder = builder.Where(squirrel.Or{
+			squirrel.Eq{"maker_token": token},
+			squirrel.Eq{"taker_token": token},
+		})
+	}
+	builder = builder.Where(squirrel.And{
+		squirrel.GtOrEq{"timestamp": from},
+		squirrel.LtOrEq{"timestamp": to},
+	})
+	q, p, err := builder.ToSql()
+
+	if err != nil {
+		return 0, fmt.Errorf("build query error: %w", err)
+	}
+	result, err := s.db.Exec(q, p...)
+	if err != nil {
+		return 0, fmt.Errorf("run query error: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("fetch rows affected error: %w", err)
+	}
+	return rowsAffected, nil
+}
