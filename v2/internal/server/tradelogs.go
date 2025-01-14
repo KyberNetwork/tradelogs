@@ -229,14 +229,8 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
-			"data": struct {
-				Token    string `json:"token"`
-				Exchange string `json:"exchange"`
-				From     int64  `json:"from"`
-				To       int64  `json:"to"`
-				Rows     int64  `json:"number of row updated"`
-			}{
-				Token:    query.Address,
+			"data": resetTokenPriceParams{
+				Address:  query.Address,
 				Exchange: query.Exchange,
 				From:     query.From,
 				To:       query.To,
@@ -253,9 +247,14 @@ func validateResetTokenPriceParams(query resetTokenPriceParams) (resetTokenPrice
 	if query.Address == "" && query.From == 0 && query.To == 0 {
 		return query, fmt.Errorf("address is empty and no valid time range provided")
 	}
+
+	// Validate `From` timestamp: it cannot be in the future or negative.
 	if query.From > now.UnixMilli() || query.From < 0 {
 		return query, fmt.Errorf("invalid from_ts")
 	}
+
+	// Validate `To` timestamp: it can not be negative,
+	// and if provided, it must be greater than or equal to `From`.
 	if query.To < 0 || (query.To > 0 && query.To < query.From) {
 		return query, fmt.Errorf("invalid to_ts")
 	}
@@ -269,10 +268,14 @@ func validateResetTokenPriceParams(query resetTokenPriceParams) (resetTokenPrice
 		query.To = now.UnixMilli()
 		return query, nil
 	}
+
+	// If `From` is provided but `To` is not, calculate `To` as `From + max range`
 	if query.From > 0 && query.To == 0 {
 		query.To = min(time.UnixMilli(query.From).Add(timeRange).UnixMilli(), now.UnixMilli())
 		return query, nil
 	}
+
+	// Adjust `From` as `To - max range
 	query.To = min(query.To, now.UnixMilli())
 	query.From = max(time.UnixMilli(query.To).Add(-timeRange).UnixMilli(), query.From)
 	return query, nil
