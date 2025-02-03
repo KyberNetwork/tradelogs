@@ -83,6 +83,11 @@ func (s *Storage) Get(query PromoteesQuery) ([]Promotee, error) {
 		return nil, err
 	}
 
+	for i := range promotees {
+		if promotees[i].Name == "" {
+			promotees[i].Name = "UNKNOWN"
+		}
+	}
 	return promotees, nil
 }
 
