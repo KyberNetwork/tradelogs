@@ -249,6 +249,15 @@ func (p *Parser) updateOrder(tradeLog storageTypes.TradeLog, call types.CallFram
 	if order.Info.Deadline != nil {
 		tradeLog.Expiry = order.Info.Deadline.Uint64()
 	}
+	if order.CosignerData.DecayStartTime != nil {
+		var decayStartTime uint64 = order.CosignerData.DecayStartTime.Uint64()
+		tradeLog.DecayStartTime = &decayStartTime
+	}
+	if order.CosignerData.DecayEndTime != nil {
+		var decayEndTime uint64 = order.CosignerData.DecayEndTime.Uint64()
+		tradeLog.DecayEndTime = &decayEndTime
+	}
+	tradeLog.ExclusiveFiller = order.CosignerData.ExclusiveFiller.Hex()
 	return tradeLog, nil
 }
 

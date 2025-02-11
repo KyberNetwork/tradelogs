@@ -37,14 +37,40 @@ func (s *Storage) Insert(orders []storageTypes.TradeLog) error {
 		return nil
 	}
 	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(s.tableName()).Columns(
-		storageTypes.CommonTradeLogColumns()...,
+		tradeLogColumns()...,
 	)
 	for _, order := range orders {
 		b = b.Values(
-			storageTypes.CommonTradeLogSerialize(&order)...,
+			tradeLogSerialize(&order)...,
 		)
 	}
-	q, p, err := b.Suffix(storageTypes.CommonTradeLogSuffix()).ToSql()
+	q, p, err := b.Suffix(`ON CONFLICT(block_number, log_index) DO UPDATE 
+		SET 
+			order_hash=excluded.order_hash,
+			maker=excluded.maker,
+			taker=excluded.taker,
+			maker_token=excluded.maker_token,
+			taker_token=excluded.taker_token,
+			maker_token_amount=excluded.maker_token_amount,
+			taker_token_amount=excluded.taker_token_amount,
+			contract_address=excluded.contract_address,
+			block_number=excluded.block_number,
+			tx_hash=excluded.tx_hash,
+			log_index=excluded.log_index,
+			timestamp=excluded.timestamp,
+			event_hash=excluded.event_hash,
+			tx_origin=excluded.tx_origin,
+			message_sender=excluded.message_sender,
+			interact_contract=excluded.interact_contract,
+			maker_token_price=excluded.maker_token_price,
+			taker_token_price=excluded.taker_token_price,
+			maker_usd_amount=excluded.maker_usd_amount,
+			taker_usd_amount=excluded.taker_usd_amount,
+			expiration=excluded.expiration,
+			decay_start_time=excluded.decay_start_time,
+			decay_end_time=excluded.decay_end_time,
+			exclusive_filler=excluded.exclusive_filler
+	`).ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
 		return err
@@ -58,7 +84,7 @@ func (s *Storage) Insert(orders []storageTypes.TradeLog) error {
 
 func (s *Storage) Get(query storageTypes.TradeLogsQuery) ([]storageTypes.TradeLog, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(storageTypes.CommonTradeLogColumns()...).
+		Select(tradeLogColumns()...).
 		From(s.tableName())
 	if query.FromTime != 0 {
 		builder = builder.Where(squirrel.GtOrEq{"timestamp": query.FromTime})
@@ -97,7 +123,7 @@ func (s *Storage) Get(query storageTypes.TradeLogsQuery) ([]storageTypes.TradeLo
 
 func (s *Storage) GetEmptyPrice(limit uint64) ([]storageTypes.TradeLog, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(storageTypes.CommonTradeLogColumns()...).
+		Select(tradeLogColumns()...).
 		From(s.tableName()).Where(squirrel.Eq{"maker_token_price": nil}).Limit(limit)
 	q, p, err := builder.ToSql()
 	if err != nil {
@@ -160,4 +186,62 @@ func (s *Storage) ResetTokenPriceToRefetch(token string, from, to int64) (int64,
 		return 0, fmt.Errorf("fetch rows affected error: %w", err)
 	}
 	return rowsAffected, nil
+}
+
+func tradeLogSerialize(o *storageTypes.TradeLog) []interface{} {
+	return []interface{}{
+		o.OrderHash,
+		strings.ToLower(o.Maker),
+		strings.ToLower(o.Taker),
+		strings.ToLower(o.MakerToken),
+		strings.ToLower(o.TakerToken),
+		o.MakerTokenAmount,
+		o.TakerTokenAmount,
+		strings.ToLower(o.ContractAddress),
+		o.BlockNumber,
+		o.TxHash,
+		o.LogIndex,
+		o.Timestamp,
+		o.EventHash,
+		o.TxOrigin,
+		o.MessageSender,
+		o.InteractContract,
+		o.MakerTokenPrice,
+		o.TakerTokenPrice,
+		o.MakerUsdAmount,
+		o.TakerUsdAmount,
+		o.Expiry,
+		o.DecayStartTime,
+		o.DecayEndTime,
+		strings.ToLower(o.ExclusiveFiller),
+	}
+}
+
+func tradeLogColumns() []string {
+	return []string{
+		"order_hash",
+		"maker",
+		"taker",
+		"maker_token",
+		"taker_token",
+		"maker_token_amount",
+		"taker_token_amount",
+		"contract_address",
+		"block_number",
+		"tx_hash",
+		"log_index",
+		"timestamp",
+		"event_hash",
+		"tx_origin",
+		"message_sender",
+		"interact_contract",
+		"maker_token_price",
+		"taker_token_price",
+		"maker_usd_amount",
+		"taker_usd_amount",
+		"expiration",
+		"decay_start_time",
+		"decay_end_time",
+		"exclusive_filler",
+	}
 }

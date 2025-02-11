@@ -33,6 +33,9 @@ type TradeLog struct {
 	MakerUsdAmount         *float64        `db:"maker_usd_amount" json:"maker_usd_amount"`
 	TakerUsdAmount         *float64        `db:"taker_usd_amount" json:"taker_usd_amount"`
 	Type                   OneInchType     `db:"type" json:"type,omitempty"`
+	DecayStartTime         *uint64         `db:"decay_start_time" json:"decay_start_time,omitempty"`
+	DecayEndTime           *uint64         `db:"decay_end_time" json:"decay_end_time,omitempty"`
+	ExclusiveFiller        string          `db:"exclusive_filler" json:"exclusive_filler,omitempty"`
 }
 
 // CommonTradeLogSerialize used for exchanges only storing fields in common trade logs,
