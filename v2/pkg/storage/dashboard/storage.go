@@ -196,3 +196,8 @@ func (s *Storage) GetTxOrigin(query types.TxOriginQuery) ([]types.TxOrigin, erro
 
 	return txOrigins, nil
 }
+
+func (s *Storage) RefreshTradelogsMView() error {
+	_, err := s.db.Exec("REFRESH MATERIALIZED VIEW mview_tradelogs WITH DATA")
+	return err
+}
