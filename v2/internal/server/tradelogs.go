@@ -281,15 +281,12 @@ func validateResetTokenPriceParams(query resetTokenPriceParams) (resetTokenPrice
 func (s *TradeLogs) scheduleMViewRefresh() {
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			err := s.dashStorage.RefreshTradelogsMView()
-			if err != nil {
-				s.l.Errorf("Error refreshing materialized view: %v", err)
-			} else {
-				s.l.Info("Materialized view refreshed successfully.")
-			}
+	for range ticker.C {
+		err := s.dashStorage.RefreshTradelogsMView()
+		if err != nil {
+			s.l.Errorf("Error refreshing materialized view: %v", err)
+		} else {
+			s.l.Info("Materialized view refreshed successfully.")
 		}
 	}
 }
