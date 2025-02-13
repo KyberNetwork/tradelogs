@@ -87,7 +87,6 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 	for _, message := range m {
-		w.l.Infow("about to process new message", "msg", message)
 		var (
 			insertOrders []storage.TradeLog
 			deleteBlocks []uint64
@@ -171,7 +170,10 @@ func (w *Worker) retryParseLog() error {
 	w.l.Infow("start retry logs", "len", len(logs))
 
 	for _, l := range logs {
-		topics := strings.Split(l.Topics, ",")
+		var topics []string
+		if len(l.Topics) > 0 {
+			topics = strings.Split(l.Topics, ",")
+		}
 		ethLog := convert.ToETHLog(types.Log{
 			Address:     l.Address,
 			Topics:      topics,
@@ -184,6 +186,7 @@ func (w *Worker) retryParseLog() error {
 		})
 		ps := w.findMatchingParser(ethLog)
 		if ps == nil {
+			w.l.Infow("cannot not find matching parser", "log", l)
 			continue
 		}
 		order, err := ps.Parse(ethLog, l.Time)
