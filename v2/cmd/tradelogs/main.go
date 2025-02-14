@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/KyberNetwork/tradelogs/v2/internal/server"
+	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
@@ -69,6 +70,8 @@ func run(c *cli.Context) error {
 		pancakeswapStorage.New(l, db),
 	}
 	dashStorage := dashboardStorage.New(l, db)
+	mviewRefresher := worker.NewRefresher(dashStorage, l)
+	mviewRefresher.Run()
 	s := server.NewTradeLogs(l, storage, dashStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
 	return s.Run()
 }
