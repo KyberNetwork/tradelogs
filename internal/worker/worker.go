@@ -140,7 +140,8 @@ func (w *Worker) processMessages(m []evmlistenerclient.Message) error {
 					w.l.Errorw("error when get tx origin", "txHash", order.TxHash, "err", err)
 				}
 				if txOrigin != (common.Address{}) {
-					order.TxOrigin = strings.ToLower(txOrigin.Hex())
+					order.TxOrigin = new(string)
+					*order.TxOrigin = strings.ToLower(txOrigin.Hex())
 				}
 				insertOrders = append(insertOrders, order)
 			}
