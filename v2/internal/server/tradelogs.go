@@ -63,8 +63,6 @@ func NewTradeLogs(
 
 // Run runs server.
 func (s *TradeLogs) Run() error {
-	go s.scheduleMViewRefresh()
-
 	if err := s.r.Run(s.bindAddr); err != nil {
 		return fmt.Errorf("run server: %w", err)
 	}
@@ -276,17 +274,4 @@ func validateResetTokenPriceParams(query resetTokenPriceParams) (resetTokenPrice
 	query.To = min(query.To, now.UnixMilli())
 	query.From = max(time.UnixMilli(query.To).Add(-timeRange).UnixMilli(), query.From)
 	return query, nil
-}
-
-func (s *TradeLogs) scheduleMViewRefresh() {
-	ticker := time.NewTicker(24 * time.Hour)
-	defer ticker.Stop()
-	for range ticker.C {
-		err := s.dashStorage.RefreshTradelogsMView()
-		if err != nil {
-			s.l.Errorf("Error refreshing materialized view: %v", err)
-		} else {
-			s.l.Info("Materialized view refreshed successfully.")
-		}
-	}
 }
