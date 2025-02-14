@@ -71,7 +71,7 @@ func run(c *cli.Context) error {
 	}
 	dashStorage := dashboardStorage.New(l, db)
 	mviewRefresher := worker.NewRefresher(dashStorage, l)
-	go mviewRefresher.ScheduleMViewRefresh()
+	go mviewRefresher.Run()
 	s := server.NewTradeLogs(l, storage, dashStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
 	return s.Run()
 }

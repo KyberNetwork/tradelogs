@@ -19,6 +19,10 @@ func NewRefresher(dashStorage *dashboardStorage.Storage, l *zap.SugaredLogger) *
 	}
 }
 
+func (r *Refresher) Run() {
+	r.ScheduleMViewRefresh()
+}
+
 func (r *Refresher) ScheduleMViewRefresh() {
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
