@@ -20,7 +20,7 @@ func NewRefresher(dashStorage *dashboardStorage.Storage, l *zap.SugaredLogger) *
 }
 
 func (r *Refresher) Run() {
-	r.ScheduleMViewRefresh()
+	go r.ScheduleMViewRefresh()
 }
 
 func (r *Refresher) ScheduleMViewRefresh() {
