@@ -12,6 +12,5 @@ type TradeLogsQuery struct {
 	EventHash        string `form:"event_hash" json:"event_hash,omitempty"`
 	MessageSender    string `form:"message_sender" json:"message_sender,omitempty"`
 	InteractContract string `form:"interact_contract" json:"interact_contract,omitempty"`
-	State            string `form:"state" json:"state,omitempty"`
 	Limit            uint64 `form:"limit" json:"limit,omitempty"`
 }
