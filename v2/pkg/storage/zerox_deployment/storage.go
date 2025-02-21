@@ -20,9 +20,9 @@ type Storage struct {
 }
 
 type Deployment struct {
-	BlockNumber  uint64 `db:"block_number"`
-	ContractType int    `db:"contract_type"`
-	Address      string `db:"contract_address"`
+	BlockNumber  uint64 `db:"block_number" json:"block_number"`
+	ContractType int    `db:"contract_type" json:"contract_type"`
+	Address      string `db:"contract_address" json:"contract_address"`
 }
 
 func NewStorage(l *zap.SugaredLogger, db *sqlx.DB) *Storage {
