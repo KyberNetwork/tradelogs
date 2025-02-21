@@ -10,17 +10,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type Server struct {
+type PromoteeServer struct {
 	r        *gin.Engine
 	bindAddr string
 	s        *promoteeTypes.Storage
 }
 
-func New(s *promoteeTypes.Storage, bindAddr string) *Server {
+func NewPromoteeServer(s *promoteeTypes.Storage, bindAddr string) *PromoteeServer {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 
-	server := &Server{
+	server := &PromoteeServer{
 		r:        engine,
 		bindAddr: bindAddr,
 		s:        s,
@@ -32,7 +32,7 @@ func New(s *promoteeTypes.Storage, bindAddr string) *Server {
 	return server
 }
 
-func (s *Server) Run() error {
+func (s *PromoteeServer) Run() error {
 	if err := s.r.Run(s.bindAddr); err != nil {
 		return fmt.Errorf("run server: %w", err)
 	}
@@ -40,21 +40,13 @@ func (s *Server) Run() error {
 	return nil
 }
 
-func (s *Server) register() {
+func (s *PromoteeServer) register() {
 	pprof.Register(s.r, "/debug")
 	s.r.GET("/promotees", s.getPromotees)
 	s.r.POST("/insert_name", s.insertName)
 }
 
-func responseErr(c *gin.Context, status int, err error) {
-	c.JSON(http.StatusBadRequest, gin.H{
-		"success": false,
-		"error":   err.Error(),
-		"status":  status,
-	})
-}
-
-func (s *Server) getPromotees(c *gin.Context) {
+func (s *PromoteeServer) getPromotees(c *gin.Context) {
 	var (
 		query promoteeTypes.PromoteesQuery
 		err   = c.ShouldBind(&query)
@@ -80,7 +72,7 @@ func (s *Server) getPromotees(c *gin.Context) {
 	})
 }
 
-func (s *Server) insertName(c *gin.Context) {
+func (s *PromoteeServer) insertName(c *gin.Context) {
 	var queries []promoteeTypes.PromoteesQuery
 
 	if err := c.ShouldBindJSON(&queries); err != nil {

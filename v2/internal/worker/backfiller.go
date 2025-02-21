@@ -226,54 +226,62 @@ func (w *BackFiller) BackfillByExchange(task backfill.Task) {
 		return
 	}
 
-	// error can occur while filtering blocks, we handle partial result and
-	// mark the status as `failed` after processing received blocks.
-	// else if there are no error, mark the status as `done` after processing all blocks
-	blocks, exclusions, getBlockErr := w.getBlockByExchange(from, to, task.Exchange)
-	if getBlockErr != nil {
-		w.l.Errorw("error when get block by exchange", "task", task, "err", getBlockErr)
-	}
+	// we need to handle by batch to avoid too large block range
+	for currentTo := to; currentTo >= from; {
+		currentFrom := max(currentTo-maxQueryBlockRange, from)
 
-	w.l.Infow("start to backfill blocks", "task_id", task.ID, "num_block", len(blocks))
-
-	// backfill from the newest blocks, if error occurs we can continue backfill from error block
-	for _, b := range blocks {
-		// check the task status, stop if canceled
-		task, err = w.backfillStorage.GetTaskByID(task.ID)
-		if err != nil {
-			w.l.Errorw("cannot get backfill task", "task_id", task.ID, "err", err)
-			return
-		}
-		if task.Status == backfill.StatusTypeCanceled {
-			w.l.Infow("cannot backfill because task is canceled", "task_id", task.ID)
-			return
+		// error can occur while filtering blocks, we handle partial result and
+		// mark the status as `failed` after processing received blocks.
+		// else if there are no error, mark the status as `done` after processing all blocks
+		blocks, exclusions, getBlockErr := w.getBlockByExchange(currentFrom, currentTo, task.Exchange)
+		if getBlockErr != nil {
+			w.l.Errorw("error when get block by exchange", "task", task, "err", getBlockErr)
 		}
 
-		err = w.processBlock(b, exclusions)
-		if err != nil {
-			w.l.Errorw("cannot backfill block", "task_id", task.ID, "block", b, "err", err)
+		w.l.Infow("start to backfill blocks", "task_id", task.ID,
+			"current_from", currentFrom, "current_to", currentTo, "num_block", len(blocks))
+
+		// backfill from the newest blocks, if error occurs we can continue backfill from error block
+		for _, b := range blocks {
+			// check the task status, stop if canceled
+			task, err = w.backfillStorage.GetTaskByID(task.ID)
+			if err != nil {
+				w.l.Errorw("cannot get backfill task", "task_id", task.ID, "err", err)
+				return
+			}
+			if task.Status == backfill.StatusTypeCanceled {
+				w.l.Infow("cannot backfill because task is canceled", "task_id", task.ID)
+				return
+			}
+
+			err = w.processBlock(b, exclusions)
+			if err != nil {
+				w.l.Errorw("cannot backfill block", "task_id", task.ID, "block", b, "err", err)
+				err = w.backfillStorage.UpdateTask(task.ID, nil, backfill.StatusTypeFailed)
+				if err != nil {
+					w.l.Errorw("cannot update task status", "task_id", task.ID, "err", err)
+				}
+				return
+			}
+
+			// update the processed block
+			err = w.backfillStorage.UpdateTask(task.ID, &b, "")
+			if err != nil {
+				w.l.Errorw("cannot update task in db", "id", task.ID, "err", err)
+				return
+			}
+		}
+
+		// mark the status = `failed`
+		if getBlockErr != nil {
 			err = w.backfillStorage.UpdateTask(task.ID, nil, backfill.StatusTypeFailed)
 			if err != nil {
-				w.l.Errorw("cannot update task status", "task_id", task.ID, "err", err)
+				w.l.Errorw("cannot update task status", "task", task, "err", err)
 			}
 			return
 		}
 
-		// update the processed block
-		err = w.backfillStorage.UpdateTask(task.ID, &b, "")
-		if err != nil {
-			w.l.Errorw("cannot update task in db", "id", task.ID, "err", err)
-			return
-		}
-	}
-
-	// mark the status = `failed`
-	if getBlockErr != nil {
-		err = w.backfillStorage.UpdateTask(task.ID, nil, backfill.StatusTypeFailed)
-		if err != nil {
-			w.l.Errorw("cannot update task status", "task", task, "err", err)
-		}
-		return
+		currentTo = currentFrom - 1
 	}
 
 	// else mark the status = `done`

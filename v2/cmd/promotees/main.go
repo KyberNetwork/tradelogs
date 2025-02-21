@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	promoteeServer "github.com/KyberNetwork/tradelogs/v2/internal/server/promotees"
+	"github.com/KyberNetwork/tradelogs/v2/internal/server"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
 	promoteeTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
@@ -48,7 +48,7 @@ func run(c *cli.Context) error {
 	//promotion storage
 	promoteeStorage := promoteeTypes.New(l, db)
 
-	s := promoteeServer.New(promoteeStorage, c.String(libapp.HTTPPromoteeServerFlag.Name))
+	s := server.NewPromoteeServer(promoteeStorage, c.String(libapp.HTTPPromoteeServerFlag.Name))
 
 	return s.Run()
 }
