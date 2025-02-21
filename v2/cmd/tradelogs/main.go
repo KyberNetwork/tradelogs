@@ -20,6 +20,7 @@ import (
 	uniswapxStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/uniswapx"
 	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
 	zxrfqv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxrfqv3"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zerox_deployment"
 	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
 	"github.com/jmoiron/sqlx"
 	"github.com/urfave/cli"
@@ -69,10 +70,14 @@ func run(c *cli.Context) error {
 		zxrfqv3Storage.New(l, db),
 		pancakeswapStorage.New(l, db),
 	}
+
 	dashStorage := dashboardStorage.New(l, db)
 	mviewRefresher := worker.NewRefresher(dashStorage, l)
 	mviewRefresher.Run()
-	s := server.NewTradeLogs(l, storage, dashStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
+
+	deployStorage := zerox_deployment.NewStorage(l, db)
+
+	s := server.NewTradeLogs(l, storage, dashStorage, deployStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
 	return s.Run()
 }
 

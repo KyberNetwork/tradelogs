@@ -8,6 +8,7 @@ import (
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	dashboardTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard/types"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zerox_deployment"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -31,28 +32,31 @@ type resetTokenPriceParams struct {
 }
 
 type TradeLogs struct {
-	r           *gin.Engine
-	bindAddr    string
-	l           *zap.SugaredLogger
-	storage     []storageTypes.Storage
-	dashStorage *dashboardStorage.Storage
+	r             *gin.Engine
+	bindAddr      string
+	l             *zap.SugaredLogger
+	storage       []storageTypes.Storage
+	dashStorage   *dashboardStorage.Storage
+	deployStorage zerox_deployment.IStorage
 }
 
 func NewTradeLogs(
 	l *zap.SugaredLogger,
 	s []storageTypes.Storage,
 	dashStorage *dashboardStorage.Storage,
+	deployStorage zerox_deployment.IStorage,
 	bindAddr string,
 ) *TradeLogs {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 
 	server := &TradeLogs{
-		r:           engine,
-		bindAddr:    bindAddr,
-		l:           l,
-		storage:     s,
-		dashStorage: dashStorage,
+		r:             engine,
+		bindAddr:      bindAddr,
+		l:             l,
+		storage:       s,
+		dashStorage:   dashStorage,
+		deployStorage: deployStorage,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -79,6 +83,7 @@ func (s *TradeLogs) register() {
 	s.r.GET("/txorigin", s.getTxOrigin)
 	s.r.POST("/txorigin", s.addTxOrigin)
 	s.r.POST("/price_filler/refetch", s.resetTokenPriceToRefetch)
+	s.r.GET("/0xv3_deployment", s.get0xv3Deployment)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -274,4 +279,16 @@ func validateResetTokenPriceParams(query resetTokenPriceParams) (resetTokenPrice
 	query.To = min(query.To, now.UnixMilli())
 	query.From = max(time.UnixMilli(query.To).Add(-timeRange).UnixMilli(), query.From)
 	return query, nil
+}
+
+func (s *TradeLogs) get0xv3Deployment(c *gin.Context) {
+	result, err := s.deployStorage.Get()
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, fmt.Errorf("get 0x deployment failed: %v", err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    result,
+	})
 }
