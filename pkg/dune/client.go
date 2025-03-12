@@ -73,7 +73,7 @@ func (c *Client) ExecuteQuery(queryID int64, evenHash string, blockFrom, blockTo
 		return nil, err
 	}
 	if executeRes.Error != "" {
-		return nil, fmt.Errorf(executeRes.Error)
+		return nil, fmt.Errorf("%s", executeRes.Error)
 	}
 	return &executeRes, nil
 }
@@ -95,7 +95,7 @@ func (c *Client) ExecuteState(exeID string) (*StateResponse, error) {
 		return nil, err
 	}
 	if state.Error != "" {
-		return nil, fmt.Errorf(state.Error)
+		return nil, fmt.Errorf("%s", state.Error)
 	}
 	return &state, nil
 }
