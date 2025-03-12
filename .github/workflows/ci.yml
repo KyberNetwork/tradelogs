@@ -97,7 +97,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.61.0
-          args: --config=.golangci.yml
+          args: --config=.golangci.yml --timeout=10m
           skip-pkg-cache: true
           skip-build-cache: true
 
