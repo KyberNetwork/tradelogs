@@ -3,6 +3,7 @@ package tracecall
 import (
 	"context"
 	"fmt"
+
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/common/lru"
@@ -21,10 +22,10 @@ func NewCache(client *rpcnode.Client) *Cache {
 }
 
 func (c *Cache) GetTraceCall(tx string) (types.CallFrame, error) {
-	data, ok := c.latestTraceCall.Get(tx)
-	if ok {
-		return data, nil
-	}
+	// data, ok := c.latestTraceCall.Get(tx)
+	// if ok {
+	// 	return data, nil
+	// }
 	data, err := c.rpcClient.FetchTraceCall(context.Background(), tx)
 	if err != nil {
 		return types.CallFrame{}, err
@@ -32,6 +33,6 @@ func (c *Cache) GetTraceCall(tx string) (types.CallFrame, error) {
 	if data.From == "" {
 		return types.CallFrame{}, fmt.Errorf("trace call not found")
 	}
-	c.latestTraceCall.Add(tx, data)
+	// c.latestTraceCall.Add(tx, data)
 	return data, nil
 }

@@ -232,7 +232,7 @@ func (p *Parser) recursiveDetectRFQTrades(tradeLog storage.TradeLog, callFrame t
 			return tradeLog, nil
 		}
 	}
-	return tradeLog, fmt.Errorf("%w, tx_hash: %s", ErrNotFoundLogWithEmptyTopic, tradeLog.TxHash)
+	return tradeLog, fmt.Errorf("%w, tx_hash: %s %+v", ErrNotFoundLogWithEmptyTopic, tradeLog.TxHash, callFrame)
 }
 
 func (p *Parser) ParseFromInternalCall(tradeLog storage.TradeLog, callFrame types.CallFrame, actionIndex int) (storage.TradeLog, error) {
