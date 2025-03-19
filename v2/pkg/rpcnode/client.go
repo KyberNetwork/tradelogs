@@ -122,10 +122,14 @@ func (c *Client) FetchLogs(ctx context.Context, from, to uint64, address string,
 		logs []ethereumTypes.Log
 		err  error
 	)
+	var addresses []common.Address
+	if len(address) > 0 {
+		addresses = append(addresses, common.HexToAddress(address))
+	}
 	filter := ethereum.FilterQuery{
 		FromBlock: new(big.Int).SetUint64(from),
 		ToBlock:   new(big.Int).SetUint64(to),
-		Addresses: []common.Address{common.HexToAddress(address)},
+		Addresses: addresses,
 	}
 	newTopics := make([]common.Hash, len(topics))
 	if len(topics) > 0 {
