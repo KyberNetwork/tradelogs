@@ -113,3 +113,22 @@ func (b *BigInt) MarshalJSON() ([]byte, error) {
 func (b *BigInt) Hex() string {
 	return "0x" + b.Text(16)
 }
+
+type OptimexTradeLog struct {
+	TradeID          string `db:"trade_id" json:"trade_id"`
+	Maker            string `db:"maker" json:"maker,omitempty"`
+	FromTaker        string `db:"from_taker" json:"from_taker,omitempty"`
+	ToTaker          string `db:"to_taker" json:"to_taker,omitempty"`
+	MakerToken       string `db:"maker_token" json:"maker_token,omitempty"`
+	TakerToken       string `db:"taker_token" json:"taker_token,omitempty"`
+	MakerTokenAmount string `db:"maker_token_amount" json:"maker_token_amount,omitempty"`
+	TakerTokenAmount string `db:"taker_token_amount" json:"taker_token_amount,omitempty"`
+	ContractAddress  string `db:"contract_address" json:"contract_address,omitempty"`
+	BlockNumber      uint64 `db:"block_number" json:"block_number,omitempty"`
+	TxHash           string `db:"tx_hash" json:"tx_hash,omitempty"`
+	LogIndex         uint64 `db:"log_index" json:"log_index,omitempty"`
+	Timestamp        uint64 `db:"timestamp" json:"timestamp,omitempty"`
+	EventHash        string `db:"event_hash" json:"event_hash,omitempty"`
+	FromChain        string `db:"from_chain" json:"from_chain,omitempty"`
+	ToChain          string `db:"to_chain" json:"to_chain,omitempty"`
+}

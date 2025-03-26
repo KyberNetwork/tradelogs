@@ -26,6 +26,7 @@ const (
 	ExBebop         = "bebop"
 	ExUniswapXV1    = "uniswapxV1"
 	ExPancakeSwap   = "pancakeswap"
+	ExOptimex       = "optimex"
 
 	Addr1InchV6       = "0x111111125421cA6dc452d289314280a0f8842A65"
 	AddrBebop         = "0xbbbbbBB520d69a9775E85b458C58c648259FAD5F"
@@ -39,6 +40,7 @@ const (
 	Deployer0xV3      = "0x00000000000004533Fe15556B1E086BB1A72cEae"
 	AddrPancakeswap   = "0x35db01D1425685789dCc9228d47C7A5C049388d8"
 	AddrParaswapTaker = "0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57"
+	AddrOptimex       = "0x272599CE3602A49B580A5C4a4d3C1067E30248D2"
 )
 
 var (
