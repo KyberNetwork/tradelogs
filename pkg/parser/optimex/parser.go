@@ -2,6 +2,7 @@ package optimex
 
 import (
 	"strings"
+	"time"
 
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
@@ -58,22 +59,21 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.Optimex
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
 		return storage.OptimexTradeLog{}, parser.ErrInvalidTopic
 	}
-	o, err := p.filter.ParseSelectPMM(log)
+	pmm, err := p.filter.ParseSelectPMM(log)
+	if err != nil {
+		return storage.OptimexTradeLog{}, err
+	}
+	trade, err := p.caller.GetTradeData(nil, pmm.TradeId)
 	if err != nil {
 		return storage.OptimexTradeLog{}, err
 	}
 
-	trade, err := p.caller.GetTradeData(nil, o.TradeId)
+	selection, err := p.caller.GetPMMSelection(nil, pmm.TradeId)
 	if err != nil {
 		return storage.OptimexTradeLog{}, err
 	}
 
-	selection, err := p.caller.GetPMMSelection(nil, o.TradeId)
-	if err != nil {
-		return storage.OptimexTradeLog{}, err
-	}
-
-	tradeID := hexutil.Encode(o.TradeId[:])
+	tradeID := hexutil.Encode(pmm.TradeId[:])
 	fromChainID := string(trade.TradeInfo.FromChain[1])
 	toChainID := string(trade.TradeInfo.ToChain[1])
 	fromUser, fromTokenID := tradeInfoToData(fromChainID, trade.TradeInfo.FromChain)
@@ -88,14 +88,15 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.Optimex
 		TakerToken:       toTokenID,
 		MakerTokenAmount: selection.PmmInfo.AmountOut.String(),
 		TakerTokenAmount: trade.TradeInfo.AmountIn.String(),
-		ContractAddress:  o.Raw.Address.String(),
-		BlockNumber:      o.Raw.BlockNumber,
-		TxHash:           o.Raw.TxHash.String(),
-		LogIndex:         uint64(o.Raw.Index),
-		Timestamp:        blockTime * 1000,
+		ContractAddress:  pmm.Raw.Address.String(),
+		BlockNumber:      pmm.Raw.BlockNumber,
+		TxHash:           pmm.Raw.TxHash.String(),
+		LogIndex:         uint64(pmm.Raw.Index),
+		LogTime:          time.Unix(int64(blockTime), 0),
 		EventHash:        p.eventHash,
 		FromChain:        fromChainID,
 		ToChain:          toChainID,
+		TradeTimeout:     time.Unix(int64(selection.RfqInfo.TradeTimeout), 0),
 	}
 	return res, nil
 }
