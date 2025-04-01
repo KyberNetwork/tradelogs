@@ -22,20 +22,27 @@ func TestFetchEventLog(t *testing.T) {
 	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
 	p := MustNewParser(client)
-	require.Equal(t, p.abi.Events[TradeEvent].ID, common.HexToHash("0x997438f726850dc0f689a2037c76da85881ee939121c2dce2ef362d02850f758"))
+	require.Equal(t, p.abi.Events[SelectEvent].ID, common.HexToHash("0x997438f726850dc0f689a2037c76da85881ee939121c2dce2ef362d02850f758"))
 	logs, err := client.FilterLogs(context.Background(), ethereum.FilterQuery{
-		BlockHash: nil,
 		FromBlock: big.NewInt(2896920),
 		ToBlock:   big.NewInt(2896920),
-		Addresses: nil,
-		Topics:    [][]common.Hash{{p.abi.Events[TradeEvent].ID}},
+		Topics:    [][]common.Hash{{p.abi.Events[SelectEvent].ID}},
 	})
 	require.NoError(t, err)
 	d, _ := json.Marshal(logs)
 	t.Log(string(d))
+	require.Equal(t, p.abi.Events[SettleEvent].ID, common.HexToHash("0x6292bb735dd6c41d01a708128a6cb40de00a8864b9208926d9fc1540497c90e6"))
+	logs, err = client.FilterLogs(context.Background(), ethereum.FilterQuery{
+		FromBlock: big.NewInt(2896920),
+		ToBlock:   big.NewInt(2897314),
+		Topics:    [][]common.Hash{{p.abi.Events[SettleEvent].ID}},
+	})
+	require.NoError(t, err)
+	d, _ = json.Marshal(logs)
+	t.Log(string(d))
 }
 
-func TestParseEventLog(t *testing.T) {
+func TestParseSelectEventLog(t *testing.T) {
 	t.Skip()
 	client, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
@@ -44,7 +51,27 @@ func TestParseEventLog(t *testing.T) {
 	err = json.Unmarshal([]byte(eventRaw), &event)
 	require.NoError(t, err)
 	p := MustNewParser(client)
-	log, err := p.Parse(event, uint64(time.Now().Unix()))
+	name, ok := p.LogFromExchange(event)
+	require.Equal(t, true, ok)
+	require.Equal(t, SelectEvent, name)
+	log, err := p.ParseSelected(event, uint64(time.Now().Unix()))
 	require.NoError(t, err)
 	fmt.Printf("%+v", log)
+}
+
+func TestParseSettleEventLog(t *testing.T) {
+	t.Skip()
+	client, err := ethclient.Dial(rpcURL)
+	require.NoError(t, err)
+	eventRaw := `{"address":"0x272599ce3602a49b580a5c4a4d3c1067e30248d2","topics":["0x6292bb735dd6c41d01a708128a6cb40de00a8864b9208926d9fc1540497c90e6","0x0000000000000000000000009d946bb9ef2a8f384d7f29159472670070926c99","0x2fa874118633aa8f373b7efc6159eb6d0ffad2ac6da937b6536e56eed78fdcfd"],"data":"0x","blockNumber":"0x2c35a2","transactionHash":"0x95a022d54cea0fdf2348b33e3233c276580001ff56688c999397e615ffb989f5","transactionIndex":"0x1","blockHash":"0x7ae81a19951e959a6c43f3804105b175eb6ec15ddf282de3fdc071c26bea65d1","logIndex":"0x0","removed":false}`
+	event := types.Log{}
+	err = json.Unmarshal([]byte(eventRaw), &event)
+	require.NoError(t, err)
+	p := MustNewParser(client)
+	name, ok := p.LogFromExchange(event)
+	require.Equal(t, true, ok)
+	require.Equal(t, SettleEvent, name)
+	trade, err := p.ParseSettle(event, uint64(time.Now().Unix()))
+	require.NoError(t, err)
+	fmt.Printf("%+v", trade)
 }

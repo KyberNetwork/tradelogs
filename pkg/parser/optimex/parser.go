@@ -1,7 +1,6 @@
 package optimex
 
 import (
-	"strings"
 	"time"
 
 	"github.com/KyberNetwork/tradelogs/pkg/parser"
@@ -14,14 +13,15 @@ import (
 )
 
 const (
-	TradeEvent = "SelectPMM"
+	SelectEvent = "SelectPMM"
+	SettleEvent = "ConfirmSettlement"
 )
 
 type Parser struct {
-	abi       *abi.ABI
-	filter    *OptimexFilterer
-	caller    *OptimexCaller
-	eventHash string
+	abi    *abi.ABI
+	filter *OptimexFilterer
+	caller *OptimexCaller
+	events map[common.Hash]string
 }
 
 func MustNewParser(ethClient *ethclient.Client) *Parser {
@@ -37,26 +37,27 @@ func MustNewParser(ethClient *ethclient.Client) *Parser {
 	if err != nil {
 		panic(err)
 	}
-	event, ok := abi.Events[TradeEvent]
+	tradeEvent, ok := abi.Events[SelectEvent]
 	if !ok {
 		panic("no such event: SelectPMM")
 	}
+	settleEvent, ok := abi.Events[SettleEvent]
+	if !ok {
+		panic("no such event: ConfirmSettlement")
+	}
 	return &Parser{
-		filter:    filter,
-		caller:    caller,
-		abi:       abi,
-		eventHash: event.ID.String(),
+		filter: filter,
+		caller: caller,
+		abi:    abi,
+		events: map[common.Hash]string{
+			tradeEvent.ID:  SelectEvent,
+			settleEvent.ID: SettleEvent,
+		},
 	}
 }
 
-func (p *Parser) Topics() []string {
-	return []string{
-		p.eventHash,
-	}
-}
-
-func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.OptimexTradeLog, error) {
-	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
+func (p *Parser) ParseSelected(log ethereumTypes.Log, blockTime uint64) (storage.OptimexTradeLog, error) {
+	if len(log.Topics) > 0 && p.events[log.Topics[0]] != SelectEvent {
 		return storage.OptimexTradeLog{}, parser.ErrInvalidTopic
 	}
 	pmm, err := p.filter.ParseSelectPMM(log)
@@ -93,7 +94,6 @@ func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storage.Optimex
 		TxHash:           pmm.Raw.TxHash.String(),
 		LogIndex:         uint64(pmm.Raw.Index),
 		LogTime:          time.Unix(int64(blockTime), 0),
-		EventHash:        p.eventHash,
 		FromChain:        fromChainID,
 		ToChain:          toChainID,
 		TradeTimeout:     time.Unix(int64(selection.RfqInfo.TradeTimeout), 0),
@@ -119,7 +119,21 @@ func tradeInfoToData(chainID string, tradeInfo [3][]byte) (string, string) {
 	return string(tradeInfo[0]), tokenID
 }
 
-func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
-	return strings.EqualFold(parser.AddrOptimex, log.Address.String()) &&
-		len(log.Topics) > 0 && strings.EqualFold(log.Topics[0].String(), p.eventHash)
+func (p *Parser) LogFromExchange(log ethereumTypes.Log) (string, bool) {
+	if len(log.Topics) == 0 {
+		return "", false
+	}
+	name, ok := p.events[log.Topics[0]]
+	return name, ok
+}
+
+func (p *Parser) ParseSettle(log ethereumTypes.Log, blockTime uint64) (string, error) {
+	if len(log.Topics) > 0 && p.events[log.Topics[0]] != SettleEvent {
+		return "", parser.ErrInvalidTopic
+	}
+	settle, err := p.filter.ParseConfirmSettlement(log)
+	if err != nil {
+		return "", err
+	}
+	return hexutil.Encode(settle.TradeId[:]), nil
 }

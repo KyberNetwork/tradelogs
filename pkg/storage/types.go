@@ -129,7 +129,6 @@ type OptimexTradeLog struct {
 	TxHash           string    `db:"tx_hash" json:"tx_hash,omitempty"`
 	LogIndex         uint64    `db:"log_index" json:"log_index,omitempty"`
 	LogTime          time.Time `db:"time" json:"log_time,omitempty"`
-	EventHash        string    `db:"event_hash" json:"event_hash,omitempty"`
 	FromChain        string    `db:"from_chain" json:"from_chain,omitempty"`
 	ToChain          string    `db:"to_chain" json:"to_chain,omitempty"`
 	TradeTimeout     time.Time `db:"trade_timeout" json:"trade_timeout"`
