@@ -75,10 +75,8 @@ func (p *Parser) ParseSelected(log ethereumTypes.Log, blockTime uint64) (storage
 	}
 
 	tradeID := hexutil.Encode(pmm.TradeId[:])
-	fromChainID := string(trade.TradeInfo.FromChain[1])
-	toChainID := string(trade.TradeInfo.ToChain[1])
-	fromUser, fromTokenID := tradeInfoToData(fromChainID, trade.TradeInfo.FromChain)
-	toUser, toTokenID := tradeInfoToData(toChainID, trade.TradeInfo.ToChain)
+	fromChainID, fromUser, fromTokenID := tradeInfoToData(trade.TradeInfo.FromChain)
+	toChainID, toUser, toTokenID := tradeInfoToData(trade.TradeInfo.ToChain)
 
 	res := storage.OptimexTradeLog{
 		TradeID:          tradeID,
@@ -89,10 +87,10 @@ func (p *Parser) ParseSelected(log ethereumTypes.Log, blockTime uint64) (storage
 		TakerToken:       toTokenID,
 		MakerTokenAmount: selection.PmmInfo.AmountOut.String(),
 		TakerTokenAmount: trade.TradeInfo.AmountIn.String(),
-		ContractAddress:  pmm.Raw.Address.String(),
-		BlockNumber:      pmm.Raw.BlockNumber,
-		TxHash:           pmm.Raw.TxHash.String(),
-		LogIndex:         uint64(pmm.Raw.Index),
+		ContractAddress:  log.Address.String(),
+		BlockNumber:      log.BlockNumber,
+		TxHash:           log.TxHash.String(),
+		LogIndex:         uint64(log.Index),
 		LogTime:          time.Unix(int64(blockTime), 0),
 		FromChain:        fromChainID,
 		ToChain:          toChainID,
@@ -105,7 +103,8 @@ func (p *Parser) Exchange() string {
 	return parser.ExOptimex
 }
 
-func tradeInfoToData(chainID string, tradeInfo [3][]byte) (string, string) {
+func tradeInfoToData(tradeInfo [3][]byte) (string, string, string) { // chain, user, token
+	chainID := string(tradeInfo[1])
 	var tokenID string
 	if len(tradeInfo[2]) == common.AddressLength {
 		tokenID = common.BytesToAddress(tradeInfo[2]).String()
@@ -114,9 +113,9 @@ func tradeInfoToData(chainID string, tradeInfo [3][]byte) (string, string) {
 	}
 	switch chainID {
 	case "ethereum", "ethereum_sepolia":
-		return common.Address(tradeInfo[0]).String(), tokenID
+		return chainID, common.Address(tradeInfo[0]).String(), tokenID
 	}
-	return string(tradeInfo[0]), tokenID
+	return chainID, string(tradeInfo[0]), tokenID
 }
 
 func (p *Parser) LogFromExchange(log ethereumTypes.Log) (string, bool) {
