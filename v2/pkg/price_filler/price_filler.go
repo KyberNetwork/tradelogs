@@ -219,6 +219,30 @@ func (p *PriceFiller) fullFillBebopTradeLog(tradeLog storageTypes.TradeLog) (sto
 	return tradeLog, nil
 }
 
+func (p *PriceFiller) fullFillCowProtocolTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
+	sellTokenPrice, sellUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.SellToken),
+		tradeLog.SellAmount, int64(tradeLog.Timestamp))
+	if isConnectionRefusedError(err) {
+		p.l.Errorw("Failed to getPriceAndAmountUsd for sell token", "err", err)
+		return tradeLog, err
+	}
+
+	buyTokenPrice, buyUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.BuyToken),
+		tradeLog.BuyAmount, int64(tradeLog.Timestamp))
+	if isConnectionRefusedError(err) {
+		p.l.Errorw("Failed to getPriceAndAmountUsd for buy token", "err", err)
+		return tradeLog, err
+	}
+
+	tradeLog.SellTokenPrice = &sellTokenPrice
+	tradeLog.SellUsdAmount = &sellUsdAmount
+
+	tradeLog.BuyTokenPrice = &buyTokenPrice
+	tradeLog.BuyUsdAmount = &buyUsdAmount
+
+	return tradeLog, nil
+}
+
 func (p *PriceFiller) getSumAmountUsd(address, rawAmt []string, at int64) (float64, float64, error) {
 	var sumAmount, price float64
 	for i := range address {
@@ -273,6 +297,9 @@ func (p *PriceFiller) FullFillTradeLogs(tradeLogs []storageTypes.TradeLog) {
 		f := p.fullFillTradeLog
 		if tradeLog.Exchange == constant.ExBebop {
 			f = p.fullFillBebopTradeLog
+		}
+		if tradeLog.Exchange == constant.CowProtocol {
+			f = p.fullFillCowProtocolTradeLog
 		}
 		filledTradeLog, err := f(tradeLog)
 		if err != nil {

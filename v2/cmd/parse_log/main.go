@@ -9,12 +9,15 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
+
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/evmlistenerclient"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/bebop"
+	cowprotocol "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol"
 	hashflowv3 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/hashflow_v3"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap"
 	kyberswaprfq "github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap_rfq"
@@ -31,6 +34,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
+	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/cow_protocol"
 	hashflowv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/hashflow_v3"
 	kyberswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap"
 	kyberswaprfqStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap_rfq"
@@ -41,6 +45,7 @@ import (
 	uniswapxStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/uniswapx"
 	zxotcStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxotc"
 	zxrfqv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxrfqv3"
+
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zerox_deployment"
 	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
 	"github.com/ethereum/go-ethereum/common"
@@ -95,6 +100,7 @@ func run(c *cli.Context) error {
 		bebopStorage.New(l, db),
 		zxrfqv3Storage.New(l, db),
 		pancakeswapStorage.New(l, db),
+		cowProtocolStorage.New(l, db),
 	})
 
 	//promotee storage
@@ -133,6 +139,7 @@ func run(c *cli.Context) error {
 		bebop.MustNewParser(),
 		zxrfqv3.MustNewParserWithDeployer(l, zxv3DeployStorage, ethClients[0], common.HexToAddress(constant.Deployer0xV3)),
 		pancakeswap.MustNewParser(),
+		cowprotocol.MustNewParser(),
 	}
 
 	promotionParsers := []promotionparser.Parser{promotion1inchv2.MustNewParser()}

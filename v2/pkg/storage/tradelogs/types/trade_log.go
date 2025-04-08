@@ -36,6 +36,18 @@ type TradeLog struct {
 	DecayStartTime         *uint64         `db:"decay_start_time" json:"decay_start_time,omitempty"`
 	DecayEndTime           *uint64         `db:"decay_end_time" json:"decay_end_time,omitempty"`
 	ExclusiveFiller        string          `db:"exclusive_filler" json:"exclusive_filler,omitempty"`
+	Owner                  string          `db:"owner" json:"owner,omitempty"`
+	SellToken              string          `db:"sell_token" json:"sell_token,omitempty"`
+	BuyToken               string          `db:"buy_token" json:"buy_token,omitempty"`
+	SellAmount             string          `db:"sell_amount" json:"sell_amount,omitempty"`
+	BuyAmount              string          `db:"buy_amount" json:"buy_amount,omitempty"`
+	FeeAmount              string          `db:"fee_amount" json:"fee_amount,omitempty"`
+	BuyTokenPrice          *float64        `db:"buy_token_price" json:"buy_token_price"`
+	SellTokenPrice         *float64        `db:"sell_token_price" json:"sell_token_price"`
+	BuyUsdAmount           *float64        `db:"buy_usd_amount" json:"buy_usd_amount"`
+	SellUsdAmount          *float64        `db:"sell_usd_amount" json:"sell_usd_amount"`
+	OrderUid               string          `db:"order_uid" json:"order_uid,omitempty"`
+	RawTradeData           string          `db:"raw_trade_data" json:"raw_trade_data,omitempty"`
 }
 
 // CommonTradeLogSerialize used for exchanges only storing fields in common trade logs,
