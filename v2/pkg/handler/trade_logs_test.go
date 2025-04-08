@@ -41,7 +41,7 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	mockKafka := &mocks.MockPublisher{}
 	mockKafka.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
-	h := NewTradeLogHandler(zap.S(), client, s, nil, []parser.Parser{p}, nil, "test", mockKafka)
+	h := NewTradeLogHandler(zap.S(), client, s, nil, nil, []parser.Parser{p}, nil, "test", mockKafka)
 
 	err = h.ProcessBlock("0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048", 20181990, 1725436442)
 	if err != nil {

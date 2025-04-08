@@ -38,3 +38,23 @@ create index cow_protocol_sell_token_idx
 
 create index cow_protocol_buy_token_idx
     on tradelogs_cow_protocol (buy_token);
+
+create table cow_transfer_event
+(
+    tx_hash      text   not null,
+    timestamp    bigint not null,
+    block_number bigint not null,
+    from_address text   not null,
+    to_address   text   not null,
+    token        text   not null,
+    amount       text   not null,
+    token_price  double precision,
+    amount_usd   double precision,
+    primary key (tx_hash,timestamp,from_address,to_address,token,amount)
+);
+
+create index cow_transfer_event_timestamp_idx
+    on cow_transfer_event (timestamp DESC);
+
+create index cow_transfer_event_tx_hash_idx
+    on cow_transfer_event (tx_hash);

@@ -42,10 +42,10 @@ type TradeLog struct {
 	SellAmount             string          `db:"sell_amount" json:"sell_amount,omitempty"`
 	BuyAmount              string          `db:"buy_amount" json:"buy_amount,omitempty"`
 	FeeAmount              string          `db:"fee_amount" json:"fee_amount,omitempty"`
-	BuyTokenPrice          *float64        `db:"buy_token_price" json:"buy_token_price"`
-	SellTokenPrice         *float64        `db:"sell_token_price" json:"sell_token_price"`
-	BuyUsdAmount           *float64        `db:"buy_usd_amount" json:"buy_usd_amount"`
-	SellUsdAmount          *float64        `db:"sell_usd_amount" json:"sell_usd_amount"`
+	BuyTokenPrice          *float64        `db:"buy_token_price" json:"buy_token_price,omitempty"`
+	SellTokenPrice         *float64        `db:"sell_token_price" json:"sell_token_price,omitempty"`
+	BuyUsdAmount           *float64        `db:"buy_usd_amount" json:"buy_usd_amount,omitempty"`
+	SellUsdAmount          *float64        `db:"sell_usd_amount" json:"sell_usd_amount,omitempty"`
 	OrderUid               string          `db:"order_uid" json:"order_uid,omitempty"`
 	RawTradeData           string          `db:"raw_trade_data" json:"raw_trade_data,omitempty"`
 }

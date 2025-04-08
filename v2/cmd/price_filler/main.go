@@ -75,7 +75,8 @@ func run(c *cli.Context) error {
 	httpClient := &http.Client{}
 	mtmClient := mtm.NewMtmClient(c.String(libapp.MarkToMarketURLFlag.Name), httpClient)
 	dashboardStorage := dashboardStorage.New(l, db)
-	priceFiller, err := pricefiller.NewPriceFiller(l, s, mtmClient, dashboardStorage)
+	cowTransferStorage := cowProtocolStorage.NewCowTransferStorage(l, db)
+	priceFiller, err := pricefiller.NewPriceFiller(l, s, mtmClient, dashboardStorage, cowTransferStorage)
 	if err != nil {
 		l.Errorw("Error while init price filler")
 		return err

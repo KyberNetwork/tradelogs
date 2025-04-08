@@ -223,7 +223,6 @@ func (s *Storage) ResetTokenPriceToRefetch(token string, from, to int64) (int64,
 		squirrel.LtOrEq{"timestamp": to},
 	})
 	q, p, err := builder.ToSql()
-
 	if err != nil {
 		return 0, fmt.Errorf("build query error: %w", err)
 	}

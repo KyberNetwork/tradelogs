@@ -325,7 +325,7 @@ func TestParseEvent(t *testing.T) {
 	require.NoError(t, err)
 	fmt.Printf("%+v\n", logs)
 	log := logs[0]
-	require.Equal(t, log.EventHash, p.eventHash)
+	require.Equal(t, log.EventHash, p.tradeEventHash)
 	t.Log("owner", log.Owner)
 	t.Log("sell token", log.SellToken)
 	t.Log("sell amount", log.SellAmount)

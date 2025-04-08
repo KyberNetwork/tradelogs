@@ -14,6 +14,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/bebop"
+	cowprotocol "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol"
 	hashflowv3 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/hashflow_v3"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap"
 	kyberswaprfq "github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap_rfq"
@@ -31,6 +32,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
+	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/cow_protocol"
 	hashflowv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/hashflow_v3"
 	kyberswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap"
 	kyberswaprfqStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap_rfq"
@@ -95,6 +97,7 @@ func run(c *cli.Context) error {
 		bebopStorage.New(l, db),
 		zxrfqv3Storage.New(l, db),
 		pancakeswapStorage.New(l, db),
+		cowProtocolStorage.New(l, db),
 	}
 	manager := tradelogs.NewManager(l, storages)
 
@@ -137,6 +140,7 @@ func run(c *cli.Context) error {
 		bebop.MustNewParser(),
 		zxrfqv3.MustNewParserWithDeployer(l, zxv3DeployStorage, ethClients[0], common.HexToAddress(constant.Deployer0xV3)),
 		pancakeswap.MustNewParser(),
+		cowprotocol.MustNewParser(),
 	}
 
 	promotionParsers := []promotionparser.Parser{promotion1inchv2.MustNewParser()}
@@ -154,8 +158,10 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("cannot create kafka publisher: %w", err)
 	}
 
+	cowTransferStorage := cowProtocolStorage.NewCowTransferStorage(l, db)
+
 	// trade log handler
-	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, promoteeStorage, parsers, promotionParsers, broadcastTopic, kafkaPublisher)
+	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, promoteeStorage, cowTransferStorage, parsers, promotionParsers, broadcastTopic, kafkaPublisher)
 
 	// parse log worker
 	w := worker.NewBackFiller(tradeLogHandler, backfillStorage, stateStorage, l, rpcNode, parsers)

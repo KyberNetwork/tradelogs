@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	promoteeTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
+	cowProtocol "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/cow_protocol"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -21,14 +23,15 @@ import (
 )
 
 type TradeLogHandler struct {
-	l                *zap.SugaredLogger
-	rpcClient        rpcnode.IClient
-	storage          *tradelogs.Manager
-	promoteeStorage  *promoteeTypes.Storage
-	parsers          []parser.Parser
-	promotionParsers []promotionparser.Parser
-	kafkaTopic       string
-	publisher        kafka.Publisher
+	l                  *zap.SugaredLogger
+	rpcClient          rpcnode.IClient
+	storage            *tradelogs.Manager
+	promoteeStorage    *promoteeTypes.Storage
+	cowTransferStorage *cowProtocol.CowTransferStorage
+	parsers            []parser.Parser
+	promotionParsers   []promotionparser.Parser
+	kafkaTopic         string
+	publisher          kafka.Publisher
 }
 
 type logMetadata struct {
@@ -41,17 +44,19 @@ type logMetadata struct {
 
 func NewTradeLogHandler(l *zap.SugaredLogger, rpc rpcnode.IClient,
 	storage *tradelogs.Manager, promoteeStorage *promoteeTypes.Storage,
+	cowTransferStorage *cowProtocol.CowTransferStorage,
 	parsers []parser.Parser, promotionParsers []promotionparser.Parser,
 	kafkaTopic string, publisher kafka.Publisher) *TradeLogHandler {
 	return &TradeLogHandler{
-		l:                l,
-		rpcClient:        rpc,
-		storage:          storage,
-		promoteeStorage:  promoteeStorage,
-		parsers:          parsers,
-		promotionParsers: promotionParsers,
-		kafkaTopic:       kafkaTopic,
-		publisher:        publisher,
+		l:                  l,
+		rpcClient:          rpc,
+		storage:            storage,
+		promoteeStorage:    promoteeStorage,
+		cowTransferStorage: cowTransferStorage,
+		parsers:            parsers,
+		promotionParsers:   promotionParsers,
+		kafkaTopic:         kafkaTopic,
+		publisher:          publisher,
 	}
 }
 
@@ -101,11 +106,13 @@ func (h *TradeLogHandler) processForTradelog(calls []types.TransactionCallFrame,
 			timestamp:   timestamp,
 		}
 
-		tradeLogs := h.processCallFrameForTradelog(call.CallFrame, metadata, exclusions)
+		tradeLogs, isCowTrade := h.processCallFrameForTradelog(call.CallFrame, metadata, exclusions)
 		if len(tradeLogs) == 0 {
 			continue
 		}
-
+		if isCowTrade {
+			h.ProcessForParseCowTransferEvent(call.TxHash, blockNumber, timestamp, call.CallFrame)
+		}
 		for j := range tradeLogs {
 			tradeLogs[j].TxOrigin = call.CallFrame.From // txOrigin, messageSender == internalCall.From
 			tradeLogs[j].InteractContract = call.CallFrame.To
@@ -174,16 +181,17 @@ func (h *TradeLogHandler) processForPromotion(calls []types.TransactionCallFrame
 	return nil
 }
 
-func (h *TradeLogHandler) processCallFrameForTradelog(call types.CallFrame, metadata logMetadata, exclusions sets.Set[string]) []storageTypes.TradeLog {
+func (h *TradeLogHandler) processCallFrameForTradelog(call types.CallFrame, metadata logMetadata, exclusions sets.Set[string]) ([]storageTypes.TradeLog, bool) {
 	result := make([]storageTypes.TradeLog, 0)
-
+	isCowTrade := false
 	// process the sub trace calls
 	for _, traceCall := range call.Calls {
-		tradeLogs := h.processCallFrameForTradelog(traceCall, metadata, exclusions)
+		tradeLogs, nestedCow := h.processCallFrameForTradelog(traceCall, metadata, exclusions)
 		result = append(result, tradeLogs...)
+		if nestedCow {
+			isCowTrade = true
+		}
 	}
-
-	// process current trace call
 	for _, log := range call.Logs {
 		ethLog := ethereumTypes.Log{
 			Address:     log.Address,
@@ -201,7 +209,6 @@ func (h *TradeLogHandler) processCallFrameForTradelog(call types.CallFrame, meta
 		if p == nil || exclusions.Has(p.Exchange()) {
 			continue
 		}
-
 		// parse trade log
 		tradeLogs, err := p.ParseWithCallFrame(call, ethLog, metadata.timestamp)
 		if err != nil {
@@ -214,8 +221,13 @@ func (h *TradeLogHandler) processCallFrameForTradelog(call types.CallFrame, meta
 		}
 
 		result = append(result, tradeLogs...)
+
+		if p.Exchange() == constant.CowProtocol {
+			isCowTrade = true
+		}
+
 	}
-	return result
+	return result, isCowTrade
 }
 
 func (h *TradeLogHandler) processCallFrameForPromotion(call types.CallFrame, metadata logMetadata) []promoteeTypes.Promotee {
@@ -305,6 +317,34 @@ func (h *TradeLogHandler) RevertBlock(blocks []uint64) error {
 	h.l.Infow("published revert message", "message", string(msgBytes))
 
 	return nil
+}
+
+func (h *TradeLogHandler) ProcessForParseCowTransferEvent(
+	txHash string,
+	block_number, timestamp uint64,
+	call types.CallFrame,
+) {
+	for _, p := range h.parsers {
+		if p.Exchange() != constant.CowProtocol {
+			continue
+		}
+		events := p.ParseTransferEvent(txHash, block_number, timestamp, call)
+		var typedTransfers []storageTypes.CowTransfer
+		for _, e := range events {
+			t, ok := e.(storageTypes.CowTransfer)
+			if !ok {
+				h.l.Warnw("unexpected type in transfer event", "value", e)
+				continue
+			}
+			typedTransfers = append(typedTransfers, t)
+		}
+		err := h.cowTransferStorage.Insert(typedTransfers)
+		if err != nil {
+			h.l.Errorw("errow when store transfer event", "error", err)
+			break
+		}
+		break
+	}
 }
 
 func assignLogIndexes(cf *types.CallFrame, index int) int {

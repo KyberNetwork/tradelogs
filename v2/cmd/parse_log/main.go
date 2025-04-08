@@ -157,8 +157,9 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("cannot create kafka publisher: %w", err)
 	}
 
+	cowTransferStorage := cowProtocolStorage.NewCowTransferStorage(l, db)
 	// trade log handler
-	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, promoteeStorage, parsers, promotionParsers, broadcastTopic, kafkaPublisher)
+	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, promoteeStorage, cowTransferStorage, parsers, promotionParsers, broadcastTopic, kafkaPublisher)
 
 	// parse log worker
 	w := worker.NewParseLog(tradeLogHandler, s, l)

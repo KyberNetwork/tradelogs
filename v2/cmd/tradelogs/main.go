@@ -78,8 +78,8 @@ func run(c *cli.Context) error {
 	mviewRefresher.Run()
 
 	deployStorage := zerox_deployment.NewStorage(l, db)
-
-	s := server.NewTradeLogs(l, storage, dashStorage, deployStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
+	cowTransferStorage := cowProtocolStorage.NewCowTransferStorage(l, db)
+	s := server.NewTradeLogs(l, storage, dashStorage, deployStorage, cowTransferStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
 	return s.Run()
 }
 

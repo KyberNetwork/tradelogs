@@ -13,6 +13,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/mtm"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	dashboardTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard/types"
+	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/cow_protocol"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"go.uber.org/zap"
 )
@@ -43,19 +44,21 @@ type CoinInfo struct {
 }
 
 type PriceFiller struct {
-	l                *zap.SugaredLogger
-	s                []storageTypes.Storage
-	mu               sync.Mutex
-	ksClient         *KsClient
-	mappedCoinInfo   map[string]CoinInfo // address - coinInfo
-	mtmClient        *mtm.MtmClient
-	dashboardStorage *dashboardStorage.Storage
+	l                  *zap.SugaredLogger
+	s                  []storageTypes.Storage
+	mu                 sync.Mutex
+	ksClient           *KsClient
+	mappedCoinInfo     map[string]CoinInfo // address - coinInfo
+	mtmClient          *mtm.MtmClient
+	dashboardStorage   *dashboardStorage.Storage
+	cowTransferStorage *cowProtocolStorage.CowTransferStorage
 }
 
 func NewPriceFiller(l *zap.SugaredLogger,
 	s []storageTypes.Storage,
 	mtmClient *mtm.MtmClient,
 	dashboardStorage *dashboardStorage.Storage,
+	cowTransferStorage *cowProtocolStorage.CowTransferStorage,
 ) (*PriceFiller, error) {
 	p := &PriceFiller{
 		l:        l,
@@ -75,8 +78,9 @@ func NewPriceFiller(l *zap.SugaredLogger,
 				Decimals:        18,
 			},
 		},
-		mtmClient:        mtmClient,
-		dashboardStorage: dashboardStorage,
+		mtmClient:          mtmClient,
+		dashboardStorage:   dashboardStorage,
+		cowTransferStorage: cowTransferStorage,
 	}
 
 	if err := p.updateAllCoinInfo(); err != nil {
@@ -160,9 +164,19 @@ func (p *PriceFiller) runBackFillTradelogPriceRoutine(fillPriceInterval time.Dur
 
 			p.l.Infow("backfill tradelog price successfully", "exchange", s.Exchange(), "number", len(tradeLogs))
 		}
+		// fill price for cow transfer events
 		if err := p.insertTokens(); err != nil {
 			p.l.Errorw("Failed to insert tokens", "err", err)
+		}
+		transferEvents, err := p.cowTransferStorage.GetEmptyPrice(backfillTradeLogsLimit)
+		if err != nil {
+			p.l.Errorw("Failed to get transfer events", "err", err)
 			continue
+		}
+		p.FullFillCowTransferEvents(transferEvents)
+
+		if err = p.cowTransferStorage.Insert(transferEvents); err != nil {
+			p.l.Errorw("Failed to insert filled transfer event", "err", err)
 		}
 
 	}
@@ -243,6 +257,20 @@ func (p *PriceFiller) fullFillCowProtocolTradeLog(tradeLog storageTypes.TradeLog
 	return tradeLog, nil
 }
 
+func (p *PriceFiller) FullFillCowTransferEvent(cowTransfer storageTypes.CowTransfer) (storageTypes.CowTransfer, error) {
+	tokenPrice, tokenUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(cowTransfer.Token),
+		cowTransfer.Amount, int64(cowTransfer.Timestamp))
+	if isConnectionRefusedError(err) {
+		p.l.Errorw("Failed to getPriceAndAmountUsd for maker", "err", err)
+		return cowTransfer, err
+	}
+
+	cowTransfer.TokenPrice = &tokenPrice
+	cowTransfer.AmountUsd = &tokenUsdAmount
+
+	return cowTransfer, nil
+}
+
 func (p *PriceFiller) getSumAmountUsd(address, rawAmt []string, at int64) (float64, float64, error) {
 	var sumAmount, price float64
 	for i := range address {
@@ -295,10 +323,10 @@ func (p *PriceFiller) FullFillTradeLogs(tradeLogs []storageTypes.TradeLog) {
 		// for the safety, sleep a bit to avoid Binance rate limit
 		time.Sleep(10 * time.Millisecond)
 		f := p.fullFillTradeLog
-		if tradeLog.Exchange == constant.ExBebop {
+		switch tradeLog.Exchange {
+		case constant.ExBebop:
 			f = p.fullFillBebopTradeLog
-		}
-		if tradeLog.Exchange == constant.CowProtocol {
+		case constant.CowProtocol:
 			f = p.fullFillCowProtocolTradeLog
 		}
 		filledTradeLog, err := f(tradeLog)
@@ -307,6 +335,19 @@ func (p *PriceFiller) FullFillTradeLogs(tradeLogs []storageTypes.TradeLog) {
 			continue
 		}
 		tradeLogs[idx] = filledTradeLog
+	}
+}
+
+func (p *PriceFiller) FullFillCowTransferEvents(events []storageTypes.CowTransfer) {
+	for idx, event := range events {
+		// for the safety, sleep a bit to avoid Binance rate limit
+		time.Sleep(10 * time.Millisecond)
+		filledEvent, err := p.FullFillCowTransferEvent(event)
+		if err != nil {
+			p.l.Errorw("Failed to full fill cow transfer event", "err", err, "event", event)
+			continue
+		}
+		events[idx] = filledEvent
 	}
 }
 
