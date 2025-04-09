@@ -438,6 +438,7 @@ func getAggregateOrderInfo(order AggregateOrder) *big.Int {
 				quoteTakerAmount = quoteTakerAmount.Add(quoteTakerAmount, order.TakerAmounts[i][j])
 			}
 		}
+		commandsInd += len(order.TakerTokens[i])
 	}
 	return quoteTakerAmount
 }
