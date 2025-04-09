@@ -1,0 +1,1 @@
+abigen --abi=abi.json --pkg=cowprotocol --out=cow.go -type CowProtocol

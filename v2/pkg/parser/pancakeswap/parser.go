@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"math/big"
 	"strings"
+
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/decoder"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
@@ -291,4 +292,12 @@ func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 
 func (p *Parser) Address() string {
 	return constant.AddrPancakewap
+}
+
+func (p *Parser) ParseTransferEvent(
+	txHash string,
+	block_number, timestamp uint64,
+	call types.CallFrame,
+) []interface{} {
+	return nil
 }

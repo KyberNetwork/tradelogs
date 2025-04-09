@@ -21,4 +21,5 @@ type Parser interface {
 	ParseWithCallFrame(callFrame types.CallFrame, log ethereumTypes.Log, blockTime uint64) ([]storageTypes.TradeLog, error)
 	LogFromExchange(log ethereumTypes.Log) bool
 	Address() string
+	ParseTransferEvent(txHash string, block_number, timestamp uint64, call types.CallFrame) []interface{}
 }

@@ -147,3 +147,11 @@ func (p *Parser) LogFromExchange(log ethereumTypes.Log) bool {
 func (p *Parser) Address() string {
 	return ""
 }
+
+func (p *Parser) ParseTransferEvent(
+	txHash string,
+	block_number, timestamp uint64,
+	call types.CallFrame,
+) []interface{} {
+	return nil
+}

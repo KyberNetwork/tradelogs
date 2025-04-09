@@ -10,6 +10,7 @@ import (
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
+	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/cow_protocol"
 	hashflowv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/hashflow_v3"
 	kyberswapStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap"
 	kyberswaprfqStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/kyberswap_rfq"
@@ -69,6 +70,7 @@ func run(c *cli.Context) error {
 		bebopStorage.New(l, db),
 		zxrfqv3Storage.New(l, db),
 		pancakeswapStorage.New(l, db),
+		cowProtocolStorage.New(l, db),
 	}
 
 	dashStorage := dashboardStorage.New(l, db)
@@ -76,8 +78,8 @@ func run(c *cli.Context) error {
 	mviewRefresher.Run()
 
 	deployStorage := zerox_deployment.NewStorage(l, db)
-
-	s := server.NewTradeLogs(l, storage, dashStorage, deployStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
+	cowTransferStorage := cowProtocolStorage.NewCowTransferStorage(l, db)
+	s := server.NewTradeLogs(l, storage, dashStorage, deployStorage, cowTransferStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
 	return s.Run()
 }
 
