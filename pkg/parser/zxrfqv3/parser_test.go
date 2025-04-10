@@ -5,13 +5,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
 	"testing"
 
+	"github.com/KyberNetwork/tradelogs/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/pkg/storage"
 	"github.com/KyberNetwork/tradelogs/pkg/tracecall"
 	"github.com/KyberNetwork/tradelogs/pkg/types"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	etypes "github.com/ethereum/go-ethereum/core/types"
@@ -208,4 +211,26 @@ func TestExtractLogData(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(orderHash, amount)
 	require.Equal(t, "0x0fe145508fd6aa299e55f8b299284d6fef19bfaffe235a22120caee307bc582e", orderHash)
+}
+
+func TestNewGaslessParser(t *testing.T) {
+	t.Skip()
+	ethclient, err := ethclient.Dial(rpcURL)
+	require.NoError(t, err)
+	logs, err := ethclient.FilterLogs(context.Background(), ethereum.FilterQuery{
+		FromBlock: big.NewInt(22190258),
+		ToBlock:   big.NewInt(22190258),
+		Addresses: []common.Address{
+			common.HexToAddress("0x2d2646b619697e3696D7413694a6a2A5f63d5a27"),
+		},
+	})
+	require.NoError(t, err)
+	s, _ := json.Marshal(logs)
+	t.Log(string(s))
+	cache := tracecall.NewCache(rpcnode.NewClient(zap.S(), ethclient))
+	p := MustNewParserWithDeployer(cache, ethclient, common.HexToAddress(parser.Deployer0xV3))
+	tradeLog, err := p.Parse(logs[0], 1000)
+	require.NoError(t, err)
+	s, _ = json.Marshal(tradeLog)
+	t.Log(string(s))
 }

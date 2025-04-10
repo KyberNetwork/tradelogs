@@ -96,7 +96,7 @@ func (p *Parser) monitorContractAddresses(deployer *deployer.Deployer) {
 }
 
 func (p *Parser) getAndUpdateSupportedContractAddress(deployer *deployer.Deployer) {
-	contractTypeSupported := []ContractType{SwapContract, GaslessContract}
+	contractTypeSupported := []ContractType{SwapContract, GaslessContract, NewGaslessContract}
 	for _, contractType := range contractTypeSupported {
 		err := p.getAndUpdateContractAddress(deployer, contractType)
 		if err != nil {

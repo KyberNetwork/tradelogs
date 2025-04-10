@@ -6,6 +6,7 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/dev"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/gasless"
+	newgasless "github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/new_gasless"
 	"github.com/KyberNetwork/tradelogs/pkg/parser/zxrfqv3/swap"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -14,9 +15,10 @@ import (
 type ContractType int
 
 const (
-	DevContract     ContractType = 1
-	SwapContract    ContractType = 2
-	GaslessContract ContractType = 3
+	DevContract ContractType = iota + 1
+	SwapContract
+	GaslessContract
+	NewGaslessContract
 )
 
 type ContractABI struct {
@@ -50,6 +52,12 @@ func NewABI(contractABI ContractABI) (*abi.ABI, error) {
 		ab, err := gasless.GaslessMetaData.GetAbi()
 		if err != nil {
 			return nil, fmt.Errorf("get gasless contract abi error: %w", err)
+		}
+		return ab, nil
+	case NewGaslessContract:
+		ab, err := newgasless.NewGaslessMetaData.GetAbi()
+		if err != nil {
+			return nil, fmt.Errorf("get new gasless contract abi error: %w", err)
 		}
 		return ab, nil
 	default:
