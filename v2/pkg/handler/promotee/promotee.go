@@ -7,7 +7,6 @@ import (
 	promoteeTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
 )
@@ -132,21 +131,4 @@ func (h *PromoteeHandler) RevertBlock(blocks []uint64) error {
 	}
 
 	return nil
-}
-
-func assignLogIndexes(cf *types.CallFrame, index int) int {
-	subCallIndex := hexutil.Uint(0)
-	for i := range cf.Logs {
-		for subCallIndex < cf.Logs[i].Position {
-			index = assignLogIndexes(&cf.Calls[subCallIndex], index)
-			subCallIndex++
-		}
-		cf.Logs[i].Index = index
-		index++
-	}
-	for subCallIndex < hexutil.Uint(len(cf.Calls)) {
-		index = assignLogIndexes(&cf.Calls[subCallIndex], index)
-		subCallIndex++
-	}
-	return index
 }

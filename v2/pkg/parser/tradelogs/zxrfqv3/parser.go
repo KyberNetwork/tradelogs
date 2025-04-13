@@ -393,11 +393,3 @@ func (p *Parser) ExtractLogData(log ethereumTypes.Log) (string, *big.Int, error)
 	}
 	return hexutil.Encode(log.Data[:orderHashLen]), new(big.Int).SetBytes(log.Data[orderHashLen : orderHashLen+fillAmountLen]), nil
 }
-
-func (p *Parser) ParseTransferEvent(
-	txHash string,
-	block_number, timestamp uint64,
-	call types.CallFrame,
-) []interface{} {
-	return nil
-}
