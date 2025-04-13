@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	dashboardTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard/types"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
@@ -32,12 +33,13 @@ type resetTokenPriceParams struct {
 }
 
 type TradeLogs struct {
-	r             *gin.Engine
-	bindAddr      string
-	l             *zap.SugaredLogger
-	storage       []storageTypes.Storage
-	dashStorage   *dashboardStorage.Storage
-	deployStorage zerox_deployment.IStorage
+	r               *gin.Engine
+	bindAddr        string
+	l               *zap.SugaredLogger
+	storage         []storageTypes.Storage
+	dashStorage     *dashboardStorage.Storage
+	deployStorage   zerox_deployment.IStorage
+	cowTradeStorage *cowProtocolStorage.CowTradeStorage
 }
 
 func NewTradeLogs(
@@ -45,18 +47,20 @@ func NewTradeLogs(
 	s []storageTypes.Storage,
 	dashStorage *dashboardStorage.Storage,
 	deployStorage zerox_deployment.IStorage,
+	cowTradeStorage *cowProtocolStorage.CowTradeStorage,
 	bindAddr string,
 ) *TradeLogs {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 
 	server := &TradeLogs{
-		r:             engine,
-		bindAddr:      bindAddr,
-		l:             l,
-		storage:       s,
-		dashStorage:   dashStorage,
-		deployStorage: deployStorage,
+		r:               engine,
+		bindAddr:        bindAddr,
+		l:               l,
+		storage:         s,
+		dashStorage:     dashStorage,
+		deployStorage:   deployStorage,
+		cowTradeStorage: cowTradeStorage,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -84,6 +88,8 @@ func (s *TradeLogs) register() {
 	s.r.POST("/txorigin", s.addTxOrigin)
 	s.r.POST("/price_filler/refetch", s.resetTokenPriceToRefetch)
 	s.r.GET("/0xv3_deployment", s.get0xv3Deployment)
+	s.r.GET("/cow_transfers", s.getCowTransfers)
+	s.r.GET("/cow_trades", s.getCowTrades)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -290,5 +296,39 @@ func (s *TradeLogs) get0xv3Deployment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    result,
+	})
+}
+
+func (s *TradeLogs) getCowTransfers(c *gin.Context) {
+	var queries cowProtocolStorage.CowTransferQuery
+	if err := c.ShouldBind(&queries); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+	data, err := s.cowTradeStorage.GetCowTransfers(queries)
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
+
+func (s *TradeLogs) getCowTrades(c *gin.Context) {
+	var queries cowProtocolStorage.CowTradeQuery
+	if err := c.ShouldBind(&queries); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+	data, err := s.cowTradeStorage.GetCowTrades(queries)
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
 	})
 }

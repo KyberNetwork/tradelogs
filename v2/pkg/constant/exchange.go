@@ -11,6 +11,7 @@ const (
 	ExUniswapX     = "uniswapx"
 	ExBebop        = "bebop"
 	ExPancackeSwap = "pancakeswap"
+	CowProtocol    = "cowProtocol"
 
 	Addr1InchV6      = "0x111111125421cA6dc452d289314280a0f8842A65"
 	AddrBebop        = "0xbbbbbBB520d69a9775E85b458C58c648259FAD5F"
@@ -22,6 +23,7 @@ const (
 	Addr0x           = "0xDef1C0ded9bec7F1a1670819833240f027b25EfF"
 	Deployer0xV3     = "0x00000000000004533Fe15556B1E086BB1A72cEae"
 	AddrPancakewap   = "0x35db01D1425685789dCc9228d47C7A5C049388d8"
+	AddrCowProtocol  = "0x9008D19f58AAbD9eD0D60971565AA8510560ab41"
 
 	TableZeroX        = "tradelogs_zerox"
 	TableKyberswap    = "tradelogs_kyberswap"
@@ -33,6 +35,8 @@ const (
 	TableBebop        = "tradelogs_bebop"
 	TableZeroXV3      = "tradelogs_zerox_v3"
 	TablePancakeswap  = "tradelogs_pancakeswap"
+	TableCowProtocol  = "tradelogs_cow_protocol"
+	TableCowTransfer  = "cow_transfer_event"
 
 	Promotion1InchV2 = "oneinchv2"
 	Promotion1InchV1 = "oneinchv1"

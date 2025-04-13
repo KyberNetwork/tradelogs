@@ -6,22 +6,38 @@ import (
 	"strconv"
 
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
+	cowTradesHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/cow_trades"
+	promoteesHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/promotee"
+	tradeLogsHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/tradelogs"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"go.uber.org/zap"
 )
 
 type LogParser struct {
-	handler *handler.TradeLogHandler
-	state   state.Storage
-	l       *zap.SugaredLogger
+	rpcClient        rpcnode.IClient
+	tradelogsHandler *tradeLogsHandler.TradeLogHandler
+	promoteeHandler  *promoteesHandler.PromoteeHandler
+	cowtradesHandler *cowTradesHandler.CowTradesHandler
+	state            state.Storage
+	l                *zap.SugaredLogger
 }
 
-func NewParseLog(handler *handler.TradeLogHandler, s state.Storage, l *zap.SugaredLogger) *LogParser {
+func NewParseLog(
+	rpcClient rpcnode.IClient,
+	tradelogsHandler *tradeLogsHandler.TradeLogHandler,
+	promoteeHandler *promoteesHandler.PromoteeHandler,
+	cowtradesHandler *cowTradesHandler.CowTradesHandler,
+	s state.Storage,
+	l *zap.SugaredLogger,
+) *LogParser {
 	return &LogParser{
-		handler: handler,
-		state:   s,
-		l:       l,
+		rpcClient:        rpcClient,
+		tradelogsHandler: tradelogsHandler,
+		promoteeHandler:  promoteeHandler,
+		cowtradesHandler: cowtradesHandler,
+		state:            s,
+		l:                l,
 	}
 }
 
@@ -45,14 +61,26 @@ func (w *LogParser) processMessage(msg types.Message) error {
 	for _, block := range msg.RevertedBlocks {
 		deleteBlocks = append(deleteBlocks, block.Number.Uint64())
 	}
-	if err := w.handler.RevertBlock(deleteBlocks); err != nil {
+	if err := w.tradelogsHandler.RevertBlock(deleteBlocks); err != nil {
 		return fmt.Errorf("failed to revert blocks: %w", err)
 	}
 
 	for _, block := range msg.NewBlocks {
 		blockNumber := block.Number.Uint64()
-
-		err := w.handler.ProcessBlock(block.Hash, blockNumber, block.Timestamp)
+		// fetch trace call
+		calls, err := w.rpcClient.FetchTraceCalls(context.Background(), block.Hash)
+		if err != nil {
+			return fmt.Errorf("fetch calls error: %w", err)
+		}
+		err = w.promoteeHandler.ProcessBlock(block.Hash, blockNumber, block.Timestamp, calls)
+		if err != nil {
+			return fmt.Errorf("failed to process new block: %w", err)
+		}
+		err = w.tradelogsHandler.ProcessBlock(block.Hash, blockNumber, block.Timestamp, calls)
+		if err != nil {
+			return fmt.Errorf("failed to process new block: %w", err)
+		}
+		err = w.cowtradesHandler.ProcessBlock(block.Hash, blockNumber, block.Timestamp, calls)
 		if err != nil {
 			return fmt.Errorf("failed to process new block: %w", err)
 		}

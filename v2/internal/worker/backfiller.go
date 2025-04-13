@@ -9,8 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+	cowTradesHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/cow_trades"
+	promoteesHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/promotee"
+	tradeLogsHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/tradelogs"
+	parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
@@ -22,24 +24,33 @@ import (
 const maxQueryBlockRange = 10000
 
 type BackFiller struct {
-	mu              sync.Mutex
-	handler         *handler.TradeLogHandler
-	backfillStorage backfill.IStorage
-	stateStorage    state.Storage
-	l               *zap.SugaredLogger
-	rpc             rpcnode.IClient
-	parsers         []parser.Parser
+	mu               sync.Mutex
+	tradelogsHandler *tradeLogsHandler.TradeLogHandler
+	promoteeHandler  *promoteesHandler.PromoteeHandler
+	cowtradesHandler *cowTradesHandler.CowTradesHandler
+	backfillStorage  backfill.IStorage
+	stateStorage     state.Storage
+	l                *zap.SugaredLogger
+	rpc              rpcnode.IClient
+	parsers          []parser.Parser
 }
 
-func NewBackFiller(handler *handler.TradeLogHandler, backfillStorage backfill.IStorage, stateStorage state.Storage,
-	l *zap.SugaredLogger, rpc rpcnode.IClient, parsers []parser.Parser) *BackFiller {
+func NewBackFiller(
+	tradelogsHandler *tradeLogsHandler.TradeLogHandler,
+	promoteeHandler *promoteesHandler.PromoteeHandler,
+	cowtradesHandler *cowTradesHandler.CowTradesHandler,
+	backfillStorage backfill.IStorage, stateStorage state.Storage,
+	l *zap.SugaredLogger, rpc rpcnode.IClient, parsers []parser.Parser,
+) *BackFiller {
 	return &BackFiller{
-		handler:         handler,
-		backfillStorage: backfillStorage,
-		stateStorage:    stateStorage,
-		l:               l,
-		rpc:             rpc,
-		parsers:         parsers,
+		tradelogsHandler: tradelogsHandler,
+		promoteeHandler:  promoteeHandler,
+		cowtradesHandler: cowtradesHandler,
+		backfillStorage:  backfillStorage,
+		stateStorage:     stateStorage,
+		l:                l,
+		rpc:              rpc,
+		parsers:          parsers,
 	}
 }
 
@@ -200,8 +211,17 @@ func (w *BackFiller) processBlock(blockNumber uint64, exclusions sets.Set[string
 	if err != nil {
 		return fmt.Errorf("cannot get block %d: %w", blockNumber, err)
 	}
+	calls, err := w.rpc.FetchTraceCalls(context.Background(), block.Hash().String())
+	if err != nil {
+		return fmt.Errorf("fetch calls error: %w", err)
+	}
 
-	err = w.handler.ProcessBlockWithExclusion(block.Hash().String(), blockNumber, block.Time(), exclusions)
+	err = w.promoteeHandler.ProcessBlock(block.Hash().String(), blockNumber, block.Time(), calls)
+	if err != nil {
+		return fmt.Errorf("cannot process block %d: %w", blockNumber, err)
+	}
+
+	err = w.tradelogsHandler.ProcessBlockWithExclusion(block.Hash().String(), blockNumber, block.Time(), exclusions, calls)
 	if err != nil {
 		return fmt.Errorf("cannot process block %d: %w", blockNumber, err)
 	}

@@ -9,6 +9,7 @@ import (
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/mtm"
 	pricefiller "github.com/KyberNetwork/tradelogs/v2/pkg/price_filler"
+	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
 	hashflowv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/hashflow_v3"
@@ -73,7 +74,8 @@ func run(c *cli.Context) error {
 	httpClient := &http.Client{}
 	mtmClient := mtm.NewMtmClient(c.String(libapp.MarkToMarketURLFlag.Name), httpClient)
 	dashboardStorage := dashboardStorage.New(l, db)
-	priceFiller, err := pricefiller.NewPriceFiller(l, s, mtmClient, dashboardStorage)
+	cowTradeStorage := cowProtocolStorage.New(l, db)
+	priceFiller, err := pricefiller.NewPriceFiller(l, s, mtmClient, dashboardStorage, cowTradeStorage)
 	if err != nil {
 		l.Errorw("Error while init price filler")
 		return err

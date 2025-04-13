@@ -10,23 +10,28 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
+	cowTradesHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/cow_trades"
+	promoteesHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/promotee"
+	tradeLogsHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/tradelogs"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/bebop"
-	hashflowv3 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/hashflow_v3"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap"
-	kyberswaprfq "github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap_rfq"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/oneinchv6"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/pancakeswap"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/paraswap"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/uniswapx"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
-	promotion1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser/oneinchv2"
+	cowTradesParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtrade_parser"
+	cowTransfersParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtransfer_parser"
+	promotionParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/promotion"
+	promotion1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/promotion/oneinchv2"
+	tradeLogsParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/bebop"
+	hashflowv3 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/hashflow_v3"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/kyberswap"
+	kyberswaprfq "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/kyberswap_rfq"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/oneinchv6"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/pancakeswap"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/paraswap"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/uniswapx"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/zxotc"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/zxrfqv3"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
+	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	promotee_storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
@@ -126,7 +131,7 @@ func run(c *cli.Context) error {
 	}
 	rpcNode := rpcnode.NewClient(l, ethClients...)
 
-	parsers := []parser.Parser{
+	parsers := []tradeLogsParser.Parser{
 		kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
 		paraswap.MustNewParser(),
@@ -139,7 +144,7 @@ func run(c *cli.Context) error {
 		pancakeswap.MustNewParser(),
 	}
 
-	promotionParsers := []promotionparser.Parser{promotion1inchv2.MustNewParser()}
+	promotionParsers := []promotionParser.Parser{promotion1inchv2.MustNewParser()}
 
 	// kafka broadcast topic
 	broadcastTopic := c.String(libapp.KafkaBroadcastTopic.Name)
@@ -154,11 +159,18 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("cannot create kafka publisher: %w", err)
 	}
 
+	cowTradeStorage := cowProtocolStorage.New(l, db)
+
 	// trade log handler
-	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, promoteeStorage, parsers, promotionParsers, broadcastTopic, kafkaPublisher)
+	tradeLogHandler := tradeLogsHandler.NewTradeLogHandler(l, manager, parsers, broadcastTopic, kafkaPublisher)
+	promoteeHandler := promoteesHandler.NewPromoteeHandler(l, promoteeStorage, promotionParsers)
+
+	cowTradeParser := cowTradesParser.MustNewParser()
+	cowTransferParser := cowTransfersParser.MustNewParser()
+	cowProtocolHandler := cowTradesHandler.NewCowTradeHandler(l, cowTradeStorage, cowTradeParser, cowTransferParser)
 
 	// parse log worker
-	w := worker.NewBackFiller(tradeLogHandler, backfillStorage, stateStorage, l, rpcNode, parsers)
+	w := worker.NewBackFiller(tradeLogHandler, promoteeHandler, cowProtocolHandler, backfillStorage, stateStorage, l, rpcNode, parsers)
 
 	w.Run()
 
