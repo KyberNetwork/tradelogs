@@ -70,6 +70,7 @@ func TestFetchEvent(t *testing.T) {
 }
 
 func TestParseEvent(t *testing.T) {
+	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
 	eventRaw := `[{"address":"0x111111125421ca6dc452d289314280a0f8842a65","topics":["0xfec331350fce78ba658e082a71da20ac9f8d798a99b3c79681c8440cbfe77e07"],"data":"0xb81725973077ecc6db7dd73510be46152917f31ab7d02210aace851edc0f3fbb000000000000000000000000000000000000000000000000a5953ec9be11bd73","blockNumber":"0x13ec371","transactionHash":"0x09b63a10295261192885b38af317ba138ad7fe5828ce25524e7f0f053e250458","transactionIndex":"0x7","blockHash":"0x291e59d96ccc8b661842cfd9c4dcce1d11ed30cd4cf2b8034bff2a8d7a595785","logIndex":"0x3e","removed":false}]`
 	var events []types.Log
 	err := json.Unmarshal([]byte(eventRaw), &events)
