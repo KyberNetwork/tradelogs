@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/zxrfqv3/dev"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/zxrfqv3/gasless"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/zxrfqv3/swap"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/dev"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/gasless"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/swap"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 )

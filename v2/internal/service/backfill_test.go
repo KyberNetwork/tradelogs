@@ -5,7 +5,7 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	"github.com/KyberNetwork/tradelogs/v2/mocks"
-	parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"

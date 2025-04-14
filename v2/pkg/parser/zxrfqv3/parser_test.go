@@ -11,7 +11,7 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/v2/mocks"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/zxrfqv3/deployer"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/deployer"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"

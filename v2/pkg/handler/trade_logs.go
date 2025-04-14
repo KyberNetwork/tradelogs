@@ -1,11 +1,11 @@
-package tradelogs
+package handler
 
 import (
 	"encoding/json"
 	"fmt"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
-	parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
@@ -135,6 +135,8 @@ func (h *TradeLogHandler) processCallFrameForTradelog(call types.CallFrame, meta
 		tradeLogs := h.processCallFrameForTradelog(traceCall, metadata, exclusions)
 		result = append(result, tradeLogs...)
 	}
+
+	// process current trace call
 	for _, log := range call.Logs {
 		ethLog := ethereumTypes.Log{
 			Address:     log.Address,

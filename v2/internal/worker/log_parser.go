@@ -6,9 +6,7 @@ import (
 	"strconv"
 
 	"github.com/KyberNetwork/evmlistener/pkg/types"
-	cowTradesHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/cow_trades"
-	promoteesHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/promotee"
-	tradeLogsHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/tradelogs"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"go.uber.org/zap"
@@ -16,18 +14,18 @@ import (
 
 type LogParser struct {
 	rpcClient        rpcnode.IClient
-	tradelogsHandler *tradeLogsHandler.TradeLogHandler
-	promoteeHandler  *promoteesHandler.PromoteeHandler
-	cowtradesHandler *cowTradesHandler.CowTradesHandler
+	tradelogsHandler *handler.TradeLogHandler
+	promoteeHandler  *handler.PromoteeHandler
+	cowtradesHandler *handler.CowTradesHandler
 	state            state.Storage
 	l                *zap.SugaredLogger
 }
 
 func NewParseLog(
 	rpcClient rpcnode.IClient,
-	tradelogsHandler *tradeLogsHandler.TradeLogHandler,
-	promoteeHandler *promoteesHandler.PromoteeHandler,
-	cowtradesHandler *cowTradesHandler.CowTradesHandler,
+	tradelogsHandler *handler.TradeLogHandler,
+	promoteeHandler *handler.PromoteeHandler,
+	cowtradesHandler *handler.CowTradesHandler,
 	s state.Storage,
 	l *zap.SugaredLogger,
 ) *LogParser {

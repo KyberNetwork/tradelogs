@@ -10,7 +10,7 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/decoder"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/zxrfqv3/deployer"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/deployer"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zerox_deployment"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"

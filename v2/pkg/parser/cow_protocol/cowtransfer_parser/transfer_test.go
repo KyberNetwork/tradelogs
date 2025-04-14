@@ -20,7 +20,8 @@ func TestFetchEvent(t *testing.T) {
 	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
 	ethClient, err := ethclient.Dial(rpcURL)
 	require.NoError(t, err)
-	p := MustNewParser()
+	p, err := MustNewParser()
+	require.NoError(t, err)
 	require.Equal(t, p.abi.Events[TransferEvent].ID, common.HexToHash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"))
 	logs, err := ethClient.FilterLogs(context.Background(), ethereum.FilterQuery{
 		BlockHash: nil,
@@ -51,7 +52,8 @@ func TestParseEvent(t *testing.T) {
 	}
 	block, err := ethClient.BlockByHash(context.Background(), event.BlockHash)
 	require.NoError(t, err)
-	p := MustNewParser()
+	p, err := MustNewParser()
+	require.NoError(t, err)
 
 	log, err := p.Parse(event, block.Time())
 	require.NoError(t, err)

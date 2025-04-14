@@ -9,10 +9,8 @@ import (
 	"sync"
 	"time"
 
-	cowTradesHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/cow_trades"
-	promoteesHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/promotee"
-	tradeLogsHandler "github.com/KyberNetwork/tradelogs/v2/pkg/handler/tradelogs"
-	parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
@@ -25,9 +23,9 @@ const maxQueryBlockRange = 10000
 
 type BackFiller struct {
 	mu               sync.Mutex
-	tradelogsHandler *tradeLogsHandler.TradeLogHandler
-	promoteeHandler  *promoteesHandler.PromoteeHandler
-	cowtradesHandler *cowTradesHandler.CowTradesHandler
+	tradelogsHandler *handler.TradeLogHandler
+	promoteeHandler  *handler.PromoteeHandler
+	cowtradesHandler *handler.CowTradesHandler
 	backfillStorage  backfill.IStorage
 	stateStorage     state.Storage
 	l                *zap.SugaredLogger
@@ -36,9 +34,9 @@ type BackFiller struct {
 }
 
 func NewBackFiller(
-	tradelogsHandler *tradeLogsHandler.TradeLogHandler,
-	promoteeHandler *promoteesHandler.PromoteeHandler,
-	cowtradesHandler *cowTradesHandler.CowTradesHandler,
+	tradelogsHandler *handler.TradeLogHandler,
+	promoteeHandler *handler.PromoteeHandler,
+	cowtradesHandler *handler.CowTradesHandler,
 	backfillStorage backfill.IStorage, stateStorage state.Storage,
 	l *zap.SugaredLogger, rpc rpcnode.IClient, parsers []parser.Parser,
 ) *BackFiller {

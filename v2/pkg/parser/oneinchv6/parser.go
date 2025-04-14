@@ -9,7 +9,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/abitypes"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/decoder"
-	parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	promotee_storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"

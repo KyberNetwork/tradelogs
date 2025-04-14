@@ -36,7 +36,6 @@ func TestSimple(t *testing.T) {
 		BuyAmount:       "buyamount",
 		FeeAmount:       "feeamount",
 		OrderUid:        "orderuid",
-		RawTradeData:    "raw",
 		ContractAddress: "contract_address",
 		BlockNumber:     1,
 		TxHash:          "tx_hash",

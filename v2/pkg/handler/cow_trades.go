@@ -1,4 +1,4 @@
-package cowtrades
+package handler
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
 )
@@ -18,14 +17,6 @@ type CowTradesHandler struct {
 	storage        *cowStorage.CowTradeStorage
 	tradeParser    *cowTradeParser.CowTradeParser
 	transferParser *cowTransferParser.CowTransferParser
-}
-
-type logMetadata struct {
-	blockNumber uint64
-	blockHash   string
-	txHash      string
-	txIndex     int
-	timestamp   uint64
 }
 
 func NewCowTradeHandler(
@@ -185,21 +176,4 @@ func (h *CowTradesHandler) RevertBlock(blocks []uint64) error {
 	}
 
 	return nil
-}
-
-func assignLogIndexes(cf *types.CallFrame, index int) int {
-	subCallIndex := hexutil.Uint(0)
-	for i := range cf.Logs {
-		for subCallIndex < cf.Logs[i].Position {
-			index = assignLogIndexes(&cf.Calls[subCallIndex], index)
-			subCallIndex++
-		}
-		cf.Logs[i].Index = index
-		index++
-	}
-	for subCallIndex < hexutil.Uint(len(cf.Calls)) {
-		index = assignLogIndexes(&cf.Calls[subCallIndex], index)
-		subCallIndex++
-	}
-	return index
 }

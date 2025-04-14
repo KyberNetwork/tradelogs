@@ -1,4 +1,4 @@
-package tradelogs
+package handler
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/KyberNetwork/tradelogs/v2/mocks"
-	parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs"
-	zxotc2 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/zxotc"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+	zxotc2 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"

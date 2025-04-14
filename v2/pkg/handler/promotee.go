@@ -1,4 +1,4 @@
-package promotee
+package handler
 
 import (
 	"fmt"
@@ -15,14 +15,6 @@ type PromoteeHandler struct {
 	l       *zap.SugaredLogger
 	storage *promoteeTypes.Storage
 	parsers []promotionparser.Parser
-}
-
-type logMetadata struct {
-	blockNumber uint64
-	blockHash   string
-	txHash      string
-	txIndex     int
-	timestamp   uint64
 }
 
 func NewPromoteeHandler(

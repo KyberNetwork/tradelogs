@@ -9,7 +9,7 @@ import (
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/decoder"
-	parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"

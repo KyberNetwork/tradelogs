@@ -7,7 +7,6 @@ create table tradelogs_cow_protocol
     buy_amount        text                  not null,
     fee_amount        text                  not null,
     order_uid         text                  not null,
-    raw_trade_data    text                  not null,
     contract_address  text                  not null,
     block_number      bigint                not null,
     tx_hash           text                  not null,
@@ -41,6 +40,7 @@ create index cow_protocol_buy_token_idx
 
 create table cow_transfer_event
 (
+    transfer_id  text   not null,
     tx_hash      text   not null,
     timestamp    bigint not null,
     block_number bigint not null,
@@ -50,7 +50,7 @@ create table cow_transfer_event
     amount       text   not null,
     token_price  double precision,
     amount_usd   double precision,
-    primary key (tx_hash,timestamp,from_address,to_address,token,amount)
+    primary key (transfer_id)
 );
 
 create index cow_transfer_event_timestamp_idx

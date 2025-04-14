@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/tradelogs/zxrfqv3/deployer"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/deployer"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zerox_deployment"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"

@@ -24,7 +24,7 @@ func (s *CowTradeStorage) InsertCowTransfers(events []CowTransfer) error {
 			cowTransferStorageSerialize(&event)...,
 		)
 	}
-	q, p, err := b.Suffix(`ON CONFLICT(tx_hash,timestamp,from_address,to_address,token,amount) DO UPDATE 
+	q, p, err := b.Suffix(`ON CONFLICT(transfer_id) DO UPDATE 
 		SET 
 			token_price=excluded.token_price,
 			amount_usd=excluded.amount_usd
@@ -128,6 +128,7 @@ func (s *CowTradeStorage) ResetTokenPriceToRefetchCowTransfers(token string, fro
 
 func cowTransferStorageSerialize(o *CowTransfer) []interface{} {
 	return []interface{}{
+		o.TransferId,
 		strings.ToLower(o.TxHash),
 		strings.ToLower(o.FromAddress),
 		strings.ToLower(o.ToAddress),
@@ -142,6 +143,7 @@ func cowTransferStorageSerialize(o *CowTransfer) []interface{} {
 
 func cowTransferStorageColumns() []string {
 	return []string{
+		"transfer_id",
 		"tx_hash",
 		"from_address",
 		"to_address",

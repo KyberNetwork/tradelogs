@@ -166,7 +166,6 @@ func (p *PriceFiller) runBackFillTradelogPriceRoutine(fillPriceInterval time.Dur
 
 			p.l.Infow("backfill tradelog price successfully", "exchange", s.Exchange(), "number", len(tradeLogs))
 		}
-		// fill price for cow transfer events
 		if err := p.insertTokens(); err != nil {
 			p.l.Errorw("Failed to insert tokens", "err", err)
 		}
@@ -288,7 +287,7 @@ func (p *PriceFiller) fullFillCowTrade(trade cowProtocolStorage.CowTrade) (cowPr
 	return trade, nil
 }
 
-func (p *PriceFiller) FullFillCowTransfer(cowTransfer cowProtocolStorage.CowTransfer) (cowProtocolStorage.CowTransfer, error) {
+func (p *PriceFiller) fullFillCowTransfer(cowTransfer cowProtocolStorage.CowTransfer) (cowProtocolStorage.CowTransfer, error) {
 	tokenPrice, tokenUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(cowTransfer.Token),
 		cowTransfer.Amount, int64(cowTransfer.Timestamp))
 	if isConnectionRefusedError(err) {
@@ -383,7 +382,7 @@ func (p *PriceFiller) FullFillCowTransferEvents(events []cowProtocolStorage.CowT
 	for idx, event := range events {
 		// for the safety, sleep a bit to avoid Binance rate limit
 		time.Sleep(10 * time.Millisecond)
-		filledEvent, err := p.FullFillCowTransfer(event)
+		filledEvent, err := p.fullFillCowTransfer(event)
 		if err != nil {
 			p.l.Errorw("Failed to full fill cow transfer event", "err", err, "event", event)
 			continue

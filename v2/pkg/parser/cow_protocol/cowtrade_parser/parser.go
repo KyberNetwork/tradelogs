@@ -2,7 +2,6 @@ package cowprotocol
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -24,24 +23,24 @@ type CowTradeParser struct {
 	tradeEventHash string
 }
 
-func MustNewParser() *CowTradeParser {
+func MustNewParser() (*CowTradeParser, error) {
 	ps, err := NewCowProtocolFilterer(common.Address{}, nil)
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error when create new cow protocol filterer %w", err)
 	}
 	ab, err := CowProtocolMetaData.GetAbi()
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error when get abi of cow protocol metadata %w", err)
 	}
 	tradeEvent, ok := ab.Events[TradeEvent]
 	if !ok {
-		panic("no such event: Trade")
+		return nil, fmt.Errorf("no such event: Trade")
 	}
 	return &CowTradeParser{
 		ps:             ps,
 		abi:            ab,
 		tradeEventHash: tradeEvent.ID.String(),
-	}
+	}, nil
 }
 
 func (p *CowTradeParser) Topics() []string {
@@ -58,12 +57,6 @@ func (p *CowTradeParser) Parse(log ethereumTypes.Log, blockTime uint64) (cowStor
 	if err != nil {
 		return cowStorage.CowTrade{}, err
 	}
-	var rawData string
-	rawDataJson, err := json.Marshal(log)
-	rawData = string(rawDataJson)
-	if err != nil {
-		rawData = fmt.Sprintf("%+v", log)
-	}
 	res := cowStorage.CowTrade{
 		Owner:           e.Owner.String(),
 		SellToken:       e.SellToken.String(),
@@ -72,7 +65,6 @@ func (p *CowTradeParser) Parse(log ethereumTypes.Log, blockTime uint64) (cowStor
 		BuyAmount:       e.BuyAmount.String(),
 		FeeAmount:       e.FeeAmount.String(),
 		OrderUid:        hex.EncodeToString(e.OrderUid),
-		RawTradeData:    rawData,
 		ContractAddress: log.Address.String(),
 		BlockNumber:     log.BlockNumber,
 		TxHash:          log.TxHash.String(),
