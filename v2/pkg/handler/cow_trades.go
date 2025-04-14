@@ -63,13 +63,12 @@ func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame
 		if len(cowTrades) == 0 {
 			continue
 		}
-		cowTransfers := h.processCallFrameForCowTransfers(call.CallFrame, metadata)
 		for j := range cowTrades {
 			cowTrades[j].TxOrigin = call.CallFrame.From // txOrigin, messageSender == internalCall.From
 			cowTrades[j].InteractContract = call.CallFrame.To
 		}
-
 		tradesResult = append(tradesResult, cowTrades...)
+		cowTransfers := h.processCallFrameForCowTransfers(call.CallFrame, metadata)
 		transfersResult = append(transfersResult, cowTransfers...)
 	}
 

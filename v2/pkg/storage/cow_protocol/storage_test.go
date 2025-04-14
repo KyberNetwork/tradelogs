@@ -19,7 +19,7 @@ type TestCase struct {
 func TestSimple(t *testing.T) {
 	l := zap.S()
 	db, tearDown := testutil.MustNewDevelopmentDB(
-		"../../../../cmd/migrations",
+		"../../../cmd/migrations",
 		testutil.DefaultDSN(),
 		testutil.RandomString(8),
 	)
