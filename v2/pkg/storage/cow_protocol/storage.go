@@ -141,7 +141,7 @@ func (s *CowTradeStorage) DeleteCowTrades(blocks []uint64) error {
 	return nil
 }
 
-func (s *CowTradeStorage) ResetTokenPriceToRefetchCowTrades(token string, from, to int64) (int64, error) {
+func (s *CowTradeStorage) ResetTokenPriceTrades(token string, from, to int64) (int64, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Update(s.tableName()).
 		Set("sell_token_price", nil).

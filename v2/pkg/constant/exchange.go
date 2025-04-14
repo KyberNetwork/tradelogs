@@ -12,6 +12,7 @@ const (
 	ExBebop        = "bebop"
 	ExPancackeSwap = "pancakeswap"
 	CowProtocol    = "cowProtocol"
+	CowTransfer    = "cowTransfer"
 
 	Addr1InchV6      = "0x111111125421cA6dc452d289314280a0f8842A65"
 	AddrBebop        = "0xbbbbbBB520d69a9775E85b458C58c648259FAD5F"

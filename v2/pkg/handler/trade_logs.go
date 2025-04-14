@@ -69,11 +69,9 @@ func (h *TradeLogHandler) ProcessBlockWithExclusion(
 }
 
 func (h *TradeLogHandler) processForTradelog(calls []types.TransactionCallFrame, blockHash string, blockNumber uint64, timestamp uint64, exclusions sets.Set[string]) error {
-	logIndexStart := 0
 	var result []storageTypes.TradeLog
 
 	for i, call := range calls {
-		logIndexStart = assignLogIndexes(&call.CallFrame, logIndexStart)
 		metadata := logMetadata{
 			blockNumber: blockNumber,
 			blockHash:   blockHash,
@@ -207,18 +205,18 @@ func (h *TradeLogHandler) RevertBlock(blocks []uint64) error {
 	return nil
 }
 
-func assignLogIndexes(cf *types.CallFrame, index int) int {
+func AssignLogIndexes(cf *types.CallFrame, index int) int {
 	subCallIndex := hexutil.Uint(0)
 	for i := range cf.Logs {
 		for subCallIndex < cf.Logs[i].Position {
-			index = assignLogIndexes(&cf.Calls[subCallIndex], index)
+			index = AssignLogIndexes(&cf.Calls[subCallIndex], index)
 			subCallIndex++
 		}
 		cf.Logs[i].Index = index
 		index++
 	}
 	for subCallIndex < hexutil.Uint(len(cf.Calls)) {
-		index = assignLogIndexes(&cf.Calls[subCallIndex], index)
+		index = AssignLogIndexes(&cf.Calls[subCallIndex], index)
 		subCallIndex++
 	}
 	return index

@@ -26,17 +26,8 @@ create table tradelogs_cow_protocol
 create index cow_protocol_timestamp_idx
     on tradelogs_cow_protocol (timestamp DESC);
 
-create index cow_protocol_owner_idx
-    on tradelogs_cow_protocol (owner);
-
 create index cow_protocol_order_uid_idx
     on tradelogs_cow_protocol (order_uid);
-
-create index cow_protocol_sell_token_idx
-    on tradelogs_cow_protocol (sell_token);
-
-create index cow_protocol_buy_token_idx
-    on tradelogs_cow_protocol (buy_token);
 
 create table cow_transfer_event
 (

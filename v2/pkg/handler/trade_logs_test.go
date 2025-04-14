@@ -65,7 +65,7 @@ func TestAssignLogIndexes(t *testing.T) {
 	id := 0
 	callLogs := make([]types2.CallLog, 0)
 	for _, call := range traceCalls {
-		id = assignLogIndexes(&call.CallFrame, id)
+		id = AssignLogIndexes(&call.CallFrame, id)
 		callLogs = append(callLogs, getLogs(call.CallFrame)...)
 	}
 

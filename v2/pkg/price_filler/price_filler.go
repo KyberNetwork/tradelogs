@@ -158,7 +158,7 @@ func (p *PriceFiller) runBackFillTradelogPriceRoutine(fillPriceInterval time.Dur
 				continue
 			}
 
-			p.FullFillTradeLogs(tradeLogs)
+			p.FullyFillTradeLogs(tradeLogs)
 			if err = s.Insert(tradeLogs); err != nil {
 				p.l.Errorw("Failed to insert tradeLogs", "exchange", s.Exchange(), "err", err)
 				continue
@@ -183,7 +183,7 @@ func (p *PriceFiller) runBackFillCowTradesPriceRoutine(fillPriceInterval time.Du
 			p.l.Errorw("Failed to get cow trades", "err", err)
 			continue
 		}
-		p.FullFillCowTrades(cowTrades)
+		p.FullyFillCowTrades(cowTrades)
 		if err = p.cowTradeStorage.InsertCowTrades(cowTrades); err != nil {
 			p.l.Errorw("Failed to insert filled cowTrades", "err", err)
 			continue
@@ -203,7 +203,7 @@ func (p *PriceFiller) runBackFillCowTransfersPriceRoutine(fillPriceInterval time
 			p.l.Errorw("Failed to get transfer events", "err", err)
 			continue
 		}
-		p.FullFillCowTransferEvents(transferEvents)
+		p.FullyFillCowTransferEvents(transferEvents)
 
 		if err = p.cowTradeStorage.InsertCowTransfers(transferEvents); err != nil {
 			p.l.Errorw("Failed to insert filled transfer event", "err", err)
@@ -212,7 +212,7 @@ func (p *PriceFiller) runBackFillCowTransfersPriceRoutine(fillPriceInterval time
 	}
 }
 
-func (p *PriceFiller) fullFillTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
+func (p *PriceFiller) fullyFillTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
 	makerPrice, makerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.MakerToken),
 		tradeLog.MakerTokenAmount, int64(tradeLog.Timestamp))
 	if isConnectionRefusedError(err) {
@@ -236,7 +236,7 @@ func (p *PriceFiller) fullFillTradeLog(tradeLog storageTypes.TradeLog) (storageT
 	return tradeLog, nil
 }
 
-func (p *PriceFiller) fullFillBebopTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
+func (p *PriceFiller) fullyFillBebopTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
 	makerTokens := strings.Split(strings.ToLower(tradeLog.MakerToken), ",")
 	takerTokens := strings.Split(strings.ToLower(tradeLog.TakerToken), ",")
 	makerAmounts := strings.Split(tradeLog.MakerTokenAmount, ",")
@@ -263,7 +263,7 @@ func (p *PriceFiller) fullFillBebopTradeLog(tradeLog storageTypes.TradeLog) (sto
 	return tradeLog, nil
 }
 
-func (p *PriceFiller) fullFillCowTrade(trade cowProtocolStorage.CowTrade) (cowProtocolStorage.CowTrade, error) {
+func (p *PriceFiller) fullyFillCowTrade(trade cowProtocolStorage.CowTrade) (cowProtocolStorage.CowTrade, error) {
 	sellTokenPrice, sellUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(trade.SellToken),
 		trade.SellAmount, int64(trade.Timestamp))
 	if isConnectionRefusedError(err) {
@@ -287,7 +287,7 @@ func (p *PriceFiller) fullFillCowTrade(trade cowProtocolStorage.CowTrade) (cowPr
 	return trade, nil
 }
 
-func (p *PriceFiller) fullFillCowTransfer(cowTransfer cowProtocolStorage.CowTransfer) (cowProtocolStorage.CowTransfer, error) {
+func (p *PriceFiller) fullyFillCowTransfer(cowTransfer cowProtocolStorage.CowTransfer) (cowProtocolStorage.CowTransfer, error) {
 	tokenPrice, tokenUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(cowTransfer.Token),
 		cowTransfer.Amount, int64(cowTransfer.Timestamp))
 	if isConnectionRefusedError(err) {
@@ -348,41 +348,41 @@ func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (fl
 	return 0, 0, nil
 }
 
-func (p *PriceFiller) FullFillTradeLogs(tradeLogs []storageTypes.TradeLog) {
+func (p *PriceFiller) FullyFillTradeLogs(tradeLogs []storageTypes.TradeLog) {
 	for idx, tradeLog := range tradeLogs {
 		// for the safety, sleep a bit to avoid Binance rate limit
 		time.Sleep(10 * time.Millisecond)
-		f := p.fullFillTradeLog
+		f := p.fullyFillTradeLog
 		if tradeLog.Exchange == constant.ExBebop {
-			f = p.fullFillBebopTradeLog
+			f = p.fullyFillBebopTradeLog
 		}
 		filledTradeLog, err := f(tradeLog)
 		if err != nil {
-			p.l.Errorw("Failed to fullFillTradeLog", "err", err, "tradeLog", tradeLog)
+			p.l.Errorw("Failed to fullyFillTradeLog", "err", err, "tradeLog", tradeLog)
 			continue
 		}
 		tradeLogs[idx] = filledTradeLog
 	}
 }
 
-func (p *PriceFiller) FullFillCowTrades(cowTrades []cowProtocolStorage.CowTrade) {
+func (p *PriceFiller) FullyFillCowTrades(cowTrades []cowProtocolStorage.CowTrade) {
 	for idx, trade := range cowTrades {
 		// for the safety, sleep a bit to avoid Binance rate limit
 		time.Sleep(10 * time.Millisecond)
-		filledTrade, err := p.fullFillCowTrade(trade)
+		filledTrade, err := p.fullyFillCowTrade(trade)
 		if err != nil {
-			p.l.Errorw("Failed to fullFillCowTrade", "err", err, "trade", trade)
+			p.l.Errorw("Failed to fullyFillCowTrade", "err", err, "trade", trade)
 			continue
 		}
 		cowTrades[idx] = filledTrade
 	}
 }
 
-func (p *PriceFiller) FullFillCowTransferEvents(events []cowProtocolStorage.CowTransfer) {
+func (p *PriceFiller) FullyFillCowTransferEvents(events []cowProtocolStorage.CowTransfer) {
 	for idx, event := range events {
 		// for the safety, sleep a bit to avoid Binance rate limit
 		time.Sleep(10 * time.Millisecond)
-		filledEvent, err := p.fullFillCowTransfer(event)
+		filledEvent, err := p.fullyFillCowTransfer(event)
 		if err != nil {
 			p.l.Errorw("Failed to full fill cow transfer event", "err", err, "event", event)
 			continue

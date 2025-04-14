@@ -12,7 +12,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
-	cowParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtrade_parser"
+	cowParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
@@ -33,7 +33,7 @@ type BackFiller struct {
 	l                *zap.SugaredLogger
 	rpc              rpcnode.IClient
 	parsers          []parser.Parser
-	cowtradeParsers  []cowParser.Parser
+	cowtradeParsers  []cowParser.TradeParser
 }
 
 func NewBackFiller(
@@ -42,7 +42,7 @@ func NewBackFiller(
 	cowtradesHandler *handler.CowTradesHandler,
 	backfillStorage backfill.IStorage, stateStorage state.Storage,
 	l *zap.SugaredLogger, rpc rpcnode.IClient, parsers []parser.Parser,
-	cowtradeParsers []cowParser.Parser,
+	cowtradeParsers []cowParser.TradeParser,
 ) *BackFiller {
 	return &BackFiller{
 		tradelogsHandler: tradelogsHandler,
@@ -218,6 +218,10 @@ func (w *BackFiller) processBlock(blockNumber uint64, exclusions sets.Set[string
 	if err != nil {
 		return fmt.Errorf("fetch calls error: %w", err)
 	}
+	logIndexStart := 0
+	for _, call := range calls {
+		logIndexStart = handler.AssignLogIndexes(&call.CallFrame, logIndexStart)
+	}
 
 	err = w.promoteeHandler.ProcessBlock(block.Hash().String(), blockNumber, block.Time(), calls)
 	if err != nil {
@@ -241,6 +245,10 @@ func (w *BackFiller) processBlockForCowTrade(blockNumber uint64) error {
 	calls, err := w.rpc.FetchTraceCalls(context.Background(), block.Hash().String())
 	if err != nil {
 		return fmt.Errorf("fetch calls error: %w", err)
+	}
+	logIndexStart := 0
+	for _, call := range calls {
+		logIndexStart = handler.AssignLogIndexes(&call.CallFrame, logIndexStart)
 	}
 
 	err = w.cowtradesHandler.ProcessBlock(block.Hash().String(), blockNumber, block.Time(), calls)

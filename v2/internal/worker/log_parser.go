@@ -70,6 +70,11 @@ func (w *LogParser) processMessage(msg types.Message) error {
 		if err != nil {
 			return fmt.Errorf("fetch calls error: %w", err)
 		}
+		logIndexStart := 0
+		for _, call := range calls {
+			logIndexStart = handler.AssignLogIndexes(&call.CallFrame, logIndexStart)
+		}
+
 		err = w.promoteeHandler.ProcessBlock(block.Hash, blockNumber, block.Timestamp, calls)
 		if err != nil {
 			return fmt.Errorf("failed to process new block: %w", err)

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	dashboardTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard/types"
@@ -228,24 +229,46 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
-
-	for _, storage := range s.storage {
-		if storage.Exchange() != query.Exchange {
-			continue
-		}
-		rows, err := storage.ResetTokenPriceToRefetch(query.Address, query.From, query.To)
-		if err != nil {
-			responseErr(c, http.StatusInternalServerError, err)
-			return
-		}
-		query.Rows = rows
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"data":    query,
-		})
+	row := int64(0)
+	err = nil
+	switch query.Exchange {
+	case constant.CowProtocol:
+		row, err = s.resetTokenPriceCowTrade(query.Address, query.From, query.To)
+	case constant.CowTransfer:
+		row, err = s.resetTokenPriceCowTransfer(query.Address, query.From, query.To)
+	default:
+		row, err = s.resetTokenPriceTradelogs(query.Exchange, query.Address, query.From, query.To)
+	}
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, err)
 		return
 	}
-	responseErr(c, http.StatusBadRequest, fmt.Errorf("exchange not found"))
+	query.Rows = row
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    query,
+	})
+}
+
+func (s *TradeLogs) resetTokenPriceCowTrade(token string, from int64, to int64) (int64, error) {
+	rows, err := s.cowTradeStorage.ResetTokenPriceTrades(token, from, to)
+	return rows, err
+}
+
+func (s *TradeLogs) resetTokenPriceCowTransfer(token string, from int64, to int64) (int64, error) {
+	rows, err := s.cowTradeStorage.ResetTokenPriceTransfers(token, from, to)
+	return rows, err
+}
+
+func (s *TradeLogs) resetTokenPriceTradelogs(exchange, token string, from int64, to int64) (int64, error) {
+	for _, storage := range s.storage {
+		if storage.Exchange() != exchange {
+			continue
+		}
+		rows, err := storage.ResetTokenPriceToRefetch(token, from, to)
+		return rows, err
+	}
+	return 0, nil
 }
 
 func validateResetTokenPriceParams(query resetTokenPriceParams) (resetTokenPriceParams, error) {

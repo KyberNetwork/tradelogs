@@ -36,7 +36,6 @@ func TestFetchEvent(t *testing.T) {
 }
 
 func TestParseEvent(t *testing.T) {
-	t.Skip("Need to add the rpc url that enables the trace call JSON-RPC")
 	eventRaw := `{"address":"0xf55684bc536487394b423e70567413fab8e45e26",
 		"topics": [
 			"0xb863cf86b291171e4b0332ea12b59af030f98a2c74a6d51effaf1109ae4c7f1e"

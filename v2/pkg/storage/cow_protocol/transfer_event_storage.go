@@ -98,7 +98,7 @@ func (s *CowTradeStorage) DeleteCowTransfers(blocks []uint64) error {
 	return nil
 }
 
-func (s *CowTradeStorage) ResetTokenPriceToRefetchCowTransfers(token string, from, to int64) (int64, error) {
+func (s *CowTradeStorage) ResetTokenPriceTransfers(token string, from, to int64) (int64, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Update(s.transferTableName()).
 		Set("token_price", nil).
@@ -111,7 +111,6 @@ func (s *CowTradeStorage) ResetTokenPriceToRefetchCowTransfers(token string, fro
 		squirrel.LtOrEq{"timestamp": to},
 	})
 	q, p, err := builder.ToSql()
-
 	if err != nil {
 		return 0, fmt.Errorf("build query error: %w", err)
 	}

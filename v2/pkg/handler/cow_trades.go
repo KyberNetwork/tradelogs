@@ -3,8 +3,7 @@ package handler
 import (
 	"fmt"
 
-	cowTradeParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtrade_parser"
-	cowTransferParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtransfer_parser"
+	cowParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol"
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,15 +14,15 @@ import (
 type CowTradesHandler struct {
 	l               *zap.SugaredLogger
 	storage         *cowStorage.CowTradeStorage
-	tradeParsers    []cowTradeParser.Parser
-	transferParsers []cowTransferParser.Parser
+	tradeParsers    []cowParser.TradeParser
+	transferParsers []cowParser.TransferParser
 }
 
 func NewCowTradeHandler(
 	l *zap.SugaredLogger,
 	cowTradeStorage *cowStorage.CowTradeStorage,
-	tradeParsers []cowTradeParser.Parser,
-	transferParsers []cowTransferParser.Parser,
+	tradeParsers []cowParser.TradeParser,
+	transferParsers []cowParser.TransferParser,
 ) *CowTradesHandler {
 	return &CowTradesHandler{
 		l:               l,
@@ -43,14 +42,12 @@ func (h *CowTradesHandler) ProcessBlock(blockHash string, blockNumber uint64, ti
 }
 
 func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame, blockHash string, blockNumber uint64, timestamp uint64) error {
-	logIndexStart := 0
 	var (
 		tradesResult    []cowStorage.CowTrade
 		transfersResult []cowStorage.CowTransfer
 	)
 
 	for i, call := range calls {
-		logIndexStart = assignLogIndexes(&call.CallFrame, logIndexStart)
 		metadata := logMetadata{
 			blockNumber: blockNumber,
 			blockHash:   blockHash,
@@ -179,7 +176,7 @@ func (h *CowTradesHandler) RevertBlock(blocks []uint64) error {
 	return nil
 }
 
-func (h *CowTradesHandler) findMatchingCowTradeParser(log ethereumTypes.Log) cowTradeParser.Parser {
+func (h *CowTradesHandler) findMatchingCowTradeParser(log ethereumTypes.Log) cowParser.TradeParser {
 	for _, p := range h.tradeParsers {
 		if p.IsMatchLog(log) {
 			return p
@@ -188,7 +185,7 @@ func (h *CowTradesHandler) findMatchingCowTradeParser(log ethereumTypes.Log) cow
 	return nil
 }
 
-func (h *CowTradesHandler) findMatchingCowTransferParser(log ethereumTypes.Log) cowTransferParser.Parser {
+func (h *CowTradesHandler) findMatchingCowTransferParser(log ethereumTypes.Log) cowParser.TransferParser {
 	for _, p := range h.transferParsers {
 		if p.IsMatchLog(log) {
 			return p
