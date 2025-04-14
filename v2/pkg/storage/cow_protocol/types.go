@@ -1,7 +1,7 @@
 package cowprotocol
 
 type CowTransfer struct {
-	TransferId  string   `db:"transfer_id" json:"transfer_id"`
+	TransferId  uint64   `db:"transfer_id" json:"transfer_id"`
 	TxHash      string   `db:"tx_hash" json:"tx_hash"`
 	Timestamp   uint64   `db:"timestamp" json:"timestamp"`
 	BlockNumber uint64   `db:"block_number" json:"block_number"`

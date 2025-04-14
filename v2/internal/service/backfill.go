@@ -40,22 +40,13 @@ func (s *Backfill) rerunAllTasks() error {
 	}
 	for _, task := range tasks {
 		if task.Status == backfill.StatusTypeProcessing || task.Status == backfill.StatusTypeFailed {
-			go s.worker.BackfillByExchange(task)
+			go s.worker.BackfillByTask(task)
 		}
 	}
 	return nil
 }
 
-func (s *Backfill) BackfillForCowTrade(from, to uint64) (int, string, error) {
-	// limit max 10 tasks running at the same time
-	count, err := s.storage.GetRunningTaskNumber()
-	if err != nil {
-		return 0, "", fmt.Errorf("fail to get running task number: %w", err)
-	}
-	if count >= MaxBackfillTaskNumber {
-		return 0, "", fmt.Errorf("number of running task exceed: %d", MaxBackfillTaskNumber)
-	}
-
+func (s *Backfill) NewBackfillForCowTrade(from, to uint64) (int, string, error) {
 	if from > to {
 		return 0, "", fmt.Errorf("startBlock must be lower than endBlock")
 	}
@@ -63,7 +54,7 @@ func (s *Backfill) BackfillForCowTrade(from, to uint64) (int, string, error) {
 	task := backfill.Task{
 		FromBlock: from,
 		ToBlock:   to,
-		Exchange:  "cowProtocol",
+		Exchange:  constant.CowProtocol,
 	}
 	id, err := s.storage.CreateTask(task)
 	if err != nil {
@@ -76,25 +67,11 @@ func (s *Backfill) BackfillForCowTrade(from, to uint64) (int, string, error) {
 	return id, "", nil
 }
 
-func (s *Backfill) NewBackfillTask(from, to uint64, exchange string) (int, string, error) {
-	if exchange == constant.CowProtocol {
-		id, message, err := s.BackfillForCowTrade(from, to)
-		return id, message, err
-	}
-
+func (s *Backfill) NewBackfillForTradeLogs(from, to uint64, exchange string) (int, string, error) {
 	var message string
 
 	if !s.worker.IsValidExchange(exchange) {
 		return 0, "", fmt.Errorf("invalid exchange %s", exchange)
-	}
-
-	// limit max 10 tasks running at the same time
-	count, err := s.storage.GetRunningTaskNumber()
-	if err != nil {
-		return 0, "", fmt.Errorf("fail to get running task number: %w", err)
-	}
-	if count >= MaxBackfillTaskNumber {
-		return 0, "", fmt.Errorf("number of running task exceed: %d", MaxBackfillTaskNumber)
 	}
 
 	first, last, _, err := s.worker.GetBlockRanges()
@@ -132,6 +109,25 @@ func (s *Backfill) NewBackfillTask(from, to uint64, exchange string) (int, strin
 	go s.worker.BackfillByExchange(task)
 
 	return id, message, nil
+}
+
+func (s *Backfill) NewBackfillTask(from, to uint64, exchange string) (int, string, error) {
+	// limit max 10 tasks running at the same time
+	count, err := s.storage.GetRunningTaskNumber()
+	if err != nil {
+		return 0, "", fmt.Errorf("fail to get running task number: %w", err)
+	}
+	if count >= MaxBackfillTaskNumber {
+		return 0, "", fmt.Errorf("number of running task exceed: %d", MaxBackfillTaskNumber)
+	}
+	switch exchange {
+	case constant.CowProtocol:
+		id, message, err := s.NewBackfillForCowTrade(from, to)
+		return id, message, err
+	default:
+		id, message, err := s.NewBackfillForTradeLogs(from, to, exchange)
+		return id, message, err
+	}
 }
 
 func (s *Backfill) CancelBackfillTask(id int) error {

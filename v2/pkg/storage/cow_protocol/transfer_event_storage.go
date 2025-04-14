@@ -42,7 +42,7 @@ func (s *CowTradeStorage) InsertCowTransfers(events []CowTransfer) error {
 
 func (s *CowTradeStorage) GetCowTransfers(query CowTransferQuery) ([]CowTransfer, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(cowTransferStorageColumns()...).
+		Select("*").
 		From(s.transferTableName())
 	if query.FromTime != 0 {
 		builder = builder.Where(squirrel.GtOrEq{"timestamp": query.FromTime})
@@ -66,7 +66,7 @@ func (s *CowTradeStorage) GetCowTransfers(query CowTransferQuery) ([]CowTransfer
 
 func (s *CowTradeStorage) GetEmptyPriceCowTransfers(limit uint64) ([]CowTransfer, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
-		Select(cowTransferStorageColumns()...).
+		Select("*").
 		From(s.transferTableName()).Where(squirrel.Eq{"token_price": nil}).Limit(limit)
 	q, p, err := builder.ToSql()
 	if err != nil {
@@ -128,7 +128,6 @@ func (s *CowTradeStorage) ResetTokenPriceToRefetchCowTransfers(token string, fro
 
 func cowTransferStorageSerialize(o *CowTransfer) []interface{} {
 	return []interface{}{
-		o.TransferId,
 		strings.ToLower(o.TxHash),
 		strings.ToLower(o.FromAddress),
 		strings.ToLower(o.ToAddress),
@@ -143,7 +142,6 @@ func cowTransferStorageSerialize(o *CowTransfer) []interface{} {
 
 func cowTransferStorageColumns() []string {
 	return []string{
-		"transfer_id",
 		"tx_hash",
 		"from_address",
 		"to_address",

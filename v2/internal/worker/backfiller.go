@@ -12,7 +12,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
-	cowprotocol "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtrade_parser"
+	cowParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtrade_parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
@@ -33,7 +33,7 @@ type BackFiller struct {
 	l                *zap.SugaredLogger
 	rpc              rpcnode.IClient
 	parsers          []parser.Parser
-	cowtradeParser   *cowprotocol.CowTradeParser
+	cowtradeParsers  []cowParser.Parser
 }
 
 func NewBackFiller(
@@ -42,7 +42,7 @@ func NewBackFiller(
 	cowtradesHandler *handler.CowTradesHandler,
 	backfillStorage backfill.IStorage, stateStorage state.Storage,
 	l *zap.SugaredLogger, rpc rpcnode.IClient, parsers []parser.Parser,
-	cowtradeParser *cowprotocol.CowTradeParser,
+	cowtradeParsers []cowParser.Parser,
 ) *BackFiller {
 	return &BackFiller{
 		tradelogsHandler: tradelogsHandler,
@@ -53,7 +53,7 @@ func NewBackFiller(
 		l:                l,
 		rpc:              rpc,
 		parsers:          parsers,
-		cowtradeParser:   cowtradeParser,
+		cowtradeParsers:  cowtradeParsers,
 	}
 }
 
@@ -250,6 +250,15 @@ func (w *BackFiller) processBlockForCowTrade(blockNumber uint64) error {
 
 	w.l.Infow("successfully backfill block", "block", blockNumber)
 	return nil
+}
+
+func (w *BackFiller) BackfillByTask(task backfill.Task) {
+	switch task.Exchange {
+	case constant.CowProtocol:
+		w.BackfillForCowProtocol(task)
+	default:
+		w.BackfillByExchange(task)
+	}
 }
 
 func (w *BackFiller) BackfillByExchange(task backfill.Task) {
@@ -466,8 +475,11 @@ func (w *BackFiller) getBlockByCowProtocol(from, to uint64) ([]uint64, error) {
 		err          error
 	)
 	// get exchange address and topics to filter logs
-	address = constant.AddrCowProtocol
-	topics = w.cowtradeParser.Topics()
+	for _, p := range w.cowtradeParsers {
+		address = constant.AddrCowProtocol
+		topics = p.Topics()
+		break
+	}
 
 	for currentTo := to; currentTo >= from; {
 		currentFrom := max(currentTo-maxQueryBlockRange, from)

@@ -14,8 +14,10 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
 	tradeLogsParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/bebop"
-	cowTradesParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtrade_parser"
-	cowTransfersParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtransfer_parser"
+	iCowTradesParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtrade_parser"
+	cowTradesParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtrade_parser/cow"
+	iCowTransfersParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtransfer_parser"
+	cowTransfersParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtransfer_parser/cow"
 	hashflowv3 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/hashflow_v3"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap"
 	kyberswaprfq "github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap_rfq"
@@ -167,14 +169,20 @@ func run(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("cannot create cow trade parser: %w", err)
 	}
+	cowTradeParsers := []iCowTradesParser.Parser{
+		cowTradeParser,
+	}
 	cowTransferParser, err := cowTransfersParser.MustNewParser()
 	if err != nil {
 		return fmt.Errorf("cannot create cow transfer parser: %w", err)
 	}
-	cowProtocolHandler := handler.NewCowTradeHandler(l, cowTradeStorage, cowTradeParser, cowTransferParser)
+	cowTransferParsers := []iCowTransfersParser.Parser{
+		cowTransferParser,
+	}
+	cowProtocolHandler := handler.NewCowTradeHandler(l, cowTradeStorage, cowTradeParsers, cowTransferParsers)
 
 	// parse log worker
-	w := worker.NewBackFiller(tradeLogHandler, promoteeHandler, cowProtocolHandler, backfillStorage, stateStorage, l, rpcNode, parsers, cowTradeParser)
+	w := worker.NewBackFiller(tradeLogHandler, promoteeHandler, cowProtocolHandler, backfillStorage, stateStorage, l, rpcNode, parsers, cowTradeParsers)
 
 	w.Run()
 

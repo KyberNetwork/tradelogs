@@ -13,23 +13,23 @@ import (
 )
 
 type CowTradesHandler struct {
-	l              *zap.SugaredLogger
-	storage        *cowStorage.CowTradeStorage
-	tradeParser    *cowTradeParser.CowTradeParser
-	transferParser *cowTransferParser.CowTransferParser
+	l               *zap.SugaredLogger
+	storage         *cowStorage.CowTradeStorage
+	tradeParsers    []cowTradeParser.Parser
+	transferParsers []cowTransferParser.Parser
 }
 
 func NewCowTradeHandler(
 	l *zap.SugaredLogger,
 	cowTradeStorage *cowStorage.CowTradeStorage,
-	tradeParser *cowTradeParser.CowTradeParser,
-	transferParser *cowTransferParser.CowTransferParser,
+	tradeParsers []cowTradeParser.Parser,
+	transferParsers []cowTransferParser.Parser,
 ) *CowTradesHandler {
 	return &CowTradesHandler{
-		l:              l,
-		storage:        cowTradeStorage,
-		tradeParser:    tradeParser,
-		transferParser: transferParser,
+		l:               l,
+		storage:         cowTradeStorage,
+		tradeParsers:    tradeParsers,
+		transferParsers: transferParsers,
 	}
 }
 
@@ -110,11 +110,12 @@ func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, me
 			Index:       uint(log.Index),
 		}
 
-		if !h.tradeParser.IsMatchLog(ethLog) {
+		p := h.findMatchingCowTradeParser(ethLog)
+		if p == nil {
 			continue
 		}
 		// parse trade log
-		cowTrade, err := h.tradeParser.Parse(ethLog, metadata.timestamp)
+		cowTrade, err := p.Parse(ethLog, metadata.timestamp)
 		if err != nil {
 			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", "cowTradeParser")
 			continue
@@ -145,11 +146,12 @@ func (h *CowTradesHandler) processCallFrameForCowTransfers(call types.CallFrame,
 			Index:       uint(log.Index),
 		}
 
-		if !h.transferParser.IsMatchLog(ethLog) {
+		p := h.findMatchingCowTransferParser(ethLog)
+		if p == nil {
 			continue
 		}
 		// parse trade log
-		cowTransfer, err := h.transferParser.Parse(ethLog, metadata.timestamp)
+		cowTransfer, err := p.Parse(ethLog, metadata.timestamp)
 		if err != nil {
 			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", "cowTransferParesr")
 			continue
@@ -174,5 +176,23 @@ func (h *CowTradesHandler) RevertBlock(blocks []uint64) error {
 		return fmt.Errorf("delete blocks error: %w", err)
 	}
 
+	return nil
+}
+
+func (h *CowTradesHandler) findMatchingCowTradeParser(log ethereumTypes.Log) cowTradeParser.Parser {
+	for _, p := range h.tradeParsers {
+		if p.IsMatchLog(log) {
+			return p
+		}
+	}
+	return nil
+}
+
+func (h *CowTradesHandler) findMatchingCowTransferParser(log ethereumTypes.Log) cowTransferParser.Parser {
+	for _, p := range h.transferParsers {
+		if p.IsMatchLog(log) {
+			return p
+		}
+	}
 	return nil
 }

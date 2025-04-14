@@ -40,7 +40,7 @@ create index cow_protocol_buy_token_idx
 
 create table cow_transfer_event
 (
-    transfer_id  text   not null,
+    transfer_id  serial not null,
     tx_hash      text   not null,
     timestamp    bigint not null,
     block_number bigint not null,
