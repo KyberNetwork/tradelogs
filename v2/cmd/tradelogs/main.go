@@ -8,6 +8,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/internal/server"
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
+	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
 	hashflowv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/hashflow_v3"
@@ -76,8 +77,8 @@ func run(c *cli.Context) error {
 	mviewRefresher.Run()
 
 	deployStorage := zerox_deployment.NewStorage(l, db)
-
-	s := server.NewTradeLogs(l, storage, dashStorage, deployStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
+	cowTradeStorage := cowProtocolStorage.New(l, db)
+	s := server.NewTradeLogs(l, storage, dashStorage, deployStorage, cowTradeStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
 	return s.Run()
 }
 

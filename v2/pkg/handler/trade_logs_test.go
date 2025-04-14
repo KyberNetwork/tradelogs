@@ -23,13 +23,6 @@ var rpcURL = os.Getenv("TEST_RPC_URL")
 
 func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	t.Skip("Need to set the rpc url env that enables the trace call JSON-RPC")
-
-	ethClient, err := ethclient.Dial(rpcURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client := rpcnode.NewClient(zap.S(), ethClient)
-
 	mockStorage := &mocks.MockStorage{}
 	mockStorage.On("Exchange").Return("zerox").
 		On("Insert", mock.Anything).Return(nil).
@@ -41,9 +34,8 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	mockKafka := &mocks.MockPublisher{}
 	mockKafka.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
-	h := NewTradeLogHandler(zap.S(), client, s, nil, []parser.Parser{p}, nil, "test", mockKafka)
-
-	err = h.ProcessBlock("0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048", 20181990, 1725436442)
+	h := NewTradeLogHandler(zap.S(), s, []parser.Parser{p}, "test", mockKafka)
+	err := h.ProcessBlock("0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048", 20181990, 1725436442, nil) //please add callFrames
 	if err != nil {
 		t.Fatal(err)
 	}

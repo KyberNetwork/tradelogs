@@ -1,10 +1,10 @@
 package oneinchv2
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -49,7 +49,7 @@ func (p *Parser) Topics() []string {
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storageTypes.Promotee, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storageTypes.Promotee{}, promotionparser.ErrInvalidTopic
+		return storageTypes.Promotee{}, errors.New("invalid order topic")
 	}
 	e, err := p.ps.ParsePromotion(log)
 	if err != nil {
@@ -69,7 +69,7 @@ func (p *Parser) Contract() string {
 	return constant.Promotion1InchV2
 }
 
-func (p *Parser) LogFromContract(log ethereumTypes.Log) bool {
+func (p *Parser) IsMatchLog(log ethereumTypes.Log) bool {
 	return strings.EqualFold(log.Address.String(), constant.AddrPr1InchV2) &&
 		len(log.Topics) > 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.eventHash)

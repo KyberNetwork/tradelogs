@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
 	"go.uber.org/zap"
 )
@@ -45,7 +46,42 @@ func (s *Backfill) rerunAllTasks() error {
 	return nil
 }
 
+func (s *Backfill) BackfillForCowTrade(from, to uint64) (int, string, error) {
+	// limit max 10 tasks running at the same time
+	count, err := s.storage.GetRunningTaskNumber()
+	if err != nil {
+		return 0, "", fmt.Errorf("fail to get running task number: %w", err)
+	}
+	if count >= MaxBackfillTaskNumber {
+		return 0, "", fmt.Errorf("number of running task exceed: %d", MaxBackfillTaskNumber)
+	}
+
+	if from > to {
+		return 0, "", fmt.Errorf("startBlock must be lower than endBlock")
+	}
+
+	task := backfill.Task{
+		FromBlock: from,
+		ToBlock:   to,
+		Exchange:  "cowProtocol",
+	}
+	id, err := s.storage.CreateTask(task)
+	if err != nil {
+		return 0, "", fmt.Errorf("cannot create backfill task: %w", err)
+	}
+
+	task.ID = id
+	go s.worker.BackfillForCowProtocol(task)
+
+	return id, "", nil
+}
+
 func (s *Backfill) NewBackfillTask(from, to uint64, exchange string) (int, string, error) {
+	if exchange == constant.CowProtocol {
+		id, message, err := s.BackfillForCowTrade(from, to)
+		return id, message, err
+	}
+
 	var message string
 
 	if !s.worker.IsValidExchange(exchange) {

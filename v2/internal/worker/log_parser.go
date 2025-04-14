@@ -7,21 +7,35 @@ import (
 
 	"github.com/KyberNetwork/evmlistener/pkg/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"go.uber.org/zap"
 )
 
 type LogParser struct {
-	handler *handler.TradeLogHandler
-	state   state.Storage
-	l       *zap.SugaredLogger
+	rpcClient        rpcnode.IClient
+	tradelogsHandler *handler.TradeLogHandler
+	promoteeHandler  *handler.PromoteeHandler
+	cowtradesHandler *handler.CowTradesHandler
+	state            state.Storage
+	l                *zap.SugaredLogger
 }
 
-func NewParseLog(handler *handler.TradeLogHandler, s state.Storage, l *zap.SugaredLogger) *LogParser {
+func NewParseLog(
+	rpcClient rpcnode.IClient,
+	tradelogsHandler *handler.TradeLogHandler,
+	promoteeHandler *handler.PromoteeHandler,
+	cowtradesHandler *handler.CowTradesHandler,
+	s state.Storage,
+	l *zap.SugaredLogger,
+) *LogParser {
 	return &LogParser{
-		handler: handler,
-		state:   s,
-		l:       l,
+		rpcClient:        rpcClient,
+		tradelogsHandler: tradelogsHandler,
+		promoteeHandler:  promoteeHandler,
+		cowtradesHandler: cowtradesHandler,
+		state:            s,
+		l:                l,
 	}
 }
 
@@ -45,14 +59,26 @@ func (w *LogParser) processMessage(msg types.Message) error {
 	for _, block := range msg.RevertedBlocks {
 		deleteBlocks = append(deleteBlocks, block.Number.Uint64())
 	}
-	if err := w.handler.RevertBlock(deleteBlocks); err != nil {
+	if err := w.tradelogsHandler.RevertBlock(deleteBlocks); err != nil {
 		return fmt.Errorf("failed to revert blocks: %w", err)
 	}
 
 	for _, block := range msg.NewBlocks {
 		blockNumber := block.Number.Uint64()
-
-		err := w.handler.ProcessBlock(block.Hash, blockNumber, block.Timestamp)
+		// fetch trace call
+		calls, err := w.rpcClient.FetchTraceCalls(context.Background(), block.Hash)
+		if err != nil {
+			return fmt.Errorf("fetch calls error: %w", err)
+		}
+		err = w.promoteeHandler.ProcessBlock(block.Hash, blockNumber, block.Timestamp, calls)
+		if err != nil {
+			return fmt.Errorf("failed to process new block: %w", err)
+		}
+		err = w.tradelogsHandler.ProcessBlock(block.Hash, blockNumber, block.Timestamp, calls)
+		if err != nil {
+			return fmt.Errorf("failed to process new block: %w", err)
+		}
+		err = w.cowtradesHandler.ProcessBlock(block.Hash, blockNumber, block.Timestamp, calls)
 		if err != nil {
 			return fmt.Errorf("failed to process new block: %w", err)
 		}
