@@ -258,16 +258,6 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 	})
 }
 
-func (s *TradeLogs) resetTokenPriceCowTrade(token string, from int64, to int64) (int64, error) {
-	rows, err := s.cowTradeStorage.ResetTokenPriceTrades(token, from, to)
-	return rows, err
-}
-
-func (s *TradeLogs) resetTokenPriceCowTransfer(token string, from int64, to int64) (int64, error) {
-	rows, err := s.cowTradeStorage.ResetTokenPriceTransfers(token, from, to)
-	return rows, err
-}
-
 func (s *TradeLogs) resetTokenPriceTradelogs(exchange, token string, from int64, to int64) (int64, error, bool) {
 	for _, storage := range s.storage {
 		if storage.Exchange() != exchange {
