@@ -1,4 +1,4 @@
-package cowtransferparser // nolint: testpackage
+package erc20transfer // nolint: testpackage
 
 import (
 	"context"

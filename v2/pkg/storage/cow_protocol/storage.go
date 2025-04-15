@@ -2,7 +2,6 @@ package cowprotocol
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
@@ -27,7 +26,7 @@ func (s *CowTradeStorage) tableName() string {
 	return constant.TableCowProtocol
 }
 
-func (s *CowTradeStorage) InsertCowTrades(trades []CowTrade) error {
+func (s *CowTradeStorage) UpsertCowTrades(trades []CowTrade) error {
 	if len(trades) == 0 {
 		return nil
 	}
@@ -81,17 +80,8 @@ func (s *CowTradeStorage) GetCowTrades(query CowTradeQuery) ([]CowTrade, error) 
 	if query.ToTime != 0 {
 		builder = builder.Where(squirrel.LtOrEq{"timestamp": query.ToTime})
 	}
-	v := reflect.ValueOf(query)
-	types := v.Type()
-	for i := 0; i < v.NumField(); i++ {
-		tag := types.Field(i).Tag.Get("form")
-		if tag == "from_time" || tag == "to_time" || tag == "limit" {
-			continue
-		}
-		if v.Field(i).IsZero() {
-			continue
-		}
-		builder = builder.Where(squirrel.Eq{tag: strings.ToLower(v.Field(i).String())})
+	if query.TxHash != "" {
+		builder = builder.Where(squirrel.Eq{"tx_hash": query.TxHash})
 	}
 	if query.Limit != 0 {
 		builder = builder.Limit(query.Limit)

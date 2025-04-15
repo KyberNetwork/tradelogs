@@ -1,4 +1,4 @@
-package cowtransferparser
+package erc20transfer
 
 import (
 	"errors"
@@ -15,18 +15,18 @@ const (
 	TransferEvent = "Transfer"
 )
 
-type CowTransferParser struct {
+type ERC20TransferParser struct {
 	abi               *abi.ABI
-	ps                *TransferFilterer
+	ps                *ERC20TransferFilterer
 	transferEventHash string
 }
 
-func MustNewParser() (*CowTransferParser, error) {
-	ps, err := NewTransferFilterer(common.Address{}, nil)
+func MustNewParser() (*ERC20TransferParser, error) {
+	ps, err := NewERC20TransferFilterer(common.Address{}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error when create new cow transfer filterer %w", err)
 	}
-	ab, err := TransferMetaData.GetAbi()
+	ab, err := ERC20TransferMetaData.GetAbi()
 	if err != nil {
 		return nil, fmt.Errorf("error when get abi of cow transfer metadata %w", err)
 	}
@@ -34,20 +34,20 @@ func MustNewParser() (*CowTransferParser, error) {
 	if !ok {
 		return nil, fmt.Errorf("no such event: Transfer")
 	}
-	return &CowTransferParser{
+	return &ERC20TransferParser{
 		ps:                ps,
 		abi:               ab,
 		transferEventHash: transferEvent.ID.String(),
 	}, nil
 }
 
-func (p *CowTransferParser) Topics() []string {
+func (p *ERC20TransferParser) Topics() []string {
 	return []string{
 		p.transferEventHash,
 	}
 }
 
-func (p *CowTransferParser) Parse(log ethereumTypes.Log, blockTime uint64) (cowStorage.CowTransfer, error) {
+func (p *ERC20TransferParser) Parse(log ethereumTypes.Log, blockTime uint64) (cowStorage.CowTransfer, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.transferEventHash {
 		return cowStorage.CowTransfer{}, errors.New("invalid order topic")
 	}
@@ -66,7 +66,7 @@ func (p *CowTransferParser) Parse(log ethereumTypes.Log, blockTime uint64) (cowS
 	}
 	return res, nil
 }
-func (p *CowTransferParser) IsMatchLog(log ethereumTypes.Log) bool {
+func (p *ERC20TransferParser) IsContractLog(log ethereumTypes.Log) bool {
 	return len(log.Topics) >= 3 &&
 		strings.EqualFold(log.Topics[0].String(), p.transferEventHash)
 }

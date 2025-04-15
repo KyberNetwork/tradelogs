@@ -3,6 +3,8 @@ package handler
 import (
 	"fmt"
 
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
+	erc20Parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/ERC20_transfer"
 	cowParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol"
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
@@ -12,23 +14,23 @@ import (
 )
 
 type CowTradesHandler struct {
-	l               *zap.SugaredLogger
-	storage         *cowStorage.CowTradeStorage
-	tradeParsers    []cowParser.TradeParser
-	transferParsers []cowParser.TransferParser
+	l              *zap.SugaredLogger
+	storage        *cowStorage.CowTradeStorage
+	tradeParser    cowParser.TradeParser
+	transferParser *erc20Parser.ERC20TransferParser
 }
 
 func NewCowTradeHandler(
 	l *zap.SugaredLogger,
 	cowTradeStorage *cowStorage.CowTradeStorage,
-	tradeParsers []cowParser.TradeParser,
-	transferParsers []cowParser.TransferParser,
+	tradeParser cowParser.TradeParser,
+	transferParser *erc20Parser.ERC20TransferParser,
 ) *CowTradesHandler {
 	return &CowTradesHandler{
-		l:               l,
-		storage:         cowTradeStorage,
-		tradeParsers:    tradeParsers,
-		transferParsers: transferParsers,
+		l:              l,
+		storage:        cowTradeStorage,
+		tradeParser:    tradeParser,
+		transferParser: transferParser,
 	}
 }
 
@@ -56,7 +58,7 @@ func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame
 			timestamp:   timestamp,
 		}
 
-		cowTrades := h.processCallFrameForCowTrades(call.CallFrame, metadata)
+		cowTrades, cowTransfers := h.processCallFrameForCowTrades(call.CallFrame, metadata)
 		if len(cowTrades) == 0 {
 			continue
 		}
@@ -65,7 +67,6 @@ func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame
 			cowTrades[j].InteractContract = call.CallFrame.To
 		}
 		tradesResult = append(tradesResult, cowTrades...)
-		cowTransfers := h.processCallFrameForCowTransfers(call.CallFrame, metadata)
 		transfersResult = append(transfersResult, cowTransfers...)
 	}
 
@@ -73,12 +74,12 @@ func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame
 		return nil
 	}
 
-	err := h.storage.InsertCowTrades(tradesResult)
+	err := h.storage.UpsertCowTrades(tradesResult)
 	if err != nil {
 		return fmt.Errorf("insert cow trades error: %w", err)
 	}
 	h.l.Infow("successfully insert cow trades", "blockNumber", blockNumber, "number", len(tradesResult))
-	err = h.storage.InsertCowTransfers(transfersResult)
+	err = h.storage.UpsertCowTransfers(transfersResult, false)
 	if err != nil {
 		return fmt.Errorf("insert cow transfers error: %w", err)
 	}
@@ -87,13 +88,15 @@ func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame
 	return nil
 }
 
-func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, metadata logMetadata) []cowStorage.CowTrade {
-	result := make([]cowStorage.CowTrade, 0)
+func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, metadata logMetadata) ([]cowStorage.CowTrade, []cowStorage.CowTransfer) {
+	tradesResult := make([]cowStorage.CowTrade, 0)
+	transfersResult := make([]cowStorage.CowTransfer, 0)
 
 	// process the sub trace calls
 	for _, traceCall := range call.Calls {
-		cowTrades := h.processCallFrameForCowTrades(traceCall, metadata)
-		result = append(result, cowTrades...)
+		cowTrades, cowTransfers := h.processCallFrameForCowTrades(traceCall, metadata)
+		tradesResult = append(tradesResult, cowTrades...)
+		transfersResult = append(transfersResult, cowTransfers...)
 	}
 	for _, log := range call.Logs {
 		ethLog := ethereumTypes.Log{
@@ -107,55 +110,29 @@ func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, me
 			Index:       uint(log.Index),
 		}
 
-		p := h.findMatchingCowTradeParser(ethLog)
-		if p == nil {
-			continue
-		}
-		// parse trade log
-		cowTrade, err := p.Parse(ethLog, metadata.timestamp)
-		if err != nil {
-			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", "cowTradeParser")
-			continue
-		}
-		cowTrade.MessageSender = call.From
-		result = append(result, cowTrade)
-	}
-	return result
-}
-
-func (h *CowTradesHandler) processCallFrameForCowTransfers(call types.CallFrame, metadata logMetadata) []cowStorage.CowTransfer {
-	result := make([]cowStorage.CowTransfer, 0)
-
-	// process the sub trace calls
-	for _, traceCall := range call.Calls {
-		cowTransfers := h.processCallFrameForCowTransfers(traceCall, metadata)
-		result = append(result, cowTransfers...)
-	}
-	for _, log := range call.Logs {
-		ethLog := ethereumTypes.Log{
-			Address:     log.Address,
-			Topics:      log.Topics,
-			Data:        common.FromHex(log.Data),
-			TxIndex:     uint(metadata.txIndex),
-			TxHash:      common.HexToHash(metadata.txHash),
-			BlockHash:   common.HexToHash(metadata.blockHash),
-			BlockNumber: metadata.blockNumber,
-			Index:       uint(log.Index),
+		if h.tradeParser.IsContractLog(ethLog) {
+			cowTrade, err := h.tradeParser.Parse(ethLog, metadata.timestamp)
+			if err != nil {
+				h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", "cowTransferParesr")
+			} else {
+				cowTrade.MessageSender = call.From
+				tradesResult = append(tradesResult, cowTrade)
+			}
 		}
 
-		p := h.findMatchingCowTransferParser(ethLog)
-		if p == nil {
-			continue
+		if h.transferParser.IsContractLog(ethLog) {
+			cowTransfer, err := h.transferParser.Parse(ethLog, metadata.timestamp)
+			if err != nil {
+				h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", "cowTransferParesr")
+			} else {
+				if cowTransfer.FromAddress == constant.AddrCowProtocol || cowTransfer.ToAddress == constant.AddrCowProtocol {
+					transfersResult = append(transfersResult, cowTransfer)
+				}
+			}
 		}
-		// parse trade log
-		cowTransfer, err := p.Parse(ethLog, metadata.timestamp)
-		if err != nil {
-			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", "cowTransferParesr")
-			continue
-		}
-		result = append(result, cowTransfer)
+
 	}
-	return result
+	return tradesResult, transfersResult
 }
 
 func (h *CowTradesHandler) RevertBlock(blocks []uint64) error {
@@ -173,23 +150,5 @@ func (h *CowTradesHandler) RevertBlock(blocks []uint64) error {
 		return fmt.Errorf("delete blocks error: %w", err)
 	}
 
-	return nil
-}
-
-func (h *CowTradesHandler) findMatchingCowTradeParser(log ethereumTypes.Log) cowParser.TradeParser {
-	for _, p := range h.tradeParsers {
-		if p.IsMatchLog(log) {
-			return p
-		}
-	}
-	return nil
-}
-
-func (h *CowTradesHandler) findMatchingCowTransferParser(log ethereumTypes.Log) cowParser.TransferParser {
-	for _, p := range h.transferParsers {
-		if p.IsMatchLog(log) {
-			return p
-		}
-	}
 	return nil
 }

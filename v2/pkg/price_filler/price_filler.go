@@ -158,7 +158,7 @@ func (p *PriceFiller) runBackFillTradelogPriceRoutine(fillPriceInterval time.Dur
 				continue
 			}
 
-			p.FullyFillTradeLogs(tradeLogs)
+			p.FullFillTradeLogs(tradeLogs)
 			if err = s.Insert(tradeLogs); err != nil {
 				p.l.Errorw("Failed to insert tradeLogs", "exchange", s.Exchange(), "err", err)
 				continue
@@ -184,7 +184,7 @@ func (p *PriceFiller) runBackFillCowTradesPriceRoutine(fillPriceInterval time.Du
 			continue
 		}
 		p.FullyFillCowTrades(cowTrades)
-		if err = p.cowTradeStorage.InsertCowTrades(cowTrades); err != nil {
+		if err = p.cowTradeStorage.UpsertCowTrades(cowTrades); err != nil {
 			p.l.Errorw("Failed to insert filled cowTrades", "err", err)
 			continue
 		}
@@ -205,14 +205,14 @@ func (p *PriceFiller) runBackFillCowTransfersPriceRoutine(fillPriceInterval time
 		}
 		p.FullyFillCowTransferEvents(transferEvents)
 
-		if err = p.cowTradeStorage.InsertCowTransfers(transferEvents); err != nil {
+		if err = p.cowTradeStorage.UpsertCowTransfers(transferEvents, true); err != nil {
 			p.l.Errorw("Failed to insert filled transfer event", "err", err)
 		}
 
 	}
 }
 
-func (p *PriceFiller) fullyFillTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
+func (p *PriceFiller) fullFillTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
 	makerPrice, makerUsdAmount, err := p.getPriceAndAmountUsd(strings.ToLower(tradeLog.MakerToken),
 		tradeLog.MakerTokenAmount, int64(tradeLog.Timestamp))
 	if isConnectionRefusedError(err) {
@@ -236,7 +236,7 @@ func (p *PriceFiller) fullyFillTradeLog(tradeLog storageTypes.TradeLog) (storage
 	return tradeLog, nil
 }
 
-func (p *PriceFiller) fullyFillBebopTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
+func (p *PriceFiller) fullFillBebopTradeLog(tradeLog storageTypes.TradeLog) (storageTypes.TradeLog, error) {
 	makerTokens := strings.Split(strings.ToLower(tradeLog.MakerToken), ",")
 	takerTokens := strings.Split(strings.ToLower(tradeLog.TakerToken), ",")
 	makerAmounts := strings.Split(tradeLog.MakerTokenAmount, ",")
@@ -348,17 +348,17 @@ func (p *PriceFiller) getPriceAndAmountUsd(address, rawAmt string, at int64) (fl
 	return 0, 0, nil
 }
 
-func (p *PriceFiller) FullyFillTradeLogs(tradeLogs []storageTypes.TradeLog) {
+func (p *PriceFiller) FullFillTradeLogs(tradeLogs []storageTypes.TradeLog) {
 	for idx, tradeLog := range tradeLogs {
 		// for the safety, sleep a bit to avoid Binance rate limit
 		time.Sleep(10 * time.Millisecond)
-		f := p.fullyFillTradeLog
+		f := p.fullFillTradeLog
 		if tradeLog.Exchange == constant.ExBebop {
-			f = p.fullyFillBebopTradeLog
+			f = p.fullFillBebopTradeLog
 		}
 		filledTradeLog, err := f(tradeLog)
 		if err != nil {
-			p.l.Errorw("Failed to fullyFillTradeLog", "err", err, "tradeLog", tradeLog)
+			p.l.Errorw("Failed to fullFillTradeLog", "err", err, "tradeLog", tradeLog)
 			continue
 		}
 		tradeLogs[idx] = filledTradeLog

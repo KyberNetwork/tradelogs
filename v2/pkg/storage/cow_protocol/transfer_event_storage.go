@@ -12,16 +12,16 @@ func (s *CowTradeStorage) transferTableName() string {
 	return constant.TableCowTransfer
 }
 
-func (s *CowTradeStorage) InsertCowTransfers(events []CowTransfer) error {
+func (s *CowTradeStorage) UpsertCowTransfers(events []CowTransfer, isUpdate bool) error {
 	if len(events) == 0 {
 		return nil
 	}
 	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(s.transferTableName()).Columns(
-		cowTransferStorageColumns()...,
+		cowTransferStorageColumns(isUpdate)...,
 	)
 	for _, event := range events {
 		b = b.Values(
-			cowTransferStorageSerialize(&event)...,
+			cowTransferStorageSerialize(&event, isUpdate)...,
 		)
 	}
 	q, p, err := b.Suffix(`ON CONFLICT(transfer_id) DO UPDATE 
@@ -125,8 +125,8 @@ func (s *CowTradeStorage) ResetTokenPriceTransfers(token string, from, to int64)
 	return rowsAffected, nil
 }
 
-func cowTransferStorageSerialize(o *CowTransfer) []interface{} {
-	return []interface{}{
+func cowTransferStorageSerialize(o *CowTransfer, isUpdate bool) []interface{} {
+	data := []interface{}{
 		strings.ToLower(o.TxHash),
 		strings.ToLower(o.FromAddress),
 		strings.ToLower(o.ToAddress),
@@ -137,18 +137,29 @@ func cowTransferStorageSerialize(o *CowTransfer) []interface{} {
 		o.TokenPrice,
 		o.AmountUsd,
 	}
+	if isUpdate {
+		return append([]interface{}{o.TransferId}, data...)
+	}
+	return data
 }
 
-func cowTransferStorageColumns() []string {
-	return []string{
-		"tx_hash",
-		"from_address",
-		"to_address",
-		"token",
-		"timestamp",
-		"block_number",
-		"amount",
-		"token_price",
-		"amount_usd",
+func cowTransferStorageColumns(isUpdate bool) []string {
+	result := []string{}
+	if isUpdate {
+		result = append(result, "transfer_id")
 	}
+	result = append(result,
+		[]string{
+			"tx_hash",
+			"from_address",
+			"to_address",
+			"token",
+			"timestamp",
+			"block_number",
+			"amount",
+			"token_price",
+			"amount_usd",
+		}...,
+	)
+	return result
 }

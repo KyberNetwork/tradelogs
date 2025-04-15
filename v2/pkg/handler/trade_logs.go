@@ -10,7 +10,6 @@ import (
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -158,7 +157,9 @@ func (h *TradeLogHandler) processCallFrameForTradelog(call types.CallFrame, meta
 			h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", p.Exchange())
 			continue
 		}
-
+		if len(tradeLogs) == 0 {
+			continue
+		}
 		for i := range tradeLogs {
 			tradeLogs[i].MessageSender = call.From
 		}
@@ -203,21 +204,4 @@ func (h *TradeLogHandler) RevertBlock(blocks []uint64) error {
 	h.l.Infow("published revert message", "message", string(msgBytes))
 
 	return nil
-}
-
-func AssignLogIndexes(cf *types.CallFrame, index int) int {
-	subCallIndex := hexutil.Uint(0)
-	for i := range cf.Logs {
-		for subCallIndex < cf.Logs[i].Position {
-			index = AssignLogIndexes(&cf.Calls[subCallIndex], index)
-			subCallIndex++
-		}
-		cf.Logs[i].Index = index
-		index++
-	}
-	for subCallIndex < hexutil.Uint(len(cf.Calls)) {
-		index = AssignLogIndexes(&cf.Calls[subCallIndex], index)
-		subCallIndex++
-	}
-	return index
 }

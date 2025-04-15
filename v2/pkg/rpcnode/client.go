@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -54,6 +55,10 @@ func (c *Client) FetchTraceCalls(ctx context.Context, blockHash string) ([]types
 				continue
 			}
 			// success case
+			logIndexStart := 0
+			for _, call := range result {
+				logIndexStart = util.AssignLogIndexes(&call.CallFrame, logIndexStart)
+			}
 			return result, nil
 		}
 		// retry if having error

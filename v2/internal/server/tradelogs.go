@@ -229,21 +229,29 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
-	row := int64(0)
-	err = nil
+	var (
+		rows              int64
+		haveExchangeMatch bool
+	)
 	switch query.Exchange {
 	case constant.CowProtocol:
-		row, err = s.resetTokenPriceCowTrade(query.Address, query.From, query.To)
+		haveExchangeMatch = true
+		rows, err = s.cowTradeStorage.ResetTokenPriceTrades(query.Address, query.From, query.To)
 	case constant.CowTransfer:
-		row, err = s.resetTokenPriceCowTransfer(query.Address, query.From, query.To)
+		haveExchangeMatch = true
+		rows, err = s.cowTradeStorage.ResetTokenPriceTransfers(query.Address, query.From, query.To)
 	default:
-		row, err = s.resetTokenPriceTradelogs(query.Exchange, query.Address, query.From, query.To)
+		rows, err, haveExchangeMatch = s.resetTokenPriceTradelogs(query.Exchange, query.Address, query.From, query.To)
 	}
 	if err != nil {
 		responseErr(c, http.StatusInternalServerError, err)
 		return
 	}
-	query.Rows = row
+	if !haveExchangeMatch {
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("exchange not found"))
+		return
+	}
+	query.Rows = rows
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    query,
@@ -260,15 +268,15 @@ func (s *TradeLogs) resetTokenPriceCowTransfer(token string, from int64, to int6
 	return rows, err
 }
 
-func (s *TradeLogs) resetTokenPriceTradelogs(exchange, token string, from int64, to int64) (int64, error) {
+func (s *TradeLogs) resetTokenPriceTradelogs(exchange, token string, from int64, to int64) (int64, error, bool) {
 	for _, storage := range s.storage {
 		if storage.Exchange() != exchange {
 			continue
 		}
 		rows, err := storage.ResetTokenPriceToRefetch(token, from, to)
-		return rows, err
+		return rows, err, true
 	}
-	return 0, nil
+	return 0, nil, false
 }
 
 func validateResetTokenPriceParams(query resetTokenPriceParams) (resetTokenPriceParams, error) {

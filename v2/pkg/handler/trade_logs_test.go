@@ -34,8 +34,20 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	mockKafka := &mocks.MockPublisher{}
 	mockKafka.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
+	ethClient, err := ethclient.Dial(rpcURL)
+	if err != nil {
+		t.Fatalf("failed to dial to rpc url: %s, err: %s", rpcURL, err)
+	}
+
+	ethClients := make([]*ethclient.Client, len(rpcURL))
+	ethClients = append(ethClients, ethClient)
+	rpcNode := rpcnode.NewClient(zap.S(), ethClients...)
+
+	blockHash := "0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048"
+	callFrames, err := rpcNode.FetchTraceCalls(context.Background(), blockHash)
+	assert.NoError(t, err)
 	h := NewTradeLogHandler(zap.S(), s, []parser.Parser{p}, "test", mockKafka)
-	err := h.ProcessBlock("0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048", 20181990, 1725436442, nil) //please add callFrames
+	err = h.ProcessBlock(blockHash, 20181990, 1725436442, callFrames)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,10 +74,10 @@ func TestAssignLogIndexes(t *testing.T) {
 	logs, err := client.FetchLogsByBlockHash(context.Background(), blockHash)
 	assert.Nil(t, err)
 
-	id := 0
+	// id := 0
 	callLogs := make([]types2.CallLog, 0)
 	for _, call := range traceCalls {
-		id = AssignLogIndexes(&call.CallFrame, id)
+		// id = util.AssignLogIndexes(&call.CallFrame, id)
 		callLogs = append(callLogs, getLogs(call.CallFrame)...)
 	}
 

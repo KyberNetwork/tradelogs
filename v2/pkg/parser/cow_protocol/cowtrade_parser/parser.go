@@ -75,7 +75,7 @@ func (p *CowTradeParser) Parse(log ethereumTypes.Log, blockTime uint64) (cowStor
 	return res, nil
 }
 
-func (p *CowTradeParser) IsMatchLog(log ethereumTypes.Log) bool {
+func (p *CowTradeParser) IsContractLog(log ethereumTypes.Log) bool {
 	return strings.EqualFold(log.Address.String(), constant.AddrCowProtocol) &&
 		len(log.Topics) > 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.tradeEventHash)

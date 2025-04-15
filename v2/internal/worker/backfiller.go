@@ -33,7 +33,7 @@ type BackFiller struct {
 	l                *zap.SugaredLogger
 	rpc              rpcnode.IClient
 	parsers          []parser.Parser
-	cowtradeParsers  []cowParser.TradeParser
+	cowtradeParser   cowParser.TradeParser
 }
 
 func NewBackFiller(
@@ -42,7 +42,7 @@ func NewBackFiller(
 	cowtradesHandler *handler.CowTradesHandler,
 	backfillStorage backfill.IStorage, stateStorage state.Storage,
 	l *zap.SugaredLogger, rpc rpcnode.IClient, parsers []parser.Parser,
-	cowtradeParsers []cowParser.TradeParser,
+	cowtradeParser cowParser.TradeParser,
 ) *BackFiller {
 	return &BackFiller{
 		tradelogsHandler: tradelogsHandler,
@@ -53,7 +53,7 @@ func NewBackFiller(
 		l:                l,
 		rpc:              rpc,
 		parsers:          parsers,
-		cowtradeParsers:  cowtradeParsers,
+		cowtradeParser:   cowtradeParser,
 	}
 }
 
@@ -218,11 +218,6 @@ func (w *BackFiller) processBlock(blockNumber uint64, exclusions sets.Set[string
 	if err != nil {
 		return fmt.Errorf("fetch calls error: %w", err)
 	}
-	logIndexStart := 0
-	for _, call := range calls {
-		logIndexStart = handler.AssignLogIndexes(&call.CallFrame, logIndexStart)
-	}
-
 	err = w.promoteeHandler.ProcessBlock(block.Hash().String(), blockNumber, block.Time(), calls)
 	if err != nil {
 		return fmt.Errorf("cannot process block %d: %w", blockNumber, err)
@@ -246,11 +241,6 @@ func (w *BackFiller) processBlockForCowTrade(blockNumber uint64) error {
 	if err != nil {
 		return fmt.Errorf("fetch calls error: %w", err)
 	}
-	logIndexStart := 0
-	for _, call := range calls {
-		logIndexStart = handler.AssignLogIndexes(&call.CallFrame, logIndexStart)
-	}
-
 	err = w.cowtradesHandler.ProcessBlock(block.Hash().String(), blockNumber, block.Time(), calls)
 	if err != nil {
 		return fmt.Errorf("cannot process block %d: %w", blockNumber, err)
@@ -375,6 +365,7 @@ func (w *BackFiller) getBlockByExchange(from, to uint64, exchange string) ([]uin
 		// get logs
 		logs, err = w.rpc.FetchLogs(context.Background(), currentFrom, currentTo, address, topics)
 		if err != nil {
+			w.l.Errorw("error when fetch logs", "error", err)
 			break
 		}
 
@@ -483,11 +474,8 @@ func (w *BackFiller) getBlockByCowProtocol(from, to uint64) ([]uint64, error) {
 		err          error
 	)
 	// get exchange address and topics to filter logs
-	for _, p := range w.cowtradeParsers {
-		address = constant.AddrCowProtocol
-		topics = p.Topics()
-		break
-	}
+	address = constant.AddrCowProtocol
+	topics = w.cowtradeParser.Topics()
 
 	for currentTo := to; currentTo >= from; {
 		currentFrom := max(currentTo-maxQueryBlockRange, from)

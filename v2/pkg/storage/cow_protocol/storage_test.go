@@ -26,9 +26,10 @@ func TestSimple(t *testing.T) {
 	defer func() {
 		assert.NoError(t, tearDown())
 	}()
+
 	s := New(l, db)
-	var tradeLogs []CowTrade
-	tradeLogs = append(tradeLogs, CowTrade{
+
+	expectedTrade := CowTrade{
 		Owner:           "owner",
 		SellToken:       "selltoken",
 		BuyToken:        "buytoken",
@@ -42,9 +43,11 @@ func TestSimple(t *testing.T) {
 		LogIndex:        1,
 		Timestamp:       1,
 		EventHash:       "event_hash",
-	})
+	}
 
-	assert.NoError(t, s.InsertCowTrades(tradeLogs), "failed to insert tradelogs")
+	tradeLogs := []CowTrade{expectedTrade}
+
+	assert.NoError(t, s.UpsertCowTrades(tradeLogs), "failed to insert tradelogs")
 
 	query := CowTradeQuery{
 		FromTime: 0,
@@ -52,6 +55,6 @@ func TestSimple(t *testing.T) {
 	}
 	trades, err := s.GetCowTrades(query)
 	assert.NoError(t, err)
-	t.Log(trades)
 
+	assert.Equal(t, []CowTrade{expectedTrade}, trades, "queried trades should match inserted trades")
 }

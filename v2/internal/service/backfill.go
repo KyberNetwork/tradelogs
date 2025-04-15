@@ -122,11 +122,9 @@ func (s *Backfill) NewBackfillTask(from, to uint64, exchange string) (int, strin
 	}
 	switch exchange {
 	case constant.CowProtocol:
-		id, message, err := s.NewBackfillForCowTrade(from, to)
-		return id, message, err
+		return s.NewBackfillForCowTrade(from, to)
 	default:
-		id, message, err := s.NewBackfillForTradeLogs(from, to, exchange)
-		return id, message, err
+		return s.NewBackfillForTradeLogs(from, to, exchange)
 	}
 }
 

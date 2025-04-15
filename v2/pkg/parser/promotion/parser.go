@@ -9,6 +9,6 @@ type Parser interface {
 	Parse(log ethereumTypes.Log, blockTime uint64) (storageTypes.Promotee, error)
 	Topics() []string
 	Contract() string
-	IsMatchLog(log ethereumTypes.Log) bool
+	IsContractLog(log ethereumTypes.Log) bool
 	Address() string
 }

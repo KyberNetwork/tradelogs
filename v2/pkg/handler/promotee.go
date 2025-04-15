@@ -105,7 +105,7 @@ func (h *PromoteeHandler) processCallFrame(call types.CallFrame, metadata logMet
 
 func (h *PromoteeHandler) findMatchingParser(log ethereumTypes.Log) promotionparser.Parser {
 	for _, p := range h.parsers {
-		if p.IsMatchLog(log) {
+		if p.IsContractLog(log) {
 			return p
 		}
 	}

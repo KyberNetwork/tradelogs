@@ -60,7 +60,7 @@ func TestFillPrice(t *testing.T) {
 			EventHash:        "0xd6d4f5681c246c9f42c203e287975af1601f8df8035a9251f79aab5c8f09e2f8",
 		},
 	}
-	filler.FullyFillTradeLogs(tradeLogs)
+	filler.FullFillTradeLogs(tradeLogs)
 
 	m, _ := json.Marshal(tradeLogs)
 	t.Log(string(m))
@@ -93,7 +93,7 @@ func TestFillBebopPrice(t *testing.T) {
 			EventHash:        "0xadd7095becdaa725f0f33243630938c861b0bba83dfd217d4055701aa768ec2e",
 		},
 	}
-	filler.FullyFillTradeLogs(tradeLogs)
+	filler.FullFillTradeLogs(tradeLogs)
 
 	m, _ := json.Marshal(tradeLogs)
 	t.Log(string(m))

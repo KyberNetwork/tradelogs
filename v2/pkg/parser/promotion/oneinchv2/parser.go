@@ -69,7 +69,7 @@ func (p *Parser) Contract() string {
 	return constant.Promotion1InchV2
 }
 
-func (p *Parser) IsMatchLog(log ethereumTypes.Log) bool {
+func (p *Parser) IsContractLog(log ethereumTypes.Log) bool {
 	return strings.EqualFold(log.Address.String(), constant.AddrPr1InchV2) &&
 		len(log.Topics) > 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.eventHash)
