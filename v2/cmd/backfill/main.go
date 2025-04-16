@@ -12,21 +12,24 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/handler"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/kafka"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+	tradeLogsParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser"
+	erc20Parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/ERC20_transfer"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/bebop"
+	cowTradesParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol/cowtrade_parser"
 	hashflowv3 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/hashflow_v3"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap"
 	kyberswaprfq "github.com/KyberNetwork/tradelogs/v2/pkg/parser/kyberswap_rfq"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/oneinchv6"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/pancakeswap"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/paraswap"
+	promotionParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/promotion"
+	promotion1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/parser/promotion/oneinchv2"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/uniswapx"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxotc"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser"
-	promotion1inchv2 "github.com/KyberNetwork/tradelogs/v2/pkg/promotionparser/oneinchv2"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/backfill"
+	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	promotee_storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/state"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
@@ -126,7 +129,7 @@ func run(c *cli.Context) error {
 	}
 	rpcNode := rpcnode.NewClient(l, ethClients...)
 
-	parsers := []parser.Parser{
+	parsers := []tradeLogsParser.Parser{
 		kyberswap.MustNewParser(),
 		zxotc.MustNewParser(),
 		paraswap.MustNewParser(),
@@ -139,7 +142,7 @@ func run(c *cli.Context) error {
 		pancakeswap.MustNewParser(),
 	}
 
-	promotionParsers := []promotionparser.Parser{promotion1inchv2.MustNewParser()}
+	promotionParsers := []promotionParser.Parser{promotion1inchv2.MustNewParser()}
 
 	// kafka broadcast topic
 	broadcastTopic := c.String(libapp.KafkaBroadcastTopic.Name)
@@ -154,11 +157,24 @@ func run(c *cli.Context) error {
 		return fmt.Errorf("cannot create kafka publisher: %w", err)
 	}
 
+	cowTradeStorage := cowProtocolStorage.New(l, db)
+
 	// trade log handler
-	tradeLogHandler := handler.NewTradeLogHandler(l, rpcNode, manager, promoteeStorage, parsers, promotionParsers, broadcastTopic, kafkaPublisher)
+	tradeLogHandler := handler.NewTradeLogHandler(l, manager, parsers, broadcastTopic, kafkaPublisher)
+	promoteeHandler := handler.NewPromoteeHandler(l, promoteeStorage, promotionParsers)
+
+	cowTradeParser, err := cowTradesParser.MustNewParser()
+	if err != nil {
+		return fmt.Errorf("cannot create cow trade parser: %w", err)
+	}
+	cowTransferParser, err := erc20Parser.MustNewParser()
+	if err != nil {
+		return fmt.Errorf("cannot create cow transfer parser: %w", err)
+	}
+	cowProtocolHandler := handler.NewCowTradeHandler(l, cowTradeStorage, cowTradeParser, cowTransferParser)
 
 	// parse log worker
-	w := worker.NewBackFiller(tradeLogHandler, backfillStorage, stateStorage, l, rpcNode, parsers)
+	w := worker.NewBackFiller(tradeLogHandler, promoteeHandler, cowProtocolHandler, backfillStorage, stateStorage, l, rpcNode, parsers, cowTradeParser)
 
 	w.Run()
 

@@ -1,10 +1,13 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
+	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	dashboardTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard/types"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
@@ -15,7 +18,8 @@ import (
 )
 
 var (
-	maxTimeRange = uint64(24 * time.Hour.Milliseconds())
+	maxTimeRange        = uint64(24 * time.Hour.Milliseconds())
+	ErrExchangeNotFound = errors.New("exchange not found")
 )
 
 const (
@@ -32,12 +36,13 @@ type resetTokenPriceParams struct {
 }
 
 type TradeLogs struct {
-	r             *gin.Engine
-	bindAddr      string
-	l             *zap.SugaredLogger
-	storage       []storageTypes.Storage
-	dashStorage   *dashboardStorage.Storage
-	deployStorage zerox_deployment.IStorage
+	r               *gin.Engine
+	bindAddr        string
+	l               *zap.SugaredLogger
+	storage         []storageTypes.Storage
+	dashStorage     *dashboardStorage.Storage
+	deployStorage   zerox_deployment.IStorage
+	cowTradeStorage *cowProtocolStorage.CowTradeStorage
 }
 
 func NewTradeLogs(
@@ -45,18 +50,20 @@ func NewTradeLogs(
 	s []storageTypes.Storage,
 	dashStorage *dashboardStorage.Storage,
 	deployStorage zerox_deployment.IStorage,
+	cowTradeStorage *cowProtocolStorage.CowTradeStorage,
 	bindAddr string,
 ) *TradeLogs {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
 
 	server := &TradeLogs{
-		r:             engine,
-		bindAddr:      bindAddr,
-		l:             l,
-		storage:       s,
-		dashStorage:   dashStorage,
-		deployStorage: deployStorage,
+		r:               engine,
+		bindAddr:        bindAddr,
+		l:               l,
+		storage:         s,
+		dashStorage:     dashStorage,
+		deployStorage:   deployStorage,
+		cowTradeStorage: cowTradeStorage,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -84,6 +91,8 @@ func (s *TradeLogs) register() {
 	s.r.POST("/txorigin", s.addTxOrigin)
 	s.r.POST("/price_filler/refetch", s.resetTokenPriceToRefetch)
 	s.r.GET("/0xv3_deployment", s.get0xv3Deployment)
+	s.r.GET("/cow_transfers", s.getCowTransfers)
+	s.r.GET("/cow_trades", s.getCowTrades)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -222,24 +231,39 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
-
-	for _, storage := range s.storage {
-		if storage.Exchange() != query.Exchange {
-			continue
-		}
-		rows, err := storage.ResetTokenPriceToRefetch(query.Address, query.From, query.To)
-		if err != nil {
-			responseErr(c, http.StatusInternalServerError, err)
-			return
-		}
-		query.Rows = rows
-		c.JSON(http.StatusOK, gin.H{
-			"success": true,
-			"data":    query,
-		})
+	var rows int64
+	switch query.Exchange {
+	case constant.CowProtocol:
+		rows, err = s.cowTradeStorage.ResetTokenPriceTrades(query.Address, query.From, query.To)
+	case constant.CowTransfer:
+		rows, err = s.cowTradeStorage.ResetTokenPriceTransfers(query.Address, query.From, query.To)
+	default:
+		rows, err = s.resetTokenPriceTradelogs(query.Exchange, query.Address, query.From, query.To)
+	}
+	if errors.Is(err, ErrExchangeNotFound) {
+		responseErr(c, http.StatusBadRequest, ErrExchangeNotFound)
 		return
 	}
-	responseErr(c, http.StatusBadRequest, fmt.Errorf("exchange not found"))
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, err)
+		return
+	}
+	query.Rows = rows
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    query,
+	})
+}
+
+func (s *TradeLogs) resetTokenPriceTradelogs(exchange, token string, from int64, to int64) (int64, error) {
+	for _, storage := range s.storage {
+		if storage.Exchange() != exchange {
+			continue
+		}
+		rows, err := storage.ResetTokenPriceToRefetch(token, from, to)
+		return rows, err
+	}
+	return 0, ErrExchangeNotFound
 }
 
 func validateResetTokenPriceParams(query resetTokenPriceParams) (resetTokenPriceParams, error) {
@@ -290,5 +314,39 @@ func (s *TradeLogs) get0xv3Deployment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    result,
+	})
+}
+
+func (s *TradeLogs) getCowTransfers(c *gin.Context) {
+	var queries cowProtocolStorage.CowTransferQuery
+	if err := c.ShouldBind(&queries); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+	data, err := s.cowTradeStorage.GetCowTransfers(queries)
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+	})
+}
+
+func (s *TradeLogs) getCowTrades(c *gin.Context) {
+	var queries cowProtocolStorage.CowTradeQuery
+	if err := c.ShouldBind(&queries); err != nil {
+		responseErr(c, http.StatusBadRequest, err)
+		return
+	}
+	data, err := s.cowTradeStorage.GetCowTrades(queries)
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
 	})
 }

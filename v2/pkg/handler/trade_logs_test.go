@@ -12,6 +12,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	types2 "github.com/KyberNetwork/tradelogs/v2/pkg/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	types3 "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
@@ -23,13 +24,6 @@ var rpcURL = os.Getenv("TEST_RPC_URL")
 
 func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	t.Skip("Need to set the rpc url env that enables the trace call JSON-RPC")
-
-	ethClient, err := ethclient.Dial(rpcURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client := rpcnode.NewClient(zap.S(), ethClient)
-
 	mockStorage := &mocks.MockStorage{}
 	mockStorage.On("Exchange").Return("zerox").
 		On("Insert", mock.Anything).Return(nil).
@@ -41,9 +35,18 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 	mockKafka := &mocks.MockPublisher{}
 	mockKafka.On("Publish", mock.Anything, mock.Anything).Return(nil)
 
-	h := NewTradeLogHandler(zap.S(), client, s, nil, []parser.Parser{p}, nil, "test", mockKafka)
+	ethClient, err := ethclient.Dial(rpcURL)
+	if err != nil {
+		t.Fatalf("failed to dial to rpc url: %s, err: %s", rpcURL, err)
+	}
 
-	err = h.ProcessBlock("0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048", 20181990, 1725436442)
+	rpcNode := rpcnode.NewClient(zap.S(), ethClient)
+
+	blockHash := "0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048"
+	callFrames, err := rpcNode.FetchTraceCalls(context.Background(), blockHash)
+	assert.NoError(t, err)
+	h := NewTradeLogHandler(zap.S(), s, []parser.Parser{p}, "test", mockKafka)
+	err = h.ProcessBlock(blockHash, 20181990, 1725436442, callFrames)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +76,7 @@ func TestAssignLogIndexes(t *testing.T) {
 	id := 0
 	callLogs := make([]types2.CallLog, 0)
 	for _, call := range traceCalls {
-		id = assignLogIndexes(&call.CallFrame, id)
+		id = util.AssignLogIndexes(&call.CallFrame, id)
 		callLogs = append(callLogs, getLogs(call.CallFrame)...)
 	}
 

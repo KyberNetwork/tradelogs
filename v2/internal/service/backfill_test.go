@@ -20,7 +20,7 @@ func TestBackfill_NewBackfill(t *testing.T) {
 
 	backfillStorage.On("GetTask").Return([]backfill.Task{}, nil)
 
-	w := worker.NewBackFiller(nil, backfillStorage, stateStorage, zap.S(), rpcClient, nil)
+	w := worker.NewBackFiller(nil, nil, nil, backfillStorage, stateStorage, zap.S(), rpcClient, nil, nil)
 	_, err := NewBackfillService(backfillStorage, zap.S(), w)
 	assert.NoError(t, err)
 
@@ -52,7 +52,7 @@ func TestBackfill_NewBackfillTask(t *testing.T) {
 		On("Address").Return("").
 		On("Topics").Return([]string{})
 
-	w := worker.NewBackFiller(nil, backfillStorage, stateStorage, zap.S(), rpcClient, []parser.Parser{mockParser})
+	w := worker.NewBackFiller(nil, nil, nil, backfillStorage, stateStorage, zap.S(), rpcClient, []parser.Parser{mockParser}, nil)
 	srv, err := NewBackfillService(backfillStorage, zap.S(), w)
 	assert.NoError(t, err)
 
@@ -143,7 +143,7 @@ func TestBackfill_ListTask(t *testing.T) {
 
 	rpcClient.On("FetchLogs", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]types.Log{}, nil)
 
-	w := worker.NewBackFiller(nil, backfillStorage, stateStorage, zap.S(), rpcClient, nil)
+	w := worker.NewBackFiller(nil, nil, nil, backfillStorage, stateStorage, zap.S(), rpcClient, nil, nil)
 	srv, err := NewBackfillService(backfillStorage, zap.S(), w)
 	assert.NoError(t, err)
 
