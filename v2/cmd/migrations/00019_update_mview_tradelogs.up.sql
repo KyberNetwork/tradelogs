@@ -32,8 +32,8 @@ WITH all_trades AS (
       'zerox' AS contract,
       '' AS type
   FROM public.tradelogs_zerox
-  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '1 day') * 1000
-  AND maker_usd_amount > 0 AND taker_usd_amount > 0
+  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '3 months') * 1000
+  AND (maker_usd_amount > 0 OR taker_usd_amount > 0)
 
   
   UNION ALL
@@ -69,8 +69,8 @@ WITH all_trades AS (
       'kyberswap' AS contract,
       '' AS type
   FROM public.tradelogs_kyberswap 
-  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '1 day') * 1000
-  AND maker_usd_amount > 0 AND taker_usd_amount > 0
+  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '3 months') * 1000
+  AND (maker_usd_amount > 0 OR taker_usd_amount > 0)
   
   UNION ALL
   
@@ -105,8 +105,8 @@ WITH all_trades AS (
       'kyberswap_rfq' AS contract,
       '' AS type
   FROM public.tradelogs_kyberswap_rfq 
-  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '1 day') * 1000
-  AND maker_usd_amount > 0 AND taker_usd_amount > 0
+  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '3 months') * 1000
+  AND (maker_usd_amount > 0 OR taker_usd_amount > 0)
   
   UNION ALL
   
@@ -141,8 +141,8 @@ WITH all_trades AS (
       'paraswap' AS contract,
       '' AS type
   FROM public.tradelogs_paraswap 
-  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '1 day') * 1000
-  AND maker_usd_amount > 0 AND taker_usd_amount > 0
+  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '3 months') * 1000
+  AND (maker_usd_amount > 0 OR taker_usd_amount > 0)
   
   UNION ALL
   
@@ -177,8 +177,8 @@ WITH all_trades AS (
       'hashflow_v3' AS contract,
       '' AS type
   FROM public.tradelogs_hashflow_v3 
-  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '1 day') * 1000
-  AND maker_usd_amount > 0 AND taker_usd_amount > 0
+  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '3 months') * 1000
+  AND (maker_usd_amount > 0 OR taker_usd_amount > 0)
   
   UNION ALL
   
@@ -213,8 +213,8 @@ WITH all_trades AS (
       'oneinch_v6' AS contract,
       type
   FROM public.tradelogs_oneinch_v6 
-  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '1 day') * 1000
-  AND maker_usd_amount > 0 AND taker_usd_amount > 0
+  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '3 months') * 1000
+  AND (maker_usd_amount > 0 OR taker_usd_amount > 0)
   
   UNION ALL
   
@@ -249,8 +249,8 @@ WITH all_trades AS (
       'uniswapx' AS contract,
       '' AS type
   FROM public.tradelogs_uniswapx 
-  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '1 day') * 1000
-  AND maker_usd_amount > 0 AND taker_usd_amount > 0
+  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '3 months') * 1000
+  AND (maker_usd_amount > 0 OR taker_usd_amount > 0)
   
   UNION ALL
   
@@ -285,8 +285,8 @@ WITH all_trades AS (
       'bebop' AS contract,
       '' AS type
   FROM public.tradelogs_bebop 
-  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '1 day') * 1000
-  AND maker_usd_amount > 0 AND taker_usd_amount > 0
+  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '3 months') * 1000
+  AND (maker_usd_amount > 0 OR taker_usd_amount > 0)
   
   UNION ALL
   
@@ -321,8 +321,8 @@ WITH all_trades AS (
       'zerox_v3' AS contract,
       '' AS type
   FROM public.tradelogs_zerox_v3
-  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '1 day') * 1000
-  AND maker_usd_amount > 0 AND taker_usd_amount > 0
+  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '3 months') * 1000
+  AND (maker_usd_amount > 0 OR taker_usd_amount > 0)
   
   UNION ALL
   
@@ -357,7 +357,7 @@ WITH all_trades AS (
       'pancakeswap' AS contract,
       '' AS type
   FROM public.tradelogs_pancakeswap 
-  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '1 day') * 1000
-  AND maker_usd_amount > 0 AND taker_usd_amount > 0
+  WHERE timestamp >= EXTRACT(EPOCH FROM CURRENT_TIMESTAMP - INTERVAL '3 months') * 1000
+  AND (maker_usd_amount > 0 OR taker_usd_amount > 0)
 )
 SELECT * FROM all_trades ORDER BY timestamp DESC;
