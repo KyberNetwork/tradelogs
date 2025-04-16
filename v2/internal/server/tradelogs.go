@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,7 +18,8 @@ import (
 )
 
 var (
-	maxTimeRange = uint64(24 * time.Hour.Milliseconds())
+	maxTimeRange        = uint64(24 * time.Hour.Milliseconds())
+	ErrExchangeNotFound = errors.New("exchange not found")
 )
 
 const (
@@ -229,26 +231,21 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
-	var (
-		rows              int64
-		haveExchangeMatch bool
-	)
+	var rows int64
 	switch query.Exchange {
 	case constant.CowProtocol:
-		haveExchangeMatch = true
 		rows, err = s.cowTradeStorage.ResetTokenPriceTrades(query.Address, query.From, query.To)
 	case constant.CowTransfer:
-		haveExchangeMatch = true
 		rows, err = s.cowTradeStorage.ResetTokenPriceTransfers(query.Address, query.From, query.To)
 	default:
-		rows, err, haveExchangeMatch = s.resetTokenPriceTradelogs(query.Exchange, query.Address, query.From, query.To)
+		rows, err = s.resetTokenPriceTradelogs(query.Exchange, query.Address, query.From, query.To)
+	}
+	if errors.Is(err, ErrExchangeNotFound) {
+		responseErr(c, http.StatusBadRequest, ErrExchangeNotFound)
+		return
 	}
 	if err != nil {
 		responseErr(c, http.StatusInternalServerError, err)
-		return
-	}
-	if !haveExchangeMatch {
-		responseErr(c, http.StatusBadRequest, fmt.Errorf("exchange not found"))
 		return
 	}
 	query.Rows = rows
@@ -258,15 +255,15 @@ func (s *TradeLogs) resetTokenPriceToRefetch(c *gin.Context) {
 	})
 }
 
-func (s *TradeLogs) resetTokenPriceTradelogs(exchange, token string, from int64, to int64) (int64, error, bool) {
+func (s *TradeLogs) resetTokenPriceTradelogs(exchange, token string, from int64, to int64) (int64, error) {
 	for _, storage := range s.storage {
 		if storage.Exchange() != exchange {
 			continue
 		}
 		rows, err := storage.ResetTokenPriceToRefetch(token, from, to)
-		return rows, err, true
+		return rows, err
 	}
-	return 0, nil, false
+	return 0, ErrExchangeNotFound
 }
 
 func validateResetTokenPriceParams(query resetTokenPriceParams) (resetTokenPriceParams, error) {
