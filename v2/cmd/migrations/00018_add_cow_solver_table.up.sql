@@ -31,8 +31,8 @@ create index cow_protocol_order_uid_idx
 
 create table cow_transfer_event
 (
-    transfer_id  serial not null,
     tx_hash      text   not null,
+    log_index    bigint not null,
     timestamp    bigint not null,
     block_number bigint not null,
     from_address text   not null,
@@ -41,7 +41,7 @@ create table cow_transfer_event
     amount       text   not null,
     token_price  double precision,
     amount_usd   double precision,
-    primary key (transfer_id)
+    primary key (block_number, log_index)
 );
 
 create index cow_transfer_event_timestamp_idx

@@ -12,6 +12,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/types"
 	types2 "github.com/KyberNetwork/tradelogs/v2/pkg/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	types3 "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/assert"
@@ -39,9 +40,7 @@ func TestTradeLogHandler_ProcessBlock(t *testing.T) {
 		t.Fatalf("failed to dial to rpc url: %s, err: %s", rpcURL, err)
 	}
 
-	ethClients := make([]*ethclient.Client, len(rpcURL))
-	ethClients = append(ethClients, ethClient)
-	rpcNode := rpcnode.NewClient(zap.S(), ethClients...)
+	rpcNode := rpcnode.NewClient(zap.S(), ethClient)
 
 	blockHash := "0x04b65fabd0eaaa00eae00782128a8add39e30098552738c305610259f14ea048"
 	callFrames, err := rpcNode.FetchTraceCalls(context.Background(), blockHash)
@@ -74,10 +73,10 @@ func TestAssignLogIndexes(t *testing.T) {
 	logs, err := client.FetchLogsByBlockHash(context.Background(), blockHash)
 	assert.Nil(t, err)
 
-	// id := 0
+	id := 0
 	callLogs := make([]types2.CallLog, 0)
 	for _, call := range traceCalls {
-		// id = util.AssignLogIndexes(&call.CallFrame, id)
+		id = util.AssignLogIndexes(&call.CallFrame, id)
 		callLogs = append(callLogs, getLogs(call.CallFrame)...)
 	}
 

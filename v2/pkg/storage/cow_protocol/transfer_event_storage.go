@@ -12,19 +12,19 @@ func (s *CowTradeStorage) transferTableName() string {
 	return constant.TableCowTransfer
 }
 
-func (s *CowTradeStorage) UpsertCowTransfers(events []CowTransfer, isUpdate bool) error {
+func (s *CowTradeStorage) InsertCowTransfers(events []CowTransfer) error {
 	if len(events) == 0 {
 		return nil
 	}
 	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(s.transferTableName()).Columns(
-		cowTransferStorageColumns(isUpdate)...,
+		cowTransferStorageColumns()...,
 	)
 	for _, event := range events {
 		b = b.Values(
-			cowTransferStorageSerialize(&event, isUpdate)...,
+			cowTransferStorageSerialize(&event)...,
 		)
 	}
-	q, p, err := b.Suffix(`ON CONFLICT(transfer_id) DO UPDATE 
+	q, p, err := b.Suffix(`ON CONFLICT(block_number, log_index) DO UPDATE 
 		SET 
 			token_price=excluded.token_price,
 			amount_usd=excluded.amount_usd
@@ -125,9 +125,10 @@ func (s *CowTradeStorage) ResetTokenPriceTransfers(token string, from, to int64)
 	return rowsAffected, nil
 }
 
-func cowTransferStorageSerialize(o *CowTransfer, isUpdate bool) []interface{} {
-	data := []interface{}{
+func cowTransferStorageSerialize(o *CowTransfer) []interface{} {
+	return []interface{}{
 		strings.ToLower(o.TxHash),
+		o.LogIndex,
 		strings.ToLower(o.FromAddress),
 		strings.ToLower(o.ToAddress),
 		strings.ToLower(o.Token),
@@ -137,29 +138,19 @@ func cowTransferStorageSerialize(o *CowTransfer, isUpdate bool) []interface{} {
 		o.TokenPrice,
 		o.AmountUsd,
 	}
-	if isUpdate {
-		return append([]interface{}{o.TransferId}, data...)
-	}
-	return data
 }
 
-func cowTransferStorageColumns(isUpdate bool) []string {
-	result := []string{}
-	if isUpdate {
-		result = append(result, "transfer_id")
+func cowTransferStorageColumns() []string {
+	return []string{
+		"tx_hash",
+		"log_index",
+		"from_address",
+		"to_address",
+		"token",
+		"timestamp",
+		"block_number",
+		"amount",
+		"token_price",
+		"amount_usd",
 	}
-	result = append(result,
-		[]string{
-			"tx_hash",
-			"from_address",
-			"to_address",
-			"token",
-			"timestamp",
-			"block_number",
-			"amount",
-			"token_price",
-			"amount_usd",
-		}...,
-	)
-	return result
 }

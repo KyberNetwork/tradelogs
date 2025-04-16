@@ -1,11 +1,11 @@
 package oneinchv2
 
 import (
-	"errors"
 	"strings"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	storageTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/promotees"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -49,7 +49,7 @@ func (p *Parser) Topics() []string {
 
 func (p *Parser) Parse(log ethereumTypes.Log, blockTime uint64) (storageTypes.Promotee, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.eventHash {
-		return storageTypes.Promotee{}, errors.New("invalid order topic")
+		return storageTypes.Promotee{}, util.ErrInvalidTopic
 	}
 	e, err := p.ps.ParsePromotion(log)
 	if err != nil {

@@ -60,7 +60,7 @@ func (h *TradeLogHandler) ProcessBlockWithExclusion(
 
 	err = h.processForTradelog(calls, blockHash, blockNumber, timestamp, exclusions)
 	if err != nil {
-		return fmt.Errorf("error when process block for tradelogs: %d", blockNumber)
+		return fmt.Errorf("error when process block for tradelogs: %w", blockNumber)
 	}
 
 	h.l.Infow("successfully process block for tradelogs", "blockNumber", blockNumber)

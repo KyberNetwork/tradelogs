@@ -2,12 +2,12 @@ package cowprotocol
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -51,7 +51,7 @@ func (p *CowTradeParser) Topics() []string {
 
 func (p *CowTradeParser) Parse(log ethereumTypes.Log, blockTime uint64) (cowStorage.CowTrade, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.tradeEventHash {
-		return cowStorage.CowTrade{}, errors.New("invalid order topic")
+		return cowStorage.CowTrade{}, util.ErrInvalidTopic
 	}
 	e, err := p.ps.ParseTrade(log)
 	if err != nil {

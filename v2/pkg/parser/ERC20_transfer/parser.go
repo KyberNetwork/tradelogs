@@ -1,11 +1,11 @@
 package erc20transfer
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
@@ -49,7 +49,7 @@ func (p *ERC20TransferParser) Topics() []string {
 
 func (p *ERC20TransferParser) Parse(log ethereumTypes.Log, blockTime uint64) (cowStorage.CowTransfer, error) {
 	if len(log.Topics) > 0 && log.Topics[0].Hex() != p.transferEventHash {
-		return cowStorage.CowTransfer{}, errors.New("invalid order topic")
+		return cowStorage.CowTransfer{}, util.ErrInvalidTopic
 	}
 	e, err := p.ps.ParseTransfer(log)
 	if err != nil {
@@ -57,6 +57,7 @@ func (p *ERC20TransferParser) Parse(log ethereumTypes.Log, blockTime uint64) (co
 	}
 	res := cowStorage.CowTransfer{
 		TxHash:      log.TxHash.String(),
+		LogIndex:    uint64(log.Index),
 		BlockNumber: log.BlockNumber,
 		Timestamp:   blockTime * 1000,
 		FromAddress: e.From.String(),
@@ -67,6 +68,6 @@ func (p *ERC20TransferParser) Parse(log ethereumTypes.Log, blockTime uint64) (co
 	return res, nil
 }
 func (p *ERC20TransferParser) IsContractLog(log ethereumTypes.Log) bool {
-	return len(log.Topics) >= 3 &&
+	return len(log.Topics) != 0 &&
 		strings.EqualFold(log.Topics[0].String(), p.transferEventHash)
 }

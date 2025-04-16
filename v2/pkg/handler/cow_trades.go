@@ -37,7 +37,7 @@ func NewCowTradeHandler(
 func (h *CowTradesHandler) ProcessBlock(blockHash string, blockNumber uint64, timestamp uint64, calls []types.TransactionCallFrame) error {
 	err := h.processForCowTrade(calls, blockHash, blockNumber, timestamp)
 	if err != nil {
-		return fmt.Errorf("error when process block for cow trade: %d", blockNumber)
+		return fmt.Errorf("error when process block for cow trade: %w", blockNumber)
 	}
 	h.l.Infow("successfully process block for cow trade", "blockNumber", blockNumber)
 	return nil
@@ -79,7 +79,7 @@ func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame
 		return fmt.Errorf("insert cow trades error: %w", err)
 	}
 	h.l.Infow("successfully insert cow trades", "blockNumber", blockNumber, "number", len(tradesResult))
-	err = h.storage.UpsertCowTransfers(transfersResult, false)
+	err = h.storage.InsertCowTransfers(transfersResult)
 	if err != nil {
 		return fmt.Errorf("insert cow transfers error: %w", err)
 	}
@@ -110,25 +110,28 @@ func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, me
 			Index:       uint(log.Index),
 		}
 
-		if h.tradeParser.IsContractLog(ethLog) {
+		switch {
+		case h.tradeParser.IsContractLog(ethLog):
 			cowTrade, err := h.tradeParser.Parse(ethLog, metadata.timestamp)
 			if err != nil {
 				h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", "cowTransferParesr")
-			} else {
-				cowTrade.MessageSender = call.From
-				tradesResult = append(tradesResult, cowTrade)
+				continue
+			}
+			cowTrade.MessageSender = call.From
+			tradesResult = append(tradesResult, cowTrade)
+		case h.transferParser.IsContractLog(ethLog):
+			cowTransfer, err := h.transferParser.Parse(ethLog, metadata.timestamp)
+			if err != nil {
+				h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", "cowTransferParesr")
+				continue
+			}
+			if cowTransfer.FromAddress == constant.AddrCowProtocol || cowTransfer.ToAddress == constant.AddrCowProtocol {
+				transfersResult = append(transfersResult, cowTransfer)
 			}
 		}
 
 		if h.transferParser.IsContractLog(ethLog) {
-			cowTransfer, err := h.transferParser.Parse(ethLog, metadata.timestamp)
-			if err != nil {
-				h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", "cowTransferParesr")
-			} else {
-				if cowTransfer.FromAddress == constant.AddrCowProtocol || cowTransfer.ToAddress == constant.AddrCowProtocol {
-					transfersResult = append(transfersResult, cowTransfer)
-				}
-			}
+
 		}
 
 	}
