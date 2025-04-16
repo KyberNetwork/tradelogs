@@ -129,11 +129,6 @@ func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, me
 				transfersResult = append(transfersResult, cowTransfer)
 			}
 		}
-
-		if h.transferParser.IsContractLog(ethLog) {
-
-		}
-
 	}
 	return tradesResult, transfersResult
 }
