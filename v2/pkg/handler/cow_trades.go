@@ -37,7 +37,7 @@ func NewCowTradeHandler(
 func (h *CowTradesHandler) ProcessBlock(blockHash string, blockNumber uint64, timestamp uint64, calls []types.TransactionCallFrame) error {
 	err := h.processForCowTrade(calls, blockHash, blockNumber, timestamp)
 	if err != nil {
-		return fmt.Errorf("error when process block for cow trade: %w", blockNumber)
+		return fmt.Errorf("error when process block %d for cow trade: %w", blockNumber, err)
 	}
 	h.l.Infow("successfully process block for cow trade", "blockNumber", blockNumber)
 	return nil

@@ -32,7 +32,7 @@ func NewPromoteeHandler(
 func (h *PromoteeHandler) ProcessBlock(blockHash string, blockNumber uint64, timestamp uint64, calls []types.TransactionCallFrame) error {
 	err := h.processForPromotion(calls, blockHash, blockNumber, timestamp)
 	if err != nil {
-		return fmt.Errorf("error when process block for promotee: %w", blockNumber)
+		return fmt.Errorf("error when process block %d for promotee: %w", blockNumber, err)
 	}
 
 	h.l.Infow("successfully process block for promotee", "blockNumber", blockNumber)
