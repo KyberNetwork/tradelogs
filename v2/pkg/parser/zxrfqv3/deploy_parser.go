@@ -70,7 +70,7 @@ func (p *DeployParser) loadDeployments() error {
 }
 
 func (p *DeployParser) syncContractAddress() {
-	contractTypeSupported := []ContractType{SwapContract, GaslessContract}
+	contractTypeSupported := []ContractType{SwapContract, GaslessContract, NewGaslessContract}
 	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
 	for ; ; <-ticker.C {
