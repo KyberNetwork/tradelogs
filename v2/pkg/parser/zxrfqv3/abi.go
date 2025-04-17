@@ -2,20 +2,23 @@ package zxrfqv3
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/dev"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/gasless"
+	newgasless "github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/new_gasless"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/parser/zxrfqv3/swap"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"sync"
 )
 
 type ContractType int
 
 const (
-	DevContract     ContractType = 1
-	SwapContract    ContractType = 2
-	GaslessContract ContractType = 3
+	DevContract        ContractType = 1
+	SwapContract       ContractType = 2
+	GaslessContract    ContractType = 3
+	NewGaslessContract ContractType = 4
 )
 
 type ContractABI struct {
@@ -51,8 +54,14 @@ func NewABI(contractABI ContractABI) (*abi.ABI, error) {
 			return nil, fmt.Errorf("get gasless contract abi error: %w", err)
 		}
 		return ab, nil
+	case NewGaslessContract:
+		ab, err := newgasless.NewGaslessMetaData.GetAbi()
+		if err != nil {
+			return nil, fmt.Errorf("get new gasless contract abi error: %w", err)
+		}
+		return ab, nil
 	default:
-		return nil, fmt.Errorf("current type %v, only support dev, swap, gassless type", contractABI.ContractType)
+		return nil, fmt.Errorf("current type %v, only support dev, swap, gassless, new gasless type", contractABI.ContractType)
 	}
 }
 
