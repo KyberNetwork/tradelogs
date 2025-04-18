@@ -68,6 +68,6 @@ func (p *ERC20TransferParser) Parse(log ethereumTypes.Log, blockTime uint64) (co
 	return res, nil
 }
 func (p *ERC20TransferParser) IsContractLog(log ethereumTypes.Log) bool {
-	return len(log.Topics) != 0 &&
+	return len(log.Topics) == 3 &&
 		strings.EqualFold(log.Topics[0].String(), p.transferEventHash)
 }
