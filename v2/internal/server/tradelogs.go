@@ -93,6 +93,7 @@ func (s *TradeLogs) register() {
 	s.r.GET("/0xv3_deployment", s.get0xv3Deployment)
 	s.r.GET("/cow_transfers", s.getCowTransfers)
 	s.r.GET("/cow_trades", s.getCowTrades)
+	s.r.GET("/cow/tx", s.getInfoCowTx)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -348,5 +349,70 @@ func (s *TradeLogs) getCowTrades(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    data,
+	})
+}
+
+func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
+	txHash := c.Query("tx_hash")
+	if txHash == "" {
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("tx_hash is required"))
+		return
+	}
+	// get trade from dexs
+	tradelogQuery := storageTypes.TradeLogsQuery{
+		TxHash: txHash,
+	}
+	var tradesFromDex []storageTypes.TradeLog
+	for _, storage := range s.storage {
+		tradeLogs, err := storage.Get(tradelogQuery)
+		if err != nil {
+			responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get trade from dexs: %w", err))
+			return
+		}
+		tradesFromDex = append(tradesFromDex, tradeLogs...)
+	}
+
+	// get cow trades
+	cowTradeQuery := cowProtocolStorage.CowTradeQuery{
+		TxHash: txHash,
+	}
+	cowTrades, err := s.cowTradeStorage.GetCowTrades(cowTradeQuery)
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get cow trades: %w", err))
+		return
+	}
+
+	// get cow transfer
+	cowTransferQuery := cowProtocolStorage.CowTransferQuery{
+		TxHash: txHash,
+	}
+	cowTransfer, err := s.cowTradeStorage.GetCowTransfers(cowTransferQuery)
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get cow transfers: %w", err))
+		return
+	}
+
+	// get cow callframe
+	callFrame, err := s.cowTradeStorage.GetCowCallFrame(txHash)
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get callFrame: %w", err))
+		return
+	}
+
+	type result struct {
+		CowTrades     []cowProtocolStorage.CowTrade          `json:"cow_trades"`
+		CowTransfer   []cowProtocolStorage.CowTransfer       `json:"cow_transfers"`
+		TradesFromDex []storageTypes.TradeLog                `json:"trades_from_dexs"`
+		CallFrame     []cowProtocolStorage.CowTradeCallFrame `json:"callframe"`
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": result{
+			CowTrades:     cowTrades,
+			CowTransfer:   cowTransfer,
+			TradesFromDex: tradesFromDex,
+			CallFrame:     callFrame,
+		},
 	})
 }

@@ -1,16 +1,18 @@
 package cowprotocol
 
 type CowTransfer struct {
-	TxHash      string   `db:"tx_hash" json:"tx_hash"`
-	LogIndex    uint64   `db:"log_index" json:"log_index"`
-	Timestamp   uint64   `db:"timestamp" json:"timestamp"`
-	BlockNumber uint64   `db:"block_number" json:"block_number"`
-	FromAddress string   `db:"from_address" json:"from_address"`
-	ToAddress   string   `db:"to_address" json:"to_address"`
-	Token       string   `db:"token" json:"token"`
-	Amount      string   `db:"amount" json:"amount"`
-	TokenPrice  *float64 `db:"token_price" json:"token_price,omitempty"`
-	AmountUsd   *float64 `db:"amount_usd" json:"amount_usd,omitempty"`
+	TransferId   uint64   `db:"transfer_id" json:"transfer_id"`
+	TxHash       string   `db:"tx_hash" json:"tx_hash"`
+	LogIndex     uint64   `db:"log_index" json:"log_index"`
+	Timestamp    uint64   `db:"timestamp" json:"timestamp"`
+	BlockNumber  uint64   `db:"block_number" json:"block_number"`
+	FromAddress  string   `db:"from_address" json:"from_address"`
+	ToAddress    string   `db:"to_address" json:"to_address"`
+	Token        string   `db:"token" json:"token"`
+	Amount       string   `db:"amount" json:"amount"`
+	TransferType string   `db:"transfer_type" json:"transfer_type"`
+	TokenPrice   *float64 `db:"token_price" json:"token_price,omitempty"`
+	AmountUsd    *float64 `db:"amount_usd" json:"amount_usd,omitempty"`
 }
 type CowTransferQuery struct {
 	FromTime uint64 `form:"from_time" json:"from_time,omitempty"`
@@ -46,4 +48,9 @@ type CowTrade struct {
 	BuyUsdAmount     *float64 `db:"buy_usd_amount" json:"buy_usd_amount,omitempty"`
 	SellUsdAmount    *float64 `db:"sell_usd_amount" json:"sell_usd_amount,omitempty"`
 	OrderUid         string   `db:"order_uid" json:"order_uid"`
+}
+
+type CowTradeCallFrame struct {
+	TxHash    string `db:"tx_hash" json:"tx_hash"`
+	CallFrame string `db:"call_frame" json:"call_frame"`
 }

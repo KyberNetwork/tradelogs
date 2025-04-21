@@ -1,9 +1,10 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
+	"math/big"
 
-	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	erc20Parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/ERC20_transfer"
 	cowParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol"
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
@@ -47,6 +48,7 @@ func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame
 	var (
 		tradesResult    []cowStorage.CowTrade
 		transfersResult []cowStorage.CowTransfer
+		callFrameResult []cowStorage.CowTradeCallFrame
 	)
 
 	for i, call := range calls {
@@ -68,6 +70,14 @@ func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame
 		}
 		tradesResult = append(tradesResult, cowTrades...)
 		transfersResult = append(transfersResult, cowTransfers...)
+		callframeJson, err := json.Marshal(call)
+		if err != nil {
+			h.l.Errorw("cannot marshal callframe", "error", err)
+		}
+		callFrameResult = append(callFrameResult, cowStorage.CowTradeCallFrame{
+			TxHash:    call.TxHash,
+			CallFrame: string(callframeJson),
+		})
 	}
 
 	if len(tradesResult) == 0 {
@@ -84,6 +94,11 @@ func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame
 		return fmt.Errorf("insert cow transfers error: %w", err)
 	}
 	h.l.Infow("successfully insert cow transfers", "blockNumber", blockNumber, "number", len(transfersResult))
+	err = h.storage.InsertCowCallFrame(callFrameResult)
+	if err != nil {
+		return fmt.Errorf("insert cow callframe error: %w", err)
+	}
+	h.l.Infow("successfully insert cow callframe", "blockNumber", blockNumber, "number", len(callFrameResult))
 
 	return nil
 }
@@ -125,10 +140,29 @@ func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, me
 				h.l.Errorw("error when parse log", "log", ethLog, "err", err, "parser", "cowTransferParesr")
 				continue
 			}
-			if cowTransfer.FromAddress == constant.AddrCowProtocol || cowTransfer.ToAddress == constant.AddrCowProtocol {
-				transfersResult = append(transfersResult, cowTransfer)
-			}
+			transfersResult = append(transfersResult, cowTransfer)
 		}
+	}
+	if call.Value != "" && call.Value != "0x0" {
+		amount := new(big.Int)
+		amount, success := amount.SetString(call.Value[2:], 16)
+		amountStr := amount.String()
+		if !success {
+			h.l.Error("cannot convert hex to decimal")
+			amountStr = call.Value
+		}
+		nativeTransfer := cowStorage.CowTransfer{
+			TxHash:       common.HexToHash(metadata.txHash).String(),
+			BlockNumber:  metadata.blockNumber,
+			LogIndex:     0,
+			Timestamp:    metadata.timestamp * 1000,
+			FromAddress:  call.From,
+			ToAddress:    call.To,
+			Amount:       amountStr,
+			Token:        "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+			TransferType: "native",
+		}
+		transfersResult = append(transfersResult, nativeTransfer)
 	}
 	return tradesResult, transfersResult
 }
