@@ -1,9 +1,10 @@
 package cowprotocol
 
+import "encoding/json"
+
 type CowTransfer struct {
 	TransferId   uint64   `db:"transfer_id" json:"transfer_id"`
 	TxHash       string   `db:"tx_hash" json:"tx_hash"`
-	LogIndex     uint64   `db:"log_index" json:"log_index"`
 	Timestamp    uint64   `db:"timestamp" json:"timestamp"`
 	BlockNumber  uint64   `db:"block_number" json:"block_number"`
 	FromAddress  string   `db:"from_address" json:"from_address"`
@@ -51,6 +52,7 @@ type CowTrade struct {
 }
 
 type CowTradeCallFrame struct {
-	TxHash    string `db:"tx_hash" json:"tx_hash"`
-	CallFrame string `db:"call_frame" json:"call_frame"`
+	TxHash      string          `db:"tx_hash" json:"tx_hash"`
+	BlockNumber uint64          `db:"block_number" json:"block_number"`
+	CallFrame   json.RawMessage `db:"call_frame" json:"call_frame"`
 }

@@ -152,7 +152,6 @@ func (s *CowTradeStorage) ResetTokenPriceTransfers(token string, from, to int64)
 func cowTransferStorageSerialize(o *CowTransfer, isUpdate bool) []interface{} {
 	data := []interface{}{
 		strings.ToLower(o.TxHash),
-		o.LogIndex,
 		strings.ToLower(o.FromAddress),
 		strings.ToLower(o.ToAddress),
 		strings.ToLower(o.Token),
@@ -171,7 +170,6 @@ func cowTransferStorageSerialize(o *CowTransfer, isUpdate bool) []interface{} {
 func cowTransferStorageColumns(isUpdate bool) []string {
 	data := []string{
 		"tx_hash",
-		"log_index",
 		"from_address",
 		"to_address",
 		"token",

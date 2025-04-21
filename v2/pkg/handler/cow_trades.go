@@ -9,6 +9,7 @@ import (
 	cowParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol"
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
@@ -73,10 +74,12 @@ func (h *CowTradesHandler) processForCowTrade(calls []types.TransactionCallFrame
 		callframeJson, err := json.Marshal(call)
 		if err != nil {
 			h.l.Errorw("cannot marshal callframe", "error", err)
+			continue
 		}
 		callFrameResult = append(callFrameResult, cowStorage.CowTradeCallFrame{
-			TxHash:    call.TxHash,
-			CallFrame: string(callframeJson),
+			TxHash:      call.TxHash,
+			CallFrame:   callframeJson,
+			BlockNumber: blockNumber,
 		})
 	}
 
@@ -143,27 +146,21 @@ func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, me
 			transfersResult = append(transfersResult, cowTransfer)
 		}
 	}
-	if call.Value != "" && call.Value != "0x0" {
-		amount := new(big.Int)
-		amount, success := amount.SetString(call.Value[2:], 16)
-		amountStr := amount.String()
-		if !success {
-			h.l.Error("cannot convert hex to decimal")
-			amountStr = call.Value
-		}
-		nativeTransfer := cowStorage.CowTransfer{
-			TxHash:       common.HexToHash(metadata.txHash).String(),
-			BlockNumber:  metadata.blockNumber,
-			LogIndex:     0,
-			Timestamp:    metadata.timestamp * 1000,
-			FromAddress:  call.From,
-			ToAddress:    call.To,
-			Amount:       amountStr,
-			Token:        "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-			TransferType: "native",
-		}
-		transfersResult = append(transfersResult, nativeTransfer)
+	if !isNativeTransfer(call.Value) {
+		return tradesResult, transfersResult
 	}
+	amountStr := h.convertHexToDecimal(call.Value)
+	nativeTransfer := cowStorage.CowTransfer{
+		TxHash:       common.HexToHash(metadata.txHash).String(),
+		BlockNumber:  metadata.blockNumber,
+		Timestamp:    metadata.timestamp * 1000,
+		FromAddress:  call.From,
+		ToAddress:    call.To,
+		Amount:       amountStr,
+		Token:        util.NativeTokenAddress,
+		TransferType: string(util.TransferTypeNative),
+	}
+	transfersResult = append(transfersResult, nativeTransfer)
 	return tradesResult, transfersResult
 }
 
@@ -182,5 +179,31 @@ func (h *CowTradesHandler) RevertBlock(blocks []uint64) error {
 		return fmt.Errorf("delete blocks error: %w", err)
 	}
 
+	err = h.storage.DeleteCowCallFrame(blocks)
+	if err != nil {
+		return fmt.Errorf("delete blocks error: %w", err)
+	}
+
 	return nil
+}
+
+func (h *CowTradesHandler) convertHexToDecimal(value string) string {
+	if len(value) <= 2 {
+		return value
+	}
+	amount := new(big.Int)
+	amount, success := amount.SetString(value[2:], 16)
+	amountStr := amount.String()
+	if !success {
+		h.l.Error("cannot convert hex to decimal")
+		amountStr = value
+	}
+	return amountStr
+}
+
+func isNativeTransfer(value string) bool {
+	if value != "" && value != "0x0" {
+		return true
+	}
+	return false
 }

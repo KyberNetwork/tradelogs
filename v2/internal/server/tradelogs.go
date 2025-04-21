@@ -93,7 +93,7 @@ func (s *TradeLogs) register() {
 	s.r.GET("/0xv3_deployment", s.get0xv3Deployment)
 	s.r.GET("/cow_transfers", s.getCowTransfers)
 	s.r.GET("/cow_trades", s.getCowTrades)
-	s.r.GET("/cow/tx", s.getInfoCowTx)
+	s.r.GET("/cow/tx/:tx_hash", s.getInfoCowTx)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -353,7 +353,7 @@ func (s *TradeLogs) getCowTrades(c *gin.Context) {
 }
 
 func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
-	txHash := c.Query("tx_hash")
+	txHash := c.Param("tx_hash")
 	if txHash == "" {
 		responseErr(c, http.StatusBadRequest, fmt.Errorf("tx_hash is required"))
 		return

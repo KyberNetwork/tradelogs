@@ -57,14 +57,13 @@ func (p *ERC20TransferParser) Parse(log ethereumTypes.Log, blockTime uint64) (co
 	}
 	res := cowStorage.CowTransfer{
 		TxHash:       log.TxHash.String(),
-		LogIndex:     uint64(log.Index),
 		BlockNumber:  log.BlockNumber,
 		Timestamp:    blockTime * 1000,
 		FromAddress:  e.From.String(),
 		ToAddress:    e.To.String(),
 		Amount:       e.Value.String(),
 		Token:        log.Address.String(),
-		TransferType: "ERC20",
+		TransferType: string(util.TransferTypeERC20),
 	}
 	return res, nil
 }
