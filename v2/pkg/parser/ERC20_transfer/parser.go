@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -63,7 +64,7 @@ func (p *ERC20TransferParser) Parse(log ethereumTypes.Log, blockTime uint64) (co
 		ToAddress:    e.To.String(),
 		Amount:       e.Value.String(),
 		Token:        log.Address.String(),
-		TransferType: string(util.TransferTypeERC20),
+		TransferType: constant.TransferTypeERC20,
 	}
 	return res, nil
 }

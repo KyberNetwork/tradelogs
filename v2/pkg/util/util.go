@@ -7,17 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-const (
-	NativeTokenAddress = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
-)
-
-type TransferType string
-
-const (
-	TransferTypeNative TransferType = "native"
-	TransferTypeERC20  TransferType = "ERC20"
-)
-
 var (
 	ErrInvalidTopic  = errors.New("invalid order topic")
 	ErrNotFoundTrade = errors.New("not found log")

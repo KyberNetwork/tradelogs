@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	erc20Parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/ERC20_transfer"
 	cowParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol"
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
@@ -157,8 +157,8 @@ func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, me
 		FromAddress:  call.From,
 		ToAddress:    call.To,
 		Amount:       amountStr,
-		Token:        util.NativeTokenAddress,
-		TransferType: string(util.TransferTypeNative),
+		Token:        constant.NativeTokenAddress,
+		TransferType: constant.TransferTypeNative,
 	}
 	transfersResult = append(transfersResult, nativeTransfer)
 	return tradesResult, transfersResult
