@@ -80,6 +80,9 @@ func (s *CowTradeStorage) GetCowTrades(query CowTradeQuery) ([]CowTrade, error) 
 	if query.ToTime != 0 {
 		builder = builder.Where(squirrel.LtOrEq{"timestamp": query.ToTime})
 	}
+	if query.BlockNumber != 0 {
+		builder = builder.Where(squirrel.Eq{"block_number": query.BlockNumber})
+	}
 	if query.TxHash != "" {
 		builder = builder.Where(squirrel.Eq{"tx_hash": query.TxHash})
 	}

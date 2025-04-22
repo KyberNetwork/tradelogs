@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
@@ -21,6 +22,7 @@ type IClient interface {
 	GetBlockNumber(ctx context.Context) (uint64, error)
 	BlockByNumber(ctx context.Context, blockNumber uint64) (*ethereumTypes.Block, error)
 	FetchLogs(ctx context.Context, from, to uint64, address string, topics []string) ([]ethereumTypes.Log, error)
+	BlockByTxHash(ctx context.Context, txHash string) (uint64, error)
 }
 
 type Client struct {
@@ -152,4 +154,43 @@ func (c *Client) FetchLogs(ctx context.Context, from, to uint64, address string,
 		return logs, nil
 	}
 	return nil, fmt.Errorf("error when get logs: %w", err)
+}
+
+func (c *Client) BlockByTxHash(ctx context.Context, txHash string) (uint64, error) {
+	var transaction *rpcTransaction
+	for i, client := range c.ethClient {
+		err := client.Client().CallContext(ctx, &transaction, "eth_getTransactionByHash", txHash)
+		if err != nil {
+			c.l.Errorw("fetch transaction by hash failed", "error", err, "tx", txHash, "clientID", i)
+			continue
+		}
+		if transaction == nil {
+			c.l.Errorw("fetch transaction by hash failed", "error", ethereum.NotFound, "tx", txHash, "clientID", i)
+			continue
+		}
+		if transaction.From == nil || transaction.BlockHash == nil || transaction.BlockNumber == nil {
+			continue
+		}
+		blockNumber, err := util.ConvertHexToDecimal(*transaction.BlockNumber)
+		if err != nil {
+			c.l.Error("cannot convert Hex to Decimal")
+		}
+		return c.stringToUint64(blockNumber), nil
+	}
+	return 0, nil
+}
+
+func (c *Client) stringToUint64(numberStr string) uint64 {
+	number, err := strconv.ParseUint(numberStr, 10, 64)
+	if err != nil {
+		c.l.Errorw("Error converting string to uint64", "error", err)
+		return 0
+	}
+	return number
+}
+
+type rpcTransaction struct {
+	BlockNumber *string         `json:"blockNumber,omitempty"`
+	BlockHash   *common.Hash    `json:"blockHash,omitempty"`
+	From        *common.Address `json:"from,omitempty"`
 }

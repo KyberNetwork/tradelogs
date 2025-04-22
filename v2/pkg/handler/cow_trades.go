@@ -3,13 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
 	erc20Parser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/ERC20_transfer"
 	cowParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol"
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
@@ -149,7 +149,10 @@ func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, me
 	if !isNativeTransfer(call.Value) {
 		return tradesResult, transfersResult
 	}
-	amountStr := h.convertHexToDecimal(call.Value)
+	amountStr, err := util.ConvertHexToDecimal(call.Value)
+	if err != nil {
+		h.l.Errorf("cannot convert Hex to Decimal")
+	}
 	nativeTransfer := cowStorage.CowTransfer{
 		TxHash:       common.HexToHash(metadata.txHash).String(),
 		BlockNumber:  metadata.blockNumber,
@@ -185,20 +188,6 @@ func (h *CowTradesHandler) RevertBlock(blocks []uint64) error {
 	}
 
 	return nil
-}
-
-func (h *CowTradesHandler) convertHexToDecimal(value string) string {
-	if len(value) <= 2 {
-		return value
-	}
-	amount := new(big.Int)
-	amount, success := amount.SetString(value[2:], 16)
-	amountStr := amount.String()
-	if !success {
-		h.l.Error("cannot convert hex to decimal")
-		amountStr = value
-	}
-	return amountStr
 }
 
 func isNativeTransfer(value string) bool {

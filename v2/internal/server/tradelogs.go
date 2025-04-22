@@ -1,12 +1,14 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	dashboardTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard/types"
@@ -43,6 +45,7 @@ type TradeLogs struct {
 	dashStorage     *dashboardStorage.Storage
 	deployStorage   zerox_deployment.IStorage
 	cowTradeStorage *cowProtocolStorage.CowTradeStorage
+	rpcClient       rpcnode.IClient
 }
 
 func NewTradeLogs(
@@ -52,6 +55,7 @@ func NewTradeLogs(
 	deployStorage zerox_deployment.IStorage,
 	cowTradeStorage *cowProtocolStorage.CowTradeStorage,
 	bindAddr string,
+	rpcClient rpcnode.IClient,
 ) *TradeLogs {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
@@ -64,6 +68,7 @@ func NewTradeLogs(
 		dashStorage:     dashStorage,
 		deployStorage:   deployStorage,
 		cowTradeStorage: cowTradeStorage,
+		rpcClient:       rpcClient,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -376,9 +381,63 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 		responseErr(c, http.StatusBadRequest, fmt.Errorf("tx_hash is required"))
 		return
 	}
+	// get blockNumber
+	blockNumber, err := s.rpcClient.BlockByTxHash(context.Background(), txHash)
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when blockNumber by txHash: %w", err))
+		return
+	}
+	if blockNumber == 0 {
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("tx not found"))
+		return
+	}
+	s.l.Infow("get cow info", "txHash", txHash, "blockNumber", blockNumber)
+	type result struct {
+		CowTrades     []cowProtocolStorage.CowTrade          `json:"cow_trades"`
+		CowTransfer   []cowProtocolStorage.CowTransfer       `json:"cow_transfers"`
+		TradesFromDex []storageTypes.TradeLog                `json:"trades_from_dexs"`
+		CallFrame     []cowProtocolStorage.CowTradeCallFrame `json:"callframe"`
+	}
+
+	// get cow trades
+	cowTradeQuery := cowProtocolStorage.CowTradeQuery{
+		TxHash:      txHash,
+		BlockNumber: blockNumber,
+	}
+	cowTrades, err := s.cowTradeStorage.GetCowTrades(cowTradeQuery)
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get cow trades: %w", err))
+		return
+	}
+
+	if len(cowTrades) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"data": result{
+				CowTrades:     []cowProtocolStorage.CowTrade{},
+				CowTransfer:   []cowProtocolStorage.CowTransfer{},
+				TradesFromDex: []storageTypes.TradeLog{},
+				CallFrame:     []cowProtocolStorage.CowTradeCallFrame{},
+			},
+		})
+		return
+	}
+
+	// get cow transfer
+	cowTransferQuery := cowProtocolStorage.CowTransferQuery{
+		TxHash:      txHash,
+		BlockNumber: blockNumber,
+	}
+	cowTransfer, err := s.cowTradeStorage.GetCowTransfers(cowTransferQuery)
+	if err != nil {
+		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get cow transfers: %w", err))
+		return
+	}
+
 	// get trade from dexs
 	tradelogQuery := storageTypes.TradeLogsQuery{
-		TxHash: txHash,
+		TxHash:      txHash,
+		BlockNumber: fmt.Sprintf("%d", blockNumber),
 	}
 	var tradesFromDex []storageTypes.TradeLog
 	for _, storage := range s.storage {
@@ -390,38 +449,11 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 		tradesFromDex = append(tradesFromDex, tradeLogs...)
 	}
 
-	// get cow trades
-	cowTradeQuery := cowProtocolStorage.CowTradeQuery{
-		TxHash: txHash,
-	}
-	cowTrades, err := s.cowTradeStorage.GetCowTrades(cowTradeQuery)
-	if err != nil {
-		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get cow trades: %w", err))
-		return
-	}
-
-	// get cow transfer
-	cowTransferQuery := cowProtocolStorage.CowTransferQuery{
-		TxHash: txHash,
-	}
-	cowTransfer, err := s.cowTradeStorage.GetCowTransfers(cowTransferQuery)
-	if err != nil {
-		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get cow transfers: %w", err))
-		return
-	}
-
 	// get cow callframe
-	callFrame, err := s.cowTradeStorage.GetCowCallFrame(txHash)
+	callFrame, err := s.cowTradeStorage.GetCowCallFrame(txHash, blockNumber)
 	if err != nil {
 		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get callFrame: %w", err))
 		return
-	}
-
-	type result struct {
-		CowTrades     []cowProtocolStorage.CowTrade          `json:"cow_trades"`
-		CowTransfer   []cowProtocolStorage.CowTransfer       `json:"cow_transfers"`
-		TradesFromDex []storageTypes.TradeLog                `json:"trades_from_dexs"`
-		CallFrame     []cowProtocolStorage.CowTradeCallFrame `json:"callframe"`
 	}
 
 	c.JSON(http.StatusOK, gin.H{

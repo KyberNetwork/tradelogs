@@ -3,6 +3,7 @@ package types
 type TradeLogsQuery struct {
 	FromTime         uint64 `form:"from_time" json:"from_time,omitempty" binding:"required"`
 	ToTime           uint64 `form:"to_time" json:"to_time,omitempty" binding:"required"`
+	BlockNumber      string `form:"block_number" json:"block_number,omitempty"`
 	ContractAddress  string `form:"contract_address" json:"contract_address,omitempty"`
 	TxHash           string `form:"tx_hash" json:"tx_hash,omitempty"`
 	Maker            string `form:"maker" json:"maker,omitempty"`
