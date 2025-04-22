@@ -319,12 +319,21 @@ func (s *TradeLogs) get0xv3Deployment(c *gin.Context) {
 }
 
 func (s *TradeLogs) getCowTransfers(c *gin.Context) {
-	var queries cowProtocolStorage.CowTransferQuery
-	if err := c.ShouldBind(&queries); err != nil {
+	var query cowProtocolStorage.CowTransferQuery
+	if err := c.ShouldBind(&query); err != nil {
 		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
-	data, err := s.cowTradeStorage.GetCowTransfers(queries)
+	if query.ToTime < query.FromTime {
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("to_time cannot smaller than from_time"))
+		return
+	}
+
+	if query.ToTime-query.FromTime > maxTimeRange {
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("max time range: %v", maxTimeRange))
+		return
+	}
+	data, err := s.cowTradeStorage.GetCowTransfers(query)
 	if err != nil {
 		responseErr(c, http.StatusInternalServerError, err)
 		return
@@ -336,12 +345,21 @@ func (s *TradeLogs) getCowTransfers(c *gin.Context) {
 }
 
 func (s *TradeLogs) getCowTrades(c *gin.Context) {
-	var queries cowProtocolStorage.CowTradeQuery
-	if err := c.ShouldBind(&queries); err != nil {
+	var query cowProtocolStorage.CowTradeQuery
+	if err := c.ShouldBind(&query); err != nil {
 		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
-	data, err := s.cowTradeStorage.GetCowTrades(queries)
+	if query.ToTime < query.FromTime {
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("to_time cannot smaller than from_time"))
+		return
+	}
+
+	if query.ToTime-query.FromTime > maxTimeRange {
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("max time range: %v", maxTimeRange))
+		return
+	}
+	data, err := s.cowTradeStorage.GetCowTrades(query)
 	if err != nil {
 		responseErr(c, http.StatusInternalServerError, err)
 		return
