@@ -38,6 +38,7 @@ const (
 	TablePancakeswap  = "tradelogs_pancakeswap"
 	TableCowProtocol  = "tradelogs_cow_protocol"
 	TableCowTransfer  = "cow_transfer_event"
+	TableCowCallFrame = "cow_trade_callframe"
 
 	Promotion1InchV2 = "oneinchv2"
 	Promotion1InchV1 = "oneinchv1"

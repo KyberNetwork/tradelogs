@@ -17,24 +17,48 @@ func (s *CowTradeStorage) InsertCowTransfers(events []CowTransfer) error {
 		return nil
 	}
 	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(s.transferTableName()).Columns(
-		cowTransferStorageColumns()...,
+		cowTransferStorageColumns(false)...,
 	)
 	for _, event := range events {
 		b = b.Values(
-			cowTransferStorageSerialize(&event)...,
+			cowTransferStorageSerialize(&event, false)...,
 		)
 	}
-	q, p, err := b.Suffix(`ON CONFLICT(block_number, log_index) DO UPDATE 
-		SET 
-			token_price=excluded.token_price,
-			amount_usd=excluded.amount_usd
-	`).ToSql()
+	q, p, err := b.ToSql()
 	if err != nil {
 		s.l.Errorw("Error build insert", "error", err)
 		return err
 	}
 	if _, err := s.db.Exec(q, p...); err != nil {
 		s.l.Errorw("Error exec insert", "sql", q, "arg", p, "error", err)
+		return err
+	}
+	return nil
+}
+
+func (s *CowTradeStorage) UpdateCowTransfers(events []CowTransfer) error {
+	if len(events) == 0 {
+		return nil
+	}
+	b := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).Insert(s.transferTableName()).Columns(
+		cowTransferStorageColumns(true)...,
+	)
+	for _, event := range events {
+		b = b.Values(
+			cowTransferStorageSerialize(&event, true)...,
+		)
+	}
+	q, p, err := b.Suffix(`ON CONFLICT (transfer_id) DO UPDATE 
+		SET 
+			token_price=excluded.token_price,
+			amount_usd=excluded.amount_usd
+	`).ToSql()
+	if err != nil {
+		s.l.Errorw("Error build insert update", "error", err)
+		return err
+	}
+	if _, err := s.db.Exec(q, p...); err != nil {
+		s.l.Errorw("Error exec insert update", "sql", q, "arg", p, "error", err)
 		return err
 	}
 	return nil
@@ -125,10 +149,9 @@ func (s *CowTradeStorage) ResetTokenPriceTransfers(token string, from, to int64)
 	return rowsAffected, nil
 }
 
-func cowTransferStorageSerialize(o *CowTransfer) []interface{} {
-	return []interface{}{
+func cowTransferStorageSerialize(o *CowTransfer, isUpdate bool) []interface{} {
+	data := []interface{}{
 		strings.ToLower(o.TxHash),
-		o.LogIndex,
 		strings.ToLower(o.FromAddress),
 		strings.ToLower(o.ToAddress),
 		strings.ToLower(o.Token),
@@ -138,12 +161,15 @@ func cowTransferStorageSerialize(o *CowTransfer) []interface{} {
 		o.TokenPrice,
 		o.AmountUsd,
 	}
+	if isUpdate {
+		return append([]interface{}{o.TransferId}, data...)
+	}
+	return data
 }
 
-func cowTransferStorageColumns() []string {
-	return []string{
+func cowTransferStorageColumns(isUpdate bool) []string {
+	data := []string{
 		"tx_hash",
-		"log_index",
 		"from_address",
 		"to_address",
 		"token",
@@ -153,4 +179,8 @@ func cowTransferStorageColumns() []string {
 		"token_price",
 		"amount_usd",
 	}
+	if isUpdate {
+		return append([]string{"transfer_id"}, data...)
+	}
+	return data
 }

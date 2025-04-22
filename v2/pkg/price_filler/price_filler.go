@@ -205,7 +205,7 @@ func (p *PriceFiller) runBackFillCowTransfersPriceRoutine(fillPriceInterval time
 		}
 		p.FillCowTransfers(transferEvents)
 
-		if err = p.cowTradeStorage.InsertCowTransfers(transferEvents); err != nil {
+		if err = p.cowTradeStorage.UpdateCowTransfers(transferEvents); err != nil {
 			p.l.Errorw("Failed to insert filled transfer event", "err", err)
 		}
 
