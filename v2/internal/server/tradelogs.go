@@ -1,14 +1,12 @@
 package server
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/constant"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	dashboardTypes "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard/types"
@@ -45,7 +43,6 @@ type TradeLogs struct {
 	dashStorage     *dashboardStorage.Storage
 	deployStorage   zerox_deployment.IStorage
 	cowTradeStorage *cowProtocolStorage.CowTradeStorage
-	rpcClient       rpcnode.IClient
 }
 
 func NewTradeLogs(
@@ -55,7 +52,6 @@ func NewTradeLogs(
 	deployStorage zerox_deployment.IStorage,
 	cowTradeStorage *cowProtocolStorage.CowTradeStorage,
 	bindAddr string,
-	rpcClient rpcnode.IClient,
 ) *TradeLogs {
 	engine := gin.New()
 	engine.Use(gin.Recovery())
@@ -68,7 +64,6 @@ func NewTradeLogs(
 		dashStorage:     dashStorage,
 		deployStorage:   deployStorage,
 		cowTradeStorage: cowTradeStorage,
-		rpcClient:       rpcClient,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -381,17 +376,6 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 		responseErr(c, http.StatusBadRequest, fmt.Errorf("tx_hash is required"))
 		return
 	}
-	// get blockNumber
-	blockNumber, err := s.rpcClient.BlockByTxHash(context.Background(), txHash)
-	if err != nil {
-		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when blockNumber by txHash: %w", err))
-		return
-	}
-	if blockNumber == 0 {
-		responseErr(c, http.StatusBadRequest, fmt.Errorf("tx not found"))
-		return
-	}
-	s.l.Infow("get cow info", "txHash", txHash, "blockNumber", blockNumber)
 	type result struct {
 		CowTrades     []cowProtocolStorage.CowTrade          `json:"cow_trades"`
 		CowTransfer   []cowProtocolStorage.CowTransfer       `json:"cow_transfers"`
@@ -401,8 +385,7 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 
 	// get cow trades
 	cowTradeQuery := cowProtocolStorage.CowTradeQuery{
-		TxHash:      txHash,
-		BlockNumber: blockNumber,
+		TxHash: txHash,
 	}
 	cowTrades, err := s.cowTradeStorage.GetCowTrades(cowTradeQuery)
 	if err != nil {
@@ -422,6 +405,7 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 		})
 		return
 	}
+	blockNumber := cowTrades[0].BlockNumber
 
 	// get cow transfer
 	cowTransferQuery := cowProtocolStorage.CowTransferQuery{
