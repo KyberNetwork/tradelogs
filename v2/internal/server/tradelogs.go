@@ -437,7 +437,7 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 	// get trade from dexs
 	tradelogQuery := storageTypes.TradeLogsQuery{
 		TxHash:      txHash,
-		BlockNumber: fmt.Sprintf("%d", blockNumber),
+		BlockNumber: blockNumber,
 	}
 	var tradesFromDex []storageTypes.TradeLog
 	for _, storage := range s.storage {

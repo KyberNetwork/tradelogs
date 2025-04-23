@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"strconv"
 	"time"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
@@ -169,24 +168,13 @@ func (c *Client) BlockByTxHash(ctx context.Context, txHash string) (uint64, erro
 			continue
 		}
 		if transaction.From == nil || transaction.BlockHash == nil || transaction.BlockNumber == nil {
+			c.l.Infow("transaction response is nil", "from", transaction.From, "blockHash", transaction.BlockHash, "blockNumber", transaction.BlockNumber)
 			continue
 		}
-		blockNumber, err := util.ConvertHexToDecimal(*transaction.BlockNumber)
-		if err != nil {
-			c.l.Error("cannot convert Hex to Decimal")
-		}
-		return c.stringToUint64(blockNumber), nil
+		blockNumber := common.HexToHash(*transaction.BlockNumber).Big().Uint64()
+		return blockNumber, nil
 	}
 	return 0, nil
-}
-
-func (c *Client) stringToUint64(numberStr string) uint64 {
-	number, err := strconv.ParseUint(numberStr, 10, 64)
-	if err != nil {
-		c.l.Errorw("Error converting string to uint64", "error", err)
-		return 0
-	}
-	return number
 }
 
 type rpcTransaction struct {

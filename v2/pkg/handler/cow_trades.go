@@ -9,7 +9,6 @@ import (
 	cowParser "github.com/KyberNetwork/tradelogs/v2/pkg/parser/cow_protocol"
 	cowStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
-	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	"github.com/ethereum/go-ethereum/common"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/zap"
@@ -149,10 +148,7 @@ func (h *CowTradesHandler) processCallFrameForCowTrades(call types.CallFrame, me
 	if !isNativeTransfer(call.Value) {
 		return tradesResult, transfersResult
 	}
-	amountStr, err := util.ConvertHexToDecimal(call.Value)
-	if err != nil {
-		h.l.Errorf("cannot convert Hex to Decimal")
-	}
+	amountStr := common.HexToHash(call.Value).Big().String()
 	nativeTransfer := cowStorage.CowTransfer{
 		TxHash:       common.HexToHash(metadata.txHash).String(),
 		BlockNumber:  metadata.blockNumber,

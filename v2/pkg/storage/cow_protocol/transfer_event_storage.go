@@ -68,6 +68,9 @@ func (s *CowTradeStorage) GetCowTransfers(query CowTransferQuery) ([]CowTransfer
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Select("*").
 		From(s.transferTableName())
+	if query.BlockNumber != 0 {
+		builder = builder.Where(squirrel.Eq{"block_number": query.BlockNumber})
+	}
 	if query.FromTime != 0 {
 		builder = builder.Where(squirrel.GtOrEq{"timestamp": query.FromTime})
 	}

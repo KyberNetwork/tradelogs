@@ -87,6 +87,9 @@ func (s *Storage) Get(query storageTypes.TradeLogsQuery) ([]storageTypes.TradeLo
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Select(tradeLogColumns()...).
 		From(s.tableName())
+	if query.BlockNumber != 0 {
+		builder = builder.Where(squirrel.Eq{"block_number": query.BlockNumber})
+	}
 	if query.FromTime != 0 {
 		builder = builder.Where(squirrel.GtOrEq{"timestamp": query.FromTime})
 	}
@@ -97,7 +100,7 @@ func (s *Storage) Get(query storageTypes.TradeLogsQuery) ([]storageTypes.TradeLo
 	types := v.Type()
 	for i := 0; i < v.NumField(); i++ {
 		tag := types.Field(i).Tag.Get("form")
-		if tag == "from_time" || tag == "to_time" || tag == "limit" {
+		if tag == "from_time" || tag == "to_time" || tag == "limit" || tag == "block_number" {
 			continue
 		}
 		if v.Field(i).IsZero() {

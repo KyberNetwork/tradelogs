@@ -74,14 +74,14 @@ func (s *CowTradeStorage) GetCowTrades(query CowTradeQuery) ([]CowTrade, error) 
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Select(cowTradeColumns()...).
 		From(s.tableName())
+	if query.BlockNumber != 0 {
+		builder = builder.Where(squirrel.Eq{"block_number": query.BlockNumber})
+	}
 	if query.FromTime != 0 {
 		builder = builder.Where(squirrel.GtOrEq{"timestamp": query.FromTime})
 	}
 	if query.ToTime != 0 {
 		builder = builder.Where(squirrel.LtOrEq{"timestamp": query.ToTime})
-	}
-	if query.BlockNumber != 0 {
-		builder = builder.Where(squirrel.Eq{"block_number": query.BlockNumber})
 	}
 	if query.TxHash != "" {
 		builder = builder.Where(squirrel.Eq{"tx_hash": query.TxHash})

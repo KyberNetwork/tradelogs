@@ -2,8 +2,6 @@ package util
 
 import (
 	"errors"
-	"fmt"
-	"math/big"
 
 	"github.com/KyberNetwork/tradelogs/v2/pkg/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -29,18 +27,4 @@ func AssignLogIndexes(cf *types.CallFrame, index int) int {
 		subCallIndex++
 	}
 	return index
-}
-
-func ConvertHexToDecimal(value string) (string, error) {
-	if len(value) <= 2 {
-		return value, nil
-	}
-	amount := new(big.Int)
-	amount, success := amount.SetString(value[2:], 16)
-	amountStr := amount.String()
-	if !success {
-		amountStr = value
-		return amountStr, fmt.Errorf("cannot convert hex to decimal")
-	}
-	return amountStr, nil
 }
