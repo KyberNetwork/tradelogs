@@ -405,12 +405,10 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 		})
 		return
 	}
-	blockNumber := cowTrades[0].BlockNumber
 
 	// get cow transfer
 	cowTransferQuery := cowProtocolStorage.CowTransferQuery{
-		TxHash:      txHash,
-		BlockNumber: blockNumber,
+		TxHash: txHash,
 	}
 	cowTransfer, err := s.cowTradeStorage.GetCowTransfers(cowTransferQuery)
 	if err != nil {
@@ -420,8 +418,7 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 
 	// get trade from dexs
 	tradelogQuery := storageTypes.TradeLogsQuery{
-		TxHash:      txHash,
-		BlockNumber: blockNumber,
+		TxHash: txHash,
 	}
 	var tradesFromDex []storageTypes.TradeLog
 	for _, storage := range s.storage {
@@ -434,7 +431,7 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 	}
 
 	// get cow callframe
-	callFrame, err := s.cowTradeStorage.GetCowCallFrame(txHash, blockNumber)
+	callFrame, err := s.cowTradeStorage.GetCowCallFrame(txHash)
 	if err != nil {
 		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get callFrame: %w", err))
 		return

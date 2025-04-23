@@ -1,0 +1,46 @@
+create index tradelogs_zerox_tx_hash_idx
+    on tradelogs_zerox (tx_hash);
+create index tradelogs_kyberswap_tx_hash_idx
+    on tradelogs_kyberswap (tx_hash);
+create index tradelogs_kyberswap_rfq_tx_hash_idx
+    on tradelogs_kyberswap_rfq (tx_hash);
+create index tradelogs_paraswap_tx_hash_idx
+    on tradelogs_paraswap (tx_hash);
+create index tradelogs_hashflow_v3_tx_hash_idx
+    on tradelogs_hashflow_v3 (tx_hash);
+create index tradelogs_oneinch_v6_tx_hash_idx
+    on tradelogs_oneinch_v6 (tx_hash);
+create index tradelogs_uniswapx_tx_hash_idx
+    on tradelogs_uniswapx (tx_hash);
+create index tradelogs_bebop_tx_hash_idx
+    on tradelogs_bebop (tx_hash);
+create index tradelogs_zerox_v3_tx_hash_idx
+    on tradelogs_zerox_v3 (tx_hash);
+create index tradelogs_pancakeswap_tx_hash_idx
+    on tradelogs_pancakeswap (tx_hash);
+
+create index tradelogs_zerox_order_hash_idx
+    on tradelogs_zerox (order_hash);
+create index tradelogs_kyberswap_order_hash_idx
+    on tradelogs_kyberswap (order_hash);
+create index tradelogs_kyberswap_rfq_order_hash_idx
+    on tradelogs_kyberswap_rfq (order_hash);
+create index tradelogs_paraswap_order_hash_idx
+    on tradelogs_paraswap (order_hash);
+create index tradelogs_hashflow_v3_order_hash_idx
+    on tradelogs_hashflow_v3 (order_hash);
+create index tradelogs_oneinch_v6_order_hash_idx
+    on tradelogs_oneinch_v6 (order_hash);
+create index tradelogs_uniswapx_order_hash_idx
+    on tradelogs_uniswapx (order_hash);
+create index tradelogs_bebop_order_hash_idx
+    on tradelogs_bebop (order_hash);
+create index tradelogs_zerox_v3_order_hash_idx
+    on tradelogs_zerox_v3 (order_hash);
+create index tradelogs_pancakeswap_order_hash_idx
+    on tradelogs_pancakeswap (order_hash);
+
+create index tradelogs_cow_protocol_tx_hash_idx
+    on tradelogs_cow_protocol (tx_hash);
+create index cow_trade_callframe_tx_hash_idx
+    on cow_trade_callframe (tx_hash);
