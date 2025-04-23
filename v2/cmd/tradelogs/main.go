@@ -8,6 +8,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/internal/server"
 	"github.com/KyberNetwork/tradelogs/v2/internal/worker"
 	libapp "github.com/KyberNetwork/tradelogs/v2/pkg/app"
+	"github.com/KyberNetwork/tradelogs/v2/pkg/rpcnode"
 	cowProtocolStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/cow_protocol"
 	dashboardStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/dashboard"
 	bebopStorage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/bebop"
@@ -23,6 +24,7 @@ import (
 	zxrfqv3Storage "github.com/KyberNetwork/tradelogs/v2/pkg/storage/tradelogs/zxrfqv3"
 	"github.com/KyberNetwork/tradelogs/v2/pkg/storage/zerox_deployment"
 	"github.com/KyberNetwork/tradinglib/pkg/dbutil"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/jmoiron/sqlx"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
@@ -34,6 +36,7 @@ func main() {
 	app.Action = run
 	app.Flags = append(app.Flags, libapp.PostgresSQLFlags("tradelogs_v2")...)
 	app.Flags = append(app.Flags, libapp.HTTPServerFlags()...)
+	app.Flags = append(app.Flags, libapp.RPCNodeFlags()...)
 
 	if err := app.Run(os.Args); err != nil {
 		log.Panic(err)
@@ -51,6 +54,22 @@ func run(c *cli.Context) error {
 	zap.ReplaceGlobals(logger)
 	l := logger.Sugar()
 	l.Infow("Starting trade logs server")
+
+	// rpc node
+	rpcURL := c.StringSlice(libapp.RPCUrlFlagName)
+	if len(rpcURL) == 0 {
+		return fmt.Errorf("rpc url is empty")
+	}
+
+	ethClients := make([]*ethclient.Client, len(rpcURL))
+	for i, url := range rpcURL {
+		client, err := ethclient.Dial(url)
+		if err != nil {
+			return fmt.Errorf("cannot dial eth client: %w", err)
+		}
+		ethClients[i] = client
+	}
+	rpcNode := rpcnode.NewClient(l, ethClients...)
 
 	db, err := initDB(c)
 	l.Infow("init db successfully")
@@ -78,7 +97,7 @@ func run(c *cli.Context) error {
 
 	deployStorage := zerox_deployment.NewStorage(l, db)
 	cowTradeStorage := cowProtocolStorage.New(l, db)
-	s := server.NewTradeLogs(l, storage, dashStorage, deployStorage, cowTradeStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name))
+	s := server.NewTradeLogs(l, storage, dashStorage, deployStorage, cowTradeStorage, c.String(libapp.HTTPTradeLogsServerFlag.Name), rpcNode)
 	return s.Run()
 }
 

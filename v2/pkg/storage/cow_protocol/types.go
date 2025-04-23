@@ -20,16 +20,18 @@ type CowTransfer struct {
 	AmountUsd    *float64              `db:"amount_usd" json:"amount_usd,omitempty"`
 }
 type CowTransferQuery struct {
-	FromTime uint64 `form:"from_time" json:"from_time,omitempty" binding:"required"`
-	ToTime   uint64 `form:"to_time" json:"to_time,omitempty" binding:"required"`
-	TxHash   string `form:"tx_hash" json:"tx_hash,omitempty"`
+	FromTime    uint64 `form:"from_time" json:"from_time,omitempty" binding:"required"`
+	ToTime      uint64 `form:"to_time" json:"to_time,omitempty" binding:"required"`
+	BlockNumber uint64 `db:"block_number" json:"block_number"`
+	TxHash      string `form:"tx_hash" json:"tx_hash,omitempty"`
 }
 
 type CowTradeQuery struct {
-	FromTime uint64 `form:"from_time" json:"from_time,omitempty" binding:"required"`
-	ToTime   uint64 `form:"to_time" json:"to_time,omitempty" binding:"required"`
-	TxHash   string `form:"tx_hash" json:"tx_hash,omitempty"`
-	Limit    uint64 `form:"limit" json:"limit,omitempty"`
+	FromTime    uint64 `form:"from_time" json:"from_time,omitempty" binding:"required"`
+	ToTime      uint64 `form:"to_time" json:"to_time,omitempty" binding:"required"`
+	BlockNumber uint64 `db:"block_number" json:"block_number"`
+	TxHash      string `form:"tx_hash" json:"tx_hash,omitempty"`
+	Limit       uint64 `form:"limit" json:"limit,omitempty"`
 }
 
 type CowTrade struct {

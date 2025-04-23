@@ -21,6 +21,7 @@ type IClient interface {
 	GetBlockNumber(ctx context.Context) (uint64, error)
 	BlockByNumber(ctx context.Context, blockNumber uint64) (*ethereumTypes.Block, error)
 	FetchLogs(ctx context.Context, from, to uint64, address string, topics []string) ([]ethereumTypes.Log, error)
+	BlockByTxHash(ctx context.Context, txHash string) (uint64, error)
 }
 
 type Client struct {
@@ -152,4 +153,32 @@ func (c *Client) FetchLogs(ctx context.Context, from, to uint64, address string,
 		return logs, nil
 	}
 	return nil, fmt.Errorf("error when get logs: %w", err)
+}
+
+func (c *Client) BlockByTxHash(ctx context.Context, txHash string) (uint64, error) {
+	var transaction *rpcTransaction
+	for i, client := range c.ethClient {
+		err := client.Client().CallContext(ctx, &transaction, "eth_getTransactionByHash", txHash)
+		if err != nil {
+			c.l.Errorw("fetch transaction by hash failed", "error", err, "tx", txHash, "clientID", i)
+			continue
+		}
+		if transaction == nil {
+			c.l.Errorw("fetch transaction by hash failed", "error", ethereum.NotFound, "tx", txHash, "clientID", i)
+			continue
+		}
+		if transaction.From == nil || transaction.BlockHash == nil || transaction.BlockNumber == nil {
+			c.l.Infow("transaction response is nil", "from", transaction.From, "blockHash", transaction.BlockHash, "blockNumber", transaction.BlockNumber)
+			continue
+		}
+		blockNumber := common.HexToHash(*transaction.BlockNumber).Big().Uint64()
+		return blockNumber, nil
+	}
+	return 0, nil
+}
+
+type rpcTransaction struct {
+	BlockNumber *string         `json:"blockNumber,omitempty"`
+	BlockHash   *common.Hash    `json:"blockHash,omitempty"`
+	From        *common.Address `json:"from,omitempty"`
 }
