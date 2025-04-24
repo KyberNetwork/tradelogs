@@ -20,8 +20,8 @@ type CowTransfer struct {
 	AmountUsd    *float64              `db:"amount_usd" json:"amount_usd,omitempty"`
 }
 type CowTransferQuery struct {
-	FromTime    uint64 `form:"from_time" json:"from_time,omitempty" binding:"required"`
-	ToTime      uint64 `form:"to_time" json:"to_time,omitempty" binding:"required"`
+	FromTime    uint64 `form:"from_time" json:"from_time,omitempty"`
+	ToTime      uint64 `form:"to_time" json:"to_time,omitempty"`
 	BlockNumber uint64 `db:"block_number" json:"block_number"`
 	TxHash      string `form:"tx_hash" json:"tx_hash,omitempty"`
 }

@@ -324,6 +324,10 @@ func (s *TradeLogs) getCowTransfers(c *gin.Context) {
 		responseErr(c, http.StatusBadRequest, err)
 		return
 	}
+	if query.ToTime == 0 && query.FromTime == 0 && query.TxHash == "" {
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("missing params time and tx_hash"))
+		return
+	}
 	if query.ToTime < query.FromTime {
 		responseErr(c, http.StatusBadRequest, fmt.Errorf("to_time cannot smaller than from_time"))
 		return
