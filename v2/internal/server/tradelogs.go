@@ -91,8 +91,6 @@ func (s *TradeLogs) register() {
 	s.r.POST("/txorigin", s.addTxOrigin)
 	s.r.POST("/price_filler/refetch", s.resetTokenPriceToRefetch)
 	s.r.GET("/0xv3_deployment", s.get0xv3Deployment)
-	s.r.GET("/cow_transfers", s.getCowTransfers)
-	s.r.GET("/cow_trades", s.getCowTrades)
 	s.r.GET("/cow/tx/:tx_hash", s.getInfoCowTx)
 }
 
@@ -381,10 +379,9 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 		return
 	}
 	type result struct {
-		CowTrades     []cowProtocolStorage.CowTrade          `json:"cow_trades"`
-		CowTransfer   []cowProtocolStorage.CowTransfer       `json:"cow_transfers"`
-		TradesFromDex []storageTypes.TradeLog                `json:"trades_from_dexs"`
-		CallFrame     []cowProtocolStorage.CowTradeCallFrame `json:"callframe"`
+		CowTrades   []cowProtocolStorage.CowTrade          `json:"cow_trades"`
+		CowTransfer []cowProtocolStorage.CowTransfer       `json:"cow_transfers"`
+		CallFrame   []cowProtocolStorage.CowTradeCallFrame `json:"callframe"`
 	}
 
 	// get cow trades
@@ -401,10 +398,9 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"data": result{
-				CowTrades:     []cowProtocolStorage.CowTrade{},
-				CowTransfer:   []cowProtocolStorage.CowTransfer{},
-				TradesFromDex: []storageTypes.TradeLog{},
-				CallFrame:     []cowProtocolStorage.CowTradeCallFrame{},
+				CowTrades:   []cowProtocolStorage.CowTrade{},
+				CowTransfer: []cowProtocolStorage.CowTransfer{},
+				CallFrame:   []cowProtocolStorage.CowTradeCallFrame{},
 			},
 		})
 		return
@@ -419,21 +415,6 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 		responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get cow transfers: %w", err))
 		return
 	}
-
-	// get trade from dexs
-	tradelogQuery := storageTypes.TradeLogsQuery{
-		TxHash: txHash,
-	}
-	var tradesFromDex []storageTypes.TradeLog
-	for _, storage := range s.storage {
-		tradeLogs, err := storage.Get(tradelogQuery)
-		if err != nil {
-			responseErr(c, http.StatusInternalServerError, fmt.Errorf("error when get trade from dexs: %w", err))
-			return
-		}
-		tradesFromDex = append(tradesFromDex, tradeLogs...)
-	}
-
 	// get cow callframe
 	callFrame, err := s.cowTradeStorage.GetCowCallFrame(txHash)
 	if err != nil {
@@ -444,10 +425,9 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data": result{
-			CowTrades:     cowTrades,
-			CowTransfer:   cowTransfer,
-			TradesFromDex: tradesFromDex,
-			CallFrame:     callFrame,
+			CowTrades:   cowTrades,
+			CowTransfer: cowTransfer,
+			CallFrame:   callFrame,
 		},
 	})
 }
