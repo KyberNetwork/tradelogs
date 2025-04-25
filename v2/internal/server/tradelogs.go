@@ -91,7 +91,7 @@ func (s *TradeLogs) register() {
 	s.r.POST("/txorigin", s.addTxOrigin)
 	s.r.POST("/price_filler/refetch", s.resetTokenPriceToRefetch)
 	s.r.GET("/0xv3_deployment", s.get0xv3Deployment)
-	s.r.GET("/cow/tx/:txHash", s.getInfoCowByTxHash)
+	s.r.GET("/cow/tx/:tx_hash", s.getInfoCowByTxHash)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -317,9 +317,9 @@ func (s *TradeLogs) get0xv3Deployment(c *gin.Context) {
 }
 
 func (s *TradeLogs) getInfoCowByTxHash(c *gin.Context) {
-	txHash := c.Param("txHash")
+	txHash := c.Param("tx_hash")
 	if txHash == "" {
-		responseErr(c, http.StatusBadRequest, fmt.Errorf("txHash is required"))
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("tx_hash is required"))
 		return
 	}
 	type result struct {
@@ -341,11 +341,7 @@ func (s *TradeLogs) getInfoCowByTxHash(c *gin.Context) {
 	if len(cowTrades) == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
-			"data": result{
-				CowTrades:   []cowProtocolStorage.CowTrade{},
-				CowTransfer: []cowProtocolStorage.CowTransfer{},
-				CallFrame:   nil,
-			},
+			"data":    result{},
 		})
 		return
 	}
