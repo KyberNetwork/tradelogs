@@ -91,7 +91,7 @@ func (s *TradeLogs) register() {
 	s.r.POST("/txorigin", s.addTxOrigin)
 	s.r.POST("/price_filler/refetch", s.resetTokenPriceToRefetch)
 	s.r.GET("/0xv3_deployment", s.get0xv3Deployment)
-	s.r.GET("/cow/tx/:tx_hash", s.getInfoCowTx)
+	s.r.GET("/cow/tx/:txHash", s.getInfoCowByTxHash)
 }
 
 func (s *TradeLogs) getTradeLogs(c *gin.Context) {
@@ -316,16 +316,16 @@ func (s *TradeLogs) get0xv3Deployment(c *gin.Context) {
 	})
 }
 
-func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
-	txHash := c.Param("tx_hash")
+func (s *TradeLogs) getInfoCowByTxHash(c *gin.Context) {
+	txHash := c.Param("txHash")
 	if txHash == "" {
-		responseErr(c, http.StatusBadRequest, fmt.Errorf("tx_hash is required"))
+		responseErr(c, http.StatusBadRequest, fmt.Errorf("txHash is required"))
 		return
 	}
 	type result struct {
-		CowTrades   []cowProtocolStorage.CowTrade          `json:"cow_trades"`
-		CowTransfer []cowProtocolStorage.CowTransfer       `json:"cow_transfers"`
-		CallFrame   []cowProtocolStorage.CowTradeCallFrame `json:"callframe"`
+		CowTrades   []cowProtocolStorage.CowTrade         `json:"cow_trades"`
+		CowTransfer []cowProtocolStorage.CowTransfer      `json:"cow_transfers"`
+		CallFrame   *cowProtocolStorage.CowTradeCallFrame `json:"callframe"`
 	}
 
 	// get cow trades
@@ -344,7 +344,7 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 			"data": result{
 				CowTrades:   []cowProtocolStorage.CowTrade{},
 				CowTransfer: []cowProtocolStorage.CowTransfer{},
-				CallFrame:   []cowProtocolStorage.CowTradeCallFrame{},
+				CallFrame:   nil,
 			},
 		})
 		return
@@ -371,7 +371,7 @@ func (s *TradeLogs) getInfoCowTx(c *gin.Context) {
 		"data": result{
 			CowTrades:   cowTrades,
 			CowTransfer: cowTransfer,
-			CallFrame:   callFrame,
+			CallFrame:   &callFrame,
 		},
 	})
 }

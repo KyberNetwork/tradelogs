@@ -40,18 +40,18 @@ func (s *CowTradeStorage) InsertCowCallFrame(txs []CowTradeCallFrame) error {
 	return nil
 }
 
-func (s *CowTradeStorage) GetCowCallFrame(tx_hash string) ([]CowTradeCallFrame, error) {
+func (s *CowTradeStorage) GetCowCallFrame(txHash string) (CowTradeCallFrame, error) {
 	builder := squirrel.StatementBuilder.PlaceholderFormat(squirrel.Dollar).
 		Select("*").
 		From(s.callFrameTableName()).
-		Where(squirrel.Eq{"tx_hash": strings.ToLower(tx_hash)})
+		Where(squirrel.Eq{"tx_hash": strings.ToLower(txHash)})
 	q, p, err := builder.ToSql()
 	if err != nil {
-		return nil, err
+		return CowTradeCallFrame{}, err
 	}
-	var results []CowTradeCallFrame
-	if err := s.db.Select(&results, q, p...); err != nil {
-		return nil, err
+	var results CowTradeCallFrame
+	if err := s.db.Get(&results, q, p...); err != nil {
+		return CowTradeCallFrame{}, err
 	}
 	return results, nil
 }
