@@ -163,6 +163,7 @@ func cowTransferStorageSerialize(o *CowTransfer, isUpdate bool) []interface{} {
 		o.Amount,
 		o.TokenPrice,
 		o.AmountUsd,
+		o.TransferType,
 	}
 	if isUpdate {
 		return append([]interface{}{o.TransferId}, data...)
@@ -181,6 +182,7 @@ func cowTransferStorageColumns(isUpdate bool) []string {
 		"amount",
 		"token_price",
 		"amount_usd",
+		"transfer_type",
 	}
 	if isUpdate {
 		return append([]string{"transfer_id"}, data...)
