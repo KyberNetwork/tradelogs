@@ -1,7 +1,6 @@
 package cowprotocol
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/KyberNetwork/tradelogs/v2/pkg/util"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethereumTypes "github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -64,7 +64,7 @@ func (p *CowTradeParser) Parse(log ethereumTypes.Log, blockTime uint64) (cowStor
 		SellAmount:      e.SellAmount.String(),
 		BuyAmount:       e.BuyAmount.String(),
 		FeeAmount:       e.FeeAmount.String(),
-		OrderUid:        hex.EncodeToString(e.OrderUid),
+		OrderUid:        hexutil.Encode(e.OrderUid),
 		ContractAddress: log.Address.String(),
 		BlockNumber:     log.BlockNumber,
 		TxHash:          log.TxHash.String(),
