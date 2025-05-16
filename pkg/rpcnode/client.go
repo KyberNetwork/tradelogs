@@ -3,6 +3,7 @@ package rpcnode
 import (
 	"context"
 	"fmt"
+	"math/big"
 
 	"github.com/KyberNetwork/tradelogs/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -51,7 +52,7 @@ func (c *Client) GetTxOriginByTxHash(ctx context.Context, txHash string) (common
 			c.l.Errorw("get transaction by hash failed", "error", err, "txHash", txHash, "clientID", i)
 			continue
 		}
-		sender, err := ethereum_types.Sender(ethereum_types.NewCancunSigner(tx.ChainId()), tx)
+		sender, err := ethereum_types.Sender(ethereum_types.NewCancunSigner(big.NewInt(1)), tx)
 		if err != nil {
 			c.l.Errorw("get sender failed", "error", err, "txHash", txHash, "clientID", i)
 			continue
